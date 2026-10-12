@@ -13,46 +13,84 @@ import {
   XCircle,
   PhoneCall,
   MessageCircle,
+  Receipt,
+  User,
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { BackButton } from '../../components/ui/BackButton';
 import { trackBooking } from '../../services/bookingStorage';
-import { BookingRequest } from '../../types';
 import { VENUE_INFO } from '../../services/hallData';
 
-interface TrackBookingPageProps {
-  navigate: (path: string) => void;
+interface TrackedBooking {
+  id: string;
+  customerName: string;
+  packageName?: string;
+  hall?: string;
+  hallSelection?: string;
+  acOption?: string;
+  date: string;
+  slot: string;
+  status: string;
+  totalAmount?: number;
+  estimatedAmount?: number;
+  amountPaid?: number;
+  balanceDue?: number;
+  paymentStatus?: string;
+  submittedAt?: string;
+  adminRemarks?: string;
+  rejectionReason?: string;
 }
 
-export const TrackBookingPage: React.FC<TrackBookingPageProps> = ({ navigate }) => {
+export const TrackBookingPage: React.FC<{ navigate: (path: string) => void }> = ({ navigate }) => {
   const urlParams = new URLSearchParams(window.location.search);
-  const paramId = urlParams.get('id');
+  const paramId = urlParams.get('id') || urlParams.get('ref') || '';
+  const paramPhone = urlParams.get('phone') || '';
 
-  const [searchQuery, setSearchQuery] = useState(paramId || '');
-  const [booking, setBooking] = useState<BookingRequest | null>(null);
+  const [bookingIdQuery, setBookingIdQuery] = useState(paramId);
+  const [phoneQuery, setPhoneQuery] = useState(paramPhone);
+  const [booking, setBooking] = useState<TrackedBooking | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const performSearch = (queryId: string) => {
-    const clean = queryId.trim();
-    if (!clean) return;
+  const performSearch = async (queryId: string, queryPhone?: string) => {
+    const cleanId = queryId.trim();
+    if (!cleanId) return;
 
     setIsLoading(true);
     setErrorMessage(null);
     setHasSearched(true);
 
     try {
-      const result = trackBooking(clean);
-      if (result) {
-        setBooking(result);
-      } else {
-        setBooking(null);
-        setErrorMessage(`No reservation found matching "${clean}". Please verify your reference number or phone number.`);
+      // 1. Try server tracking API with phone verification if phone provided
+      const phoneParam = queryPhone ? `&phone=${encodeURIComponent(queryPhone.trim())}` : '';
+      const res = await fetch(`/api/bookings/track?id=${encodeURIComponent(cleanId)}${phoneParam}`);
+
+      if (res.ok) {
+        const data = await res.json();
+        setBooking(data);
+        setIsLoading(false);
+        return;
       }
-    } catch (err: any) {
-      setErrorMessage(err?.message || 'Error looking up booking.');
+
+      // 2. Fallback to local synchronous cache
+      const localResult = trackBooking(cleanId);
+      if (localResult) {
+        setBooking(localResult as any);
+        setIsLoading(false);
+        return;
+      }
+
       setBooking(null);
+      setErrorMessage(`No reservation found matching "${cleanId}". Please verify your reference number or phone number.`);
+    } catch {
+      // Fallback to local
+      const localResult = trackBooking(cleanId);
+      if (localResult) {
+        setBooking(localResult as any);
+      } else {
+        setErrorMessage('Unable to look up reservation details. Please check connection.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -60,16 +98,16 @@ export const TrackBookingPage: React.FC<TrackBookingPageProps> = ({ navigate }) 
 
   useEffect(() => {
     if (paramId) {
-      performSearch(paramId);
+      performSearch(paramId, paramPhone);
     }
-  }, [paramId]);
+  }, [paramId, paramPhone]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    performSearch(searchQuery);
+    performSearch(bookingIdQuery, phoneQuery);
   };
 
-  const getStatusBadge = (status: BookingRequest['status']) => {
+  const getStatusBadge = (status: string) => {
     const upper = (status || '').toUpperCase();
     switch (upper) {
       case 'APPROVED':
@@ -88,7 +126,7 @@ export const TrackBookingPage: React.FC<TrackBookingPageProps> = ({ navigate }) 
       case 'REJECTED':
         return (
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-800 border border-rose-200">
-            <XCircle className="w-3.5 h-3.5 text-rose-600" /> REJECTED
+            <XCircle className="w-3.5 h-3.5 text-rose-600" /> DECLINED
           </span>
         );
       case 'CANCELLED':
@@ -123,7 +161,7 @@ export const TrackBookingPage: React.FC<TrackBookingPageProps> = ({ navigate }) 
               Track Reservation Status
             </h1>
             <p className="text-base sm:text-lg text-[#58453E] leading-relaxed">
-              Enter your booking reference code or registered phone number to verify review status, payment confirmation, and official session schedule.
+              Enter your booking reference code or registered mobile phone number to check review progress, payment records, and allocated hall wings.
             </p>
           </div>
         </div>
@@ -132,29 +170,47 @@ export const TrackBookingPage: React.FC<TrackBookingPageProps> = ({ navigate }) 
       {/* Search Input Box */}
       <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <form onSubmit={handleSearch} className="bg-white rounded-3xl p-6 sm:p-8 border border-[#E8E5E1] shadow-sm space-y-4">
-          <label className="block text-xs font-bold text-[#161210] uppercase tracking-wider">
-            Booking Reference ID or Phone Number
-          </label>
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#7E7873]" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-[#161210] uppercase tracking-wider mb-1.5">
+                Booking Reference ID *
+              </label>
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#7E7873]" />
+                <input
+                  type="text"
+                  value={bookingIdQuery}
+                  onChange={(e) => setBookingIdQuery(e.target.value)}
+                  placeholder="e.g. HH-2026-104921"
+                  className="w-full pl-11 pr-4 py-3 rounded-xl border border-[#D8D3CC] text-sm text-[#161210] focus:ring-2 focus:ring-[#C88D23] focus:outline-none bg-white font-mono"
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-[#161210] uppercase tracking-wider mb-1.5">
+                Registered Mobile Phone
+              </label>
               <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="e.g. HH-2026-0001 or 9845012345"
-                className="w-full pl-11 pr-4 py-3 rounded-xl border border-[#D8D3CC] text-sm text-[#161210] focus:ring-2 focus:ring-[#C88D23] focus:outline-none bg-white font-mono"
-                required
+                type="tel"
+                value={phoneQuery}
+                onChange={(e) => setPhoneQuery(e.target.value)}
+                placeholder="e.g. 9876543210 (Optional verification)"
+                className="w-full px-4 py-3 rounded-xl border border-[#D8D3CC] text-sm text-[#161210] focus:ring-2 focus:ring-[#C88D23] focus:outline-none bg-white font-mono"
               />
             </div>
+          </div>
+
+          <div className="flex justify-end pt-2">
             <Button
               type="submit"
               variant="gold"
               size="md"
               isLoading={isLoading}
-              className="shrink-0"
+              className="w-full sm:w-auto"
             >
-              Search Booking
+              Verify &amp; Track Booking
             </Button>
           </div>
         </form>
@@ -189,33 +245,49 @@ export const TrackBookingPage: React.FC<TrackBookingPageProps> = ({ navigate }) 
                   <span className="font-bold text-[#161210] text-sm">{booking.customerName}</span>
                 </div>
                 <div>
+                  <span className="text-[#7E7873] block uppercase">Package</span>
+                  <span className="font-bold text-[#161210] text-sm">{booking.packageName || 'Official Hall Package'}</span>
+                </div>
+                <div>
                   <span className="text-[#7E7873] block uppercase">Event Date</span>
                   <span className="font-bold text-[#161210] text-sm">{booking.date}</span>
                 </div>
                 <div>
                   <span className="text-[#7E7873] block uppercase">Session Slot</span>
                   <span className="font-bold text-[#161210] text-sm uppercase">
-                    {booking.slot} Session
-                  </span>
-                </div>
-                <div>
-                  <span className="text-[#7E7873] block uppercase">Hall Section</span>
-                  <span className="font-bold text-[#161210] text-sm">
-                    {booking.hall === 'both' ? 'Combined Hall' : booking.hall === 'hall_1' ? 'Hall 1' : 'Hall 2'}
+                    {booking.slot === 'day' ? 'Day (10 AM - 3 PM)' : 'Evening (6 PM - 10 PM)'}
                   </span>
                 </div>
               </div>
 
-              <div className="p-4 rounded-xl bg-[#FAF8F5] border border-[#E8E5E1] flex items-center justify-between text-xs">
+              {/* Remarks if any */}
+              {booking.adminRemarks && (
+                <div className="p-4 rounded-xl bg-amber-50/60 border border-amber-200 text-xs text-amber-900 space-y-1">
+                  <strong className="font-bold block">Management Remarks:</strong>
+                  <p>{booking.adminRemarks}</p>
+                </div>
+              )}
+
+              {/* Financial Status */}
+              <div className="p-5 rounded-2xl bg-[#FAF8F5] border border-[#E8E5E1] grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
                 <div>
-                  <span className="text-[#7E7873] block uppercase">Estimated Rent</span>
-                  <span className="text-xl font-bold text-[#C88D23]">
-                    ₹{(booking.estimatedAmount || 0).toLocaleString()}.00
+                  <span className="text-[#7E7873] block uppercase">Total Rent</span>
+                  <span className="text-xl font-bold text-[#161210]">
+                    ₹{(booking.totalAmount || booking.estimatedAmount || 0).toLocaleString('en-IN')}.00
                   </span>
                 </div>
-                <span className="text-xs text-emerald-800 font-semibold bg-emerald-50 px-2.5 py-1 rounded border border-emerald-200">
-                  Kitchen Included
-                </span>
+                <div>
+                  <span className="text-[#7E7873] block uppercase">Advance Paid</span>
+                  <span className="text-xl font-bold text-emerald-700">
+                    ₹{(booking.amountPaid || 0).toLocaleString('en-IN')}.00
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[#7E7873] block uppercase">Balance Due</span>
+                  <span className="text-xl font-bold text-amber-700">
+                    ₹{(booking.balanceDue !== undefined ? booking.balanceDue : (booking.totalAmount || 0)).toLocaleString('en-IN')}.00
+                  </span>
+                </div>
               </div>
 
               <div className="pt-2 flex flex-wrap items-center justify-between gap-4">
@@ -224,7 +296,7 @@ export const TrackBookingPage: React.FC<TrackBookingPageProps> = ({ navigate }) 
                   className="inline-flex items-center gap-1.5 text-xs text-[#161210] font-semibold hover:text-[#C88D23]"
                 >
                   <PhoneCall className="w-3.5 h-3.5 text-[#C88D23]" />
-                  <span>Call Liaison Desk: {VENUE_INFO.primaryPhone}</span>
+                  <span>Call Venue Management: {VENUE_INFO.primaryPhone}</span>
                 </a>
 
                 <Button

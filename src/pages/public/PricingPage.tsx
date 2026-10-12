@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Receipt,
   CheckCircle2,
@@ -11,15 +11,29 @@ import {
   Clock,
   ArrowRight,
   Filter,
+  Sparkles,
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { BackButton } from '../../components/ui/BackButton';
 import {
-  OFFICIAL_TARIFF_PACKAGES,
   OFFICIAL_TARIFF_SCHEDULE,
   VENUE_INFO,
   TIMING_SLOTS,
 } from '../../services/hallData';
+
+interface PricingPackage {
+  id: string;
+  name: string;
+  displayName?: string;
+  details: string;
+  rent: number;
+  rentFormatted?: string;
+  acType: 'AC' | 'Non AC' | 'Dining Only';
+  requiredResources?: string[];
+  inclusions?: string[];
+  capacityText?: string;
+  active?: boolean;
+}
 
 interface PricingPageProps {
   navigate: (path: string) => void;
@@ -27,11 +41,31 @@ interface PricingPageProps {
 
 export const PricingPage: React.FC<PricingPageProps> = ({ navigate }) => {
   const [filterType, setFilterType] = useState<'all' | 'AC' | 'Non AC' | 'Dining Only'>('all');
+  const [packages, setPackages] = useState<PricingPackage[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadPackages() {
+      try {
+        const res = await fetch('/api/packages');
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) {
+            setPackages(data.filter((p: any) => p.active !== false));
+            setIsLoading(false);
+            return;
+          }
+        }
+      } catch {}
+      setIsLoading(false);
+    }
+    loadPackages();
+  }, []);
 
   const filteredPackages =
     filterType === 'all'
-      ? OFFICIAL_TARIFF_PACKAGES
-      : OFFICIAL_TARIFF_PACKAGES.filter((p) => p.acType === filterType);
+      ? packages
+      : packages.filter((p) => p.acType === filterType);
 
   return (
     <div className="space-y-16 pb-24 bg-[#FDFBF9] text-[#161210]">
@@ -57,7 +91,9 @@ export const PricingPage: React.FC<PricingPageProps> = ({ navigate }) => {
                 Official Schedule: {OFFICIAL_TARIFF_SCHEDULE}
               </span>
               <span>&bull;</span>
-              <span className="text-emerald-700">Kitchen Included in All 8 Packages</span>
+              <span className="text-emerald-700">Kitchen Included in All Packages</span>
+              <span>&bull;</span>
+              <span className="text-[#C88D23]">Flexible Multi-Hall &amp; Dining Combinations</span>
             </div>
           </div>
         </div>
@@ -96,36 +132,29 @@ export const PricingPage: React.FC<PricingPageProps> = ({ navigate }) => {
                       : 'bg-[#F6F5F4] text-[#58453E] hover:bg-[#ECEAE8] border border-[#E8E5E1]'
                   }`}
                 >
-                  {cat === 'all' ? 'All 8 Packages' : cat}
+                  {cat === 'all' ? `All (${packages.length})` : cat}
                 </button>
               ))}
             </div>
 
-            <div className="text-xs text-[#9A6611] font-semibold bg-[#FAF2E4] px-3 py-1.5 rounded-full border border-[#E8D7BE]">
-              Showing {filteredPackages.length} Packages
-            </div>
+            <span className="text-xs text-[#7E7873] font-medium">
+              Showing {filteredPackages.length} package options
+            </span>
           </div>
 
-          {/* Official Packages Grid */}
+          {/* Package Cards Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {filteredPackages.map((pkg, idx) => {
               const isFullHall = pkg.id.includes('full');
-
               return (
                 <div
                   key={pkg.id}
-                  className={`rounded-2xl p-6 flex flex-col justify-between border transition-all duration-300 relative ${
+                  className={`p-6 rounded-2xl border transition-all duration-300 flex flex-col justify-between ${
                     isFullHall
-                      ? 'bg-gradient-to-b from-[#FFFDF9] via-[#FAF4EA] to-white border-[#EAD8BF] shadow-md ring-1 ring-[#C88D23]/30'
-                      : 'bg-white border-[#E8E5E1] hover:border-[#D6CCA9] shadow-2xs hover:shadow-sm'
+                      ? 'bg-gradient-to-b from-[#FFFDF9] to-[#FAF4EA] border-[#EAD8BF] shadow-md ring-1 ring-[#C88D23]/20'
+                      : 'bg-white border-[#E8E5E1] shadow-2xs hover:border-[#D8CFBC]'
                   }`}
                 >
-                  {isFullHall && (
-                    <span className="absolute -top-3 right-4 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-[#C88D23] text-white shadow-xs">
-                      Grand Package
-                    </span>
-                  )}
-
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <span className="text-[11px] font-mono font-bold text-[#7E7873]">
@@ -137,7 +166,7 @@ export const PricingPage: React.FC<PricingPageProps> = ({ navigate }) => {
                             ? 'bg-sky-50 text-sky-800 border border-sky-200'
                             : pkg.acType === 'Non AC'
                             ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                            : 'bg-purple-50 text-purple-800 border border-purple-200'
+                            : 'bg-amber-50 text-amber-800 border border-amber-200'
                         }`}
                       >
                         {pkg.acType}
@@ -146,7 +175,7 @@ export const PricingPage: React.FC<PricingPageProps> = ({ navigate }) => {
 
                     <div>
                       <h3 className="text-lg font-bold text-[#161210] font-serif-heading">
-                        {pkg.package}
+                        {pkg.name}
                       </h3>
                       <p className="text-xs text-[#58453E] mt-1 leading-relaxed">
                         {pkg.details}
@@ -159,34 +188,39 @@ export const PricingPage: React.FC<PricingPageProps> = ({ navigate }) => {
                       </span>
                       <div className="flex items-baseline gap-1 mt-0.5">
                         <span className="text-2xl font-black text-[#C88D23]">
-                          ₹{pkg.rentFormatted}
+                          ₹{pkg.rent.toLocaleString('en-IN')}
                         </span>
                       </div>
+                      {pkg.capacityText && (
+                        <span className="text-[11px] text-[#7E7873] block mt-1">
+                          {pkg.capacityText}
+                        </span>
+                      )}
                     </div>
 
                     <div className="space-y-1.5 text-xs text-[#58453E] pt-2 border-t border-[#F0ECE7]">
-                      <div className="flex items-center gap-1.5">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                        <span>Kitchen Included</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                        <span>Standard Session Hours</span>
-                      </div>
+                      {(pkg.inclusions && pkg.inclusions.length > 0
+                        ? pkg.inclusions.slice(0, 3)
+                        : ['Kitchen Facility Included', 'Standard Session Hours', 'Acoustic & Power Setup']
+                      ).map((inc, i) => (
+                        <div key={i} className="flex items-center gap-1.5">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                          <span className="truncate">{inc}</span>
+                        </div>
+                      ))}
                     </div>
                   </div>
 
                   <div className="pt-5 mt-4 border-t border-[#F0ECE7]">
                     <Button
                       onClick={() => {
-                        const hallTarget = isFullHall ? 'both' : 'hall_1';
-                        navigate(`/book?hall=${hallTarget}`);
+                        navigate(`/book?package=${pkg.id}`);
                       }}
                       variant={isFullHall ? 'gold' : 'outline'}
                       size="sm"
                       className="w-full justify-center"
                     >
-                      Book Package
+                      Book This Package
                     </Button>
                   </div>
                 </div>
@@ -194,14 +228,14 @@ export const PricingPage: React.FC<PricingPageProps> = ({ navigate }) => {
             })}
           </div>
 
-          {/* Important Operational Notice Box */}
+          {/* Operational Notice Box */}
           <div className="p-6 rounded-2xl bg-[#FAF8F5] border border-[#E8E5E1] text-[#161210] text-xs space-y-2">
             <div className="flex items-center gap-2 font-bold text-sm text-[#C88D23] uppercase tracking-wider">
               <ShieldCheck className="w-4 h-4 text-[#C88D23]" />
               Official Tariff Schedule Terms
             </div>
             <p className="leading-relaxed text-[#58453E]">
-              Rates apply for <strong>{OFFICIAL_TARIFF_SCHEDULE}</strong>. Kitchen facilities are included with all packages without extra charge. Food preparation, cleaning, power usage, and timing slots are subject to standard venue terms.
+              Rates apply for <strong>{OFFICIAL_TARIFF_SCHEDULE}</strong>. Commercial kitchen facilities are included with all packages without extra charge. Food preparation, cleaning, power usage, and timing slots are subject to standard venue terms.
             </p>
             <div className="flex flex-wrap items-center gap-4 pt-1 font-semibold text-[#161210]">
               <a href={`tel:${VENUE_INFO.primaryPhone}`} className="hover:text-[#C88D23] flex items-center gap-1">

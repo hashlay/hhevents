@@ -15,6 +15,7 @@ import {
   Sliders,
   Camera,
   ArrowLeft,
+  Package,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { BackButton } from '../ui/BackButton';
@@ -44,6 +45,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
   const navItems = [
     { label: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
     { label: 'Booking Requests', path: '/admin/bookings', icon: Inbox },
+    { label: 'Tariff & Packages', path: '/admin/packages', icon: Package },
     { label: 'Availability Controls', path: '/admin/availability', icon: Sliders },
     { label: 'Master Calendar', path: '/admin/calendar', icon: Calendar },
     { label: 'Real Photos', path: '/admin/photos', icon: Camera },

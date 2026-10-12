@@ -73,16 +73,18 @@ export const HomePage: React.FC<HomePageProps> = ({ navigate }) => {
     if (guestCount > 800) {
       return {
         hallId: 'both' as HallId,
+        packageId: acPreference === 'ac' ? 'full-ac-hall' : 'full-non-ac-hall',
         title: 'Combined Grand Campus (Hall 1 + Hall 2)',
         capacity: 'Up to 3,000 Persons',
         dining: 'Gents & Ladies Dining Wings (Combined)',
-        price: acPreference === 'ac' ? '₹70,000.00' : '₹50,000.00',
+        price: acPreference === 'ac' ? '₹65,000.00' : '₹45,000.00',
         plan: acPreference === 'ac' ? 'Full AC Hall Package' : 'Full Non AC Hall Package',
         features: ['Gents Hall & Ladies Hall', 'Dual Feast Dining Halls', 'Kitchen Facilities Included'],
       };
     } else if (guestCount > 400) {
       return {
         hallId: 'hall_1' as HallId,
+        packageId: acPreference === 'ac' ? 'single-ac-hall-ii' : 'single-non-ac-hall-ii',
         title: 'Single Hall (Double Dining Wing)',
         capacity: '400 – 800 Persons',
         dining: 'Double Dining Wings + Stage',
@@ -93,10 +95,11 @@ export const HomePage: React.FC<HomePageProps> = ({ navigate }) => {
     } else {
       return {
         hallId: 'hall_1' as HallId,
+        packageId: acPreference === 'ac' ? 'single-ac-hall' : 'single-non-ac-hall',
         title: 'Single Hall 1 or Hall 2',
         capacity: 'Up to 500 Persons',
         dining: 'Single Dedicated Dining Wing',
-        price: acPreference === 'ac' ? '₹40,000.00' : '₹25,000.00',
+        price: acPreference === 'ac' ? '₹30,000.00' : '₹25,000.00',
         plan: acPreference === 'ac' ? 'Single AC Hall Package' : 'Single Non AC Hall Package',
         features: ['Main Convention Hall', 'Dedicated Dining Wing', 'Kitchen Included'],
       };
@@ -530,9 +533,9 @@ export const HomePage: React.FC<HomePageProps> = ({ navigate }) => {
               Reserve both Hall 1 and Hall 2 simultaneously. Provides dedicated Gents Hall &amp; Ladies Hall, Gents Dining &amp; Ladies Dining wings, and high-capacity food preparation kitchens for events up to 3,000 persons.
             </p>
             <div className="flex flex-wrap items-center gap-4 text-xs font-semibold pt-1">
-              <span className="text-[#161210]">Full AC: ₹70,000.00</span>
+              <span className="text-[#161210]">Full AC: ₹65,000.00</span>
               <span className="text-[#7E7873]">&bull;</span>
-              <span className="text-[#161210]">Full Non AC: ₹50,000.00</span>
+              <span className="text-[#161210]">Full Non AC: ₹45,000.00</span>
               <span className="text-[#7E7873]">&bull;</span>
               <span className="text-emerald-700">All Kitchens Included</span>
             </div>
@@ -540,7 +543,7 @@ export const HomePage: React.FC<HomePageProps> = ({ navigate }) => {
 
           <div className="flex flex-wrap items-center gap-3 shrink-0">
             <Button
-              onClick={() => navigate('/book?hall=both')}
+              onClick={() => navigate('/book?package=full-ac-hall')}
               variant="gold"
               size="md"
               rightIcon={<ArrowRight className="w-4 h-4" />}

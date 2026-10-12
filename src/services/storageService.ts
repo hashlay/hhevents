@@ -8,94 +8,245 @@ import {
   ManagerSession,
   AuditLogRecord,
 } from '../types';
-import { MANAGER_CREDENTIALS, validateCredentials } from '../config/managerCredentials';
-import { INITIAL_BOOKINGS, INITIAL_AUDIT_LOGS, VENUE_INFO } from './hallData';
+import { VENUE_ADMIN_INFO } from '../config/managerCredentials';
+import { INITIAL_AUDIT_LOGS } from './hallData';
 import { isSlotAvailable } from './availabilityManager';
 
-const BOOKINGS_KEY = 'hh_events_bookings_v4';
-const AVAILABILITY_OVERRIDES_KEY = 'hh_events_availability_overrides_v4';
-const MANAGER_SESSION_KEY = 'hh_events_manager_session_v4';
-const AUDIT_LOGS_KEY = 'hh_events_audit_logs_v4';
+const BOOKINGS_KEY = 'hh_events_bookings_v5';
+const AVAILABILITY_OVERRIDES_KEY = 'hh_events_availability_overrides_v5';
+const AUDIT_LOGS_KEY = 'hh_events_audit_logs_v5';
+const TOKEN_KEY = 'hh_auth_token_v5';
+
+function getAuthHeader(): Record<string, string> {
+  try {
+    const token = localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY);
+    if (token) {
+      return { Authorization: `Bearer ${token}` };
+    }
+  } catch {}
+  return {};
+}
+
+// In-memory cache for synchronous renders
+let cachedBookings: BookingRequest[] = [];
+
+// Initialize cache from localStorage
+try {
+  const raw = localStorage.getItem(BOOKINGS_KEY);
+  if (raw) {
+    cachedBookings = JSON.parse(raw);
+  }
+} catch {}
+
+// Background sync with shared server
+export async function syncBookingsFromServer(): Promise<BookingRequest[]> {
+  try {
+    const res = await fetch('/api/bookings', {
+      headers: { ...getAuthHeader() },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        cachedBookings = data.map((b: any) => ({
+          ...b,
+          // Compatibility mapping
+          hall: b.hallSelection || b.hall || 'hall_1',
+          acOption: b.acOption || 'ac',
+          applicantName: b.customerName,
+          applicantPhone: b.phone,
+          applicantEmail: b.email,
+          eventDate: b.date,
+          timeSlot: b.slot,
+          totalEstimate: b.totalAmount,
+          advancePaymentStatus: b.paymentStatus,
+        }));
+        try {
+          localStorage.setItem(BOOKINGS_KEY, JSON.stringify(cachedBookings));
+        } catch {}
+        return cachedBookings;
+      }
+    }
+  } catch (err) {
+    console.warn('Could not sync bookings from server:', err);
+  }
+  return cachedBookings;
+}
+
+// Trigger initial sync silently
+syncBookingsFromServer();
 
 // ==========================================
 // 1. BOOKINGS STORAGE
 // ==========================================
 
 export function getBookings(): BookingRequest[] {
-  try {
-    const raw = localStorage.getItem(BOOKINGS_KEY);
-    if (!raw) {
-      return [];
-    }
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    // Ensure no legacy fake/mock bookings with HH-2026-10x pollute the store
-    const realBookings = parsed.filter(
-      (b) => !b.id || !b.id.startsWith('HH-2026-10')
-    );
-    return realBookings;
-  } catch (e) {
-    console.error('Failed to parse bookings from localStorage:', e);
-    return [];
-  }
+  return cachedBookings;
 }
 
-export function saveBooking(booking: BookingRequest): BookingRequest {
-  const current = getBookings();
-  // Ensure newest at the top
-  const updated = [booking, ...current.filter((b) => b.id !== booking.id)];
+export async function saveBookingAsync(booking: BookingRequest): Promise<BookingRequest> {
   try {
-    localStorage.setItem(BOOKINGS_KEY, JSON.stringify(updated));
-  } catch (e) {
-    console.error('Failed to save booking to localStorage:', e);
+    const res = await fetch('/api/bookings', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        customerName: booking.customerName || booking.applicantName,
+        phone: booking.phone || booking.applicantPhone,
+        email: booking.email || booking.applicantEmail,
+        hallSelection: booking.hall || 'hall_1',
+        acOption: booking.acOption || 'ac',
+        date: booking.date || booking.eventDate,
+        slot: booking.slot || booking.timeSlot,
+        expectedAttendees: booking.expectedAttendees || booking.estimatedAttendees,
+        additionalInfo: booking.additionalInfo || booking.adminRemarks,
+        eventType: booking.eventType || 'wedding',
+      }),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data.booking) {
+        const normalized: BookingRequest = {
+          ...booking,
+          id: data.booking.id,
+          status: data.booking.status,
+          totalEstimate: data.booking.totalAmount,
+          advancePaymentStatus: data.booking.paymentStatus,
+          submittedAt: data.booking.submittedAt,
+          updatedAt: data.booking.updatedAt,
+        };
+        cachedBookings = [normalized, ...cachedBookings.filter((b) => b.id !== normalized.id)];
+        try {
+          localStorage.setItem(BOOKINGS_KEY, JSON.stringify(cachedBookings));
+        } catch {}
+        return normalized;
+      }
+    }
+  } catch (err) {
+    console.error('Failed to save booking to server:', err);
   }
+
+  // Fallback
+  cachedBookings = [booking, ...cachedBookings.filter((b) => b.id !== booking.id)];
+  try {
+    localStorage.setItem(BOOKINGS_KEY, JSON.stringify(cachedBookings));
+  } catch {}
   return booking;
 }
 
-export function updateBooking(id: string, updates: Partial<BookingRequest>): boolean {
-  const current = getBookings();
-  const index = current.findIndex((b) => b.id === id);
-  if (index === -1) return false;
-
-  const updatedBooking: BookingRequest = {
-    ...current[index],
-    ...updates,
-    updatedAt: new Date().toISOString(),
-  };
-
-  current[index] = updatedBooking;
+export function saveBooking(booking: BookingRequest): BookingRequest {
+  saveBookingAsync(booking);
+  cachedBookings = [booking, ...cachedBookings.filter((b) => b.id !== booking.id)];
   try {
-    localStorage.setItem(BOOKINGS_KEY, JSON.stringify(current));
-    return true;
-  } catch (e) {
-    console.error('Failed to update booking in localStorage:', e);
-    return false;
+    localStorage.setItem(BOOKINGS_KEY, JSON.stringify(cachedBookings));
+  } catch {}
+  return booking;
+}
+
+export async function updateBookingAsync(id: string, updates: Partial<BookingRequest>): Promise<boolean> {
+  try {
+    const res = await fetch(`/api/bookings/${id}/status`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeader(),
+      },
+      body: JSON.stringify({
+        status: updates.status,
+        remarks: updates.adminRemarks,
+        rejectionReason: updates.rejectionReason,
+      }),
+    });
+
+    if (res.ok) {
+      await syncBookingsFromServer();
+      return true;
+    }
+  } catch (err) {
+    console.warn('Server status update fallback:', err);
   }
+
+  // Local fallback
+  const idx = cachedBookings.findIndex((b) => b.id === id);
+  if (idx !== -1) {
+    cachedBookings[idx] = { ...cachedBookings[idx], ...updates, updatedAt: new Date().toISOString() };
+    try {
+      localStorage.setItem(BOOKINGS_KEY, JSON.stringify(cachedBookings));
+    } catch {}
+    return true;
+  }
+  return false;
+}
+
+export function updateBooking(id: string, updates: Partial<BookingRequest>): boolean {
+  updateBookingAsync(id, updates);
+  const idx = cachedBookings.findIndex((b) => b.id === id);
+  if (idx !== -1) {
+    cachedBookings[idx] = { ...cachedBookings[idx], ...updates, updatedAt: new Date().toISOString() };
+    try {
+      localStorage.setItem(BOOKINGS_KEY, JSON.stringify(cachedBookings));
+    } catch {}
+    return true;
+  }
+  return false;
 }
 
 export function deleteBooking(id: string): boolean {
-  const current = getBookings();
-  const filtered = current.filter((b) => b.id !== id);
-  if (filtered.length === current.length) return false;
+  cachedBookings = cachedBookings.filter((b) => b.id !== id);
   try {
-    localStorage.setItem(BOOKINGS_KEY, JSON.stringify(filtered));
+    localStorage.setItem(BOOKINGS_KEY, JSON.stringify(cachedBookings));
     return true;
-  } catch (e) {
+  } catch {
     return false;
   }
 }
 
 /**
- * Verification for /track-booking: requires matching Booking ID AND Customer Mobile Phone
+ * Verification for /track-booking: queries shared server with local fallback
  */
-export function getBookingByIdAndPhone(id: string, rawPhone: string): BookingRequest | null {
+export async function getBookingByIdAndPhoneAsync(id: string, rawPhone: string): Promise<BookingRequest | null> {
   const cleanId = (id || '').trim().toUpperCase();
-  const cleanPhone = (rawPhone || '').replace(/\D/g, ''); // strip spaces, hyphens
+  const cleanPhone = (rawPhone || '').replace(/\D/g, '');
 
   if (!cleanId || !cleanPhone) return null;
 
-  const bookings = getBookings();
-  const found = bookings.find((b) => {
+  try {
+    const res = await fetch(`/api/bookings/track?id=${encodeURIComponent(cleanId)}&phone=${encodeURIComponent(cleanPhone)}`);
+    if (res.ok) {
+      const data = await res.json();
+      return {
+        id: data.id,
+        customerName: data.customerName,
+        phone: rawPhone,
+        email: '',
+        hall: data.hallSelection,
+        acOption: data.acOption,
+        date: data.date,
+        slot: data.slot,
+        status: data.status,
+        totalEstimate: data.totalAmount,
+        advancePaymentStatus: data.paymentStatus,
+        submittedAt: data.submittedAt,
+        updatedAt: data.submittedAt,
+        adminRemarks: data.adminRemarks,
+      };
+    }
+  } catch (err) {
+    console.warn('Track booking server fetch error, falling back to cache:', err);
+  }
+
+  // Local fallback
+  return getBookingByIdAndPhone(cleanId, cleanPhone);
+}
+
+export function getBookingByIdAndPhone(id: string, rawPhone: string): BookingRequest | null {
+  const cleanId = (id || '').trim().toUpperCase();
+  const cleanPhone = (rawPhone || '').replace(/\D/g, '');
+
+  if (!cleanId || !cleanPhone) return null;
+
+  const found = cachedBookings.find((b) => {
     const bId = (b.id || '').toUpperCase();
     const bPhone = (b.phone || b.applicantPhone || '').replace(/\D/g, '');
     return bId === cleanId && (bPhone.endsWith(cleanPhone) || cleanPhone.endsWith(bPhone));
@@ -106,7 +257,7 @@ export function getBookingByIdAndPhone(id: string, rawPhone: string): BookingReq
 
 export function generateBookingId(): string {
   const randomNum = Math.floor(100000 + Math.random() * 900000);
-  return `CH-2026-${randomNum}`;
+  return `HH-2026-${randomNum}`;
 }
 
 // ==========================================
@@ -118,7 +269,7 @@ export function getAvailabilityOverrides(): AvailabilityOverride[] {
     const raw = localStorage.getItem(AVAILABILITY_OVERRIDES_KEY);
     if (!raw) return [];
     return JSON.parse(raw);
-  } catch (e) {
+  } catch {
     return [];
   }
 }
@@ -133,7 +284,6 @@ export function saveAvailabilityOverride(
     updatedAt: new Date().toISOString(),
   };
 
-  // Remove existing identical date/hall/slot override if exists
   const filtered = list.filter(
     (item) => !(item.date === override.date && item.hall === override.hall && item.slot === override.slot)
   );
@@ -141,9 +291,25 @@ export function saveAvailabilityOverride(
 
   try {
     localStorage.setItem(AVAILABILITY_OVERRIDES_KEY, JSON.stringify(filtered));
-  } catch (e) {
-    console.error('Failed to save availability override:', e);
-  }
+  } catch {}
+
+  // Sync to server blackout if authenticated
+  try {
+    fetch('/api/availability/blackout', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeader(),
+      },
+      body: JSON.stringify({
+        date: override.date,
+        slot: override.slot,
+        resources: [override.hall === 'both' ? 'all' : override.hall === 'hall_2' ? 'ladies_hall' : 'gents_hall'],
+        reason: override.reason,
+      }),
+    });
+  } catch {}
+
   return newOverride;
 }
 
@@ -152,27 +318,16 @@ export function removeAvailabilityOverride(id: string): void {
   const filtered = list.filter((i) => i.id !== id);
   try {
     localStorage.setItem(AVAILABILITY_OVERRIDES_KEY, JSON.stringify(filtered));
-  } catch (e) {
-    console.error('Failed to remove availability override:', e);
-  }
+  } catch {}
 }
 
-/**
- * Independent Booking Conflict Logic (Requirement 8 & 17)
- * A booking conflicts ONLY when:
- * - Same Date
- * - Same Hall (or 'both' requested and either hall occupied)
- * - Same Time Slot (10 AM - 3 PM or 6 PM - 10 PM)
- * - Existing booking is APPROVED / CONFIRMED
- * Hall 1 and Hall 2 are completely independent resources!
- */
 export function checkSlotAvailability(
   hall: HallId,
   date: string,
   slot: SlotType,
   ignoreBookingId?: string
 ): { available: boolean; conflictReason?: string; booking?: BookingRequest; reason?: string } {
-  // 1. Manager-Controlled Availability: Authoritative source of truth
+  // 1. Manager-Controlled Availability check
   const managerOpen = isSlotAvailable(hall, date, slot);
   if (!managerOpen) {
     const hallName = hall === 'hall_1' ? 'Hall 1' : hall === 'hall_2' ? 'Hall 2' : 'Combined Hall';
@@ -185,12 +340,12 @@ export function checkSlotAvailability(
     };
   }
 
-  // 2. Check for existing approved customer reservations
+  // 2. Check for existing approved & confirmed customer reservations
   const bookings = getBookings();
   const activeBookings = bookings.filter((b) => {
     if (ignoreBookingId && b.id === ignoreBookingId) return false;
     const statusUpper = (b.status || '').toUpperCase();
-    return statusUpper === 'APPROVED' || statusUpper === 'CONFIRMED';
+    return statusUpper === 'APPROVED' || statusUpper === 'CONFIRMED' || statusUpper === 'PENDING';
   });
 
   for (const b of activeBookings) {
@@ -230,7 +385,6 @@ export function approveBooking(id: string): { success: boolean; error?: string }
   const booking = current.find((b) => b.id === id);
   if (!booking) return { success: false, error: 'Booking not found' };
 
-  // Final frontend conflict check against other approved bookings
   const avail = checkSlotAvailability(booking.hall, booking.date, booking.slot, booking.id);
   if (!avail.available) {
     return {
@@ -239,84 +393,27 @@ export function approveBooking(id: string): { success: boolean; error?: string }
     };
   }
 
-  const ok = updateBooking(id, {
+  updateBooking(id, {
     status: 'APPROVED',
     rejectionReason: undefined,
   });
 
-  if (ok) {
-    logAuditAction('APPROVE_BOOKING', id, `Booking ${id} approved for ${booking.hall} on ${booking.date} (${booking.slot})`);
-    return { success: true };
-  }
-  return { success: false, error: 'Failed to update booking status in storage' };
+  logAuditAction('APPROVE_BOOKING', id, `Booking ${id} approved for ${booking.hall} on ${booking.date} (${booking.slot})`);
+  return { success: true };
 }
 
 export function rejectBooking(id: string, reason?: string): { success: boolean; error?: string } {
-  const ok = updateBooking(id, {
+  updateBooking(id, {
     status: 'REJECTED',
     rejectionReason: reason?.trim() || 'Declined by venue management.',
   });
 
-  if (ok) {
-    logAuditAction('REJECT_BOOKING', id, `Booking ${id} rejected. Reason: ${reason || 'N/A'}`);
-    return { success: true };
-  }
-  return { success: false, error: 'Failed to update booking status in storage' };
+  logAuditAction('REJECT_BOOKING', id, `Booking ${id} rejected. Reason: ${reason || 'N/A'}`);
+  return { success: true };
 }
 
 // ==========================================
-// 3. MANAGER AUTHENTICATION & SESSION
-// ==========================================
-
-export function validateManagerCredentials(email: string, phone: string, pass: string): boolean {
-  return validateCredentials(email, phone, pass);
-}
-
-export function getSession(): ManagerSession | null {
-  try {
-    const raw =
-      (typeof localStorage !== 'undefined' ? localStorage.getItem(MANAGER_SESSION_KEY) : null) ||
-      (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(MANAGER_SESSION_KEY) : null);
-    if (!raw) return null;
-    return JSON.parse(raw);
-  } catch (e) {
-    return null;
-  }
-}
-
-export function setSession(session: ManagerSession): void {
-  try {
-    const serialized = JSON.stringify(session);
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(MANAGER_SESSION_KEY, serialized);
-    }
-    if (typeof sessionStorage !== 'undefined') {
-      sessionStorage.setItem(MANAGER_SESSION_KEY, serialized);
-    }
-  } catch (e) {
-    console.error('Failed to set manager session:', e);
-  }
-}
-
-export function clearSession(): void {
-  try {
-    if (typeof localStorage !== 'undefined') {
-      localStorage.removeItem(MANAGER_SESSION_KEY);
-    }
-    if (typeof sessionStorage !== 'undefined') {
-      sessionStorage.removeItem(MANAGER_SESSION_KEY);
-    }
-  } catch (e) {
-    console.error('Failed to clear manager session:', e);
-  }
-}
-
-export function isAuthenticated(): boolean {
-  return getSession() !== null;
-}
-
-// ==========================================
-// 4. AUDIT LOGS (LOCAL)
+// 3. AUDIT LOGS
 // ==========================================
 
 export function getAuditLogs(): AuditLogRecord[] {
@@ -327,18 +424,17 @@ export function getAuditLogs(): AuditLogRecord[] {
       return INITIAL_AUDIT_LOGS;
     }
     return JSON.parse(raw);
-  } catch (e) {
+  } catch {
     return INITIAL_AUDIT_LOGS;
   }
 }
 
 export function logAuditAction(action: string, targetId: string, details: string): void {
-  const session = getSession();
   const logs = getAuditLogs();
   const newLog: AuditLogRecord = {
     id: `LOG-${Date.now()}`,
     action,
-    performedBy: session?.email || 'manager@hhevents.in',
+    performedBy: VENUE_ADMIN_INFO.email,
     targetEntity: 'booking',
     targetId,
     details,
@@ -347,5 +443,5 @@ export function logAuditAction(action: string, targetId: string, details: string
   logs.unshift(newLog);
   try {
     localStorage.setItem(AUDIT_LOGS_KEY, JSON.stringify(logs.slice(0, 100)));
-  } catch (e) {}
+  } catch {}
 }

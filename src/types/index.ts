@@ -34,6 +34,8 @@ export interface BookingRequest {
   status: BookingStatus;
   rejectionReason?: string;
   estimatedAmount?: number;
+  packageId?: string;
+  packageName?: string;
   totalEstimate?: number;
   submittedAt: string;
   updatedAt: string;

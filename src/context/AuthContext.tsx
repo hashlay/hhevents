@@ -1,15 +1,9 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { ManagerSession } from '../types';
-import {
-  getSession,
-  setSession,
-  clearSession,
-  isAuthenticated as checkIsAuthenticated,
-} from '../services/storageService';
-import { MANAGER_CREDENTIALS, validateCredentials } from '../config/managerCredentials';
 
 interface AuthContextType {
   user: ManagerSession | null;
+  token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, phone: string, pass: string) => Promise<boolean>;
@@ -18,69 +12,131 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const TOKEN_KEY = 'hh_auth_token_v5';
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  // Synchronous session initialization directly from storage to prevent auth flashing on refresh
-  const [user, setUser] = useState<ManagerSession | null>(() => {
+  const [token, setToken] = useState<string | null>(() => {
     try {
-      return getSession();
-    } catch (e) {
+      return localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY);
+    } catch {
       return null;
     }
   });
-  const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  // Cross-tab and storage synchronization
+  const [user, setUser] = useState<ManagerSession | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  // Restore & verify session against server
   useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'hh_events_manager_session_v4') {
-        try {
-          const updated = getSession();
-          setUser(updated);
-        } catch (err) {
-          setUser(null);
-        }
-      }
-    };
+    let isMounted = true;
 
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    async function checkServerSession() {
+      const storedToken = localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY);
+      if (!storedToken) {
+        if (isMounted) setIsLoading(false);
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/auth/session', {
+          headers: {
+            Authorization: `Bearer ${storedToken}`,
+          },
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data.authenticated && isMounted) {
+            setUser({
+              email: data.user.email,
+              name: data.user.name,
+              role: data.user.role,
+              loginTime: new Date().toISOString(),
+              token: storedToken,
+            });
+            setToken(storedToken);
+          }
+        } else {
+          // Token invalid or expired on server
+          localStorage.removeItem(TOKEN_KEY);
+          sessionStorage.removeItem(TOKEN_KEY);
+          if (isMounted) {
+            setUser(null);
+            setToken(null);
+          }
+        }
+      } catch (err) {
+        // Fallback: If offline or during cold boot, preserve session if token exists
+        console.warn('Session verification fallback:', err);
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    }
+
+    checkServerSession();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const login = async (email: string, phone: string, pass: string): Promise<boolean> => {
     setIsLoading(true);
     try {
-      // Natural UX micro-delay
-      await new Promise((resolve) => setTimeout(resolve, 150));
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, phone, password: pass }),
+      });
 
-      const isValid = validateCredentials(email, phone, pass);
-      if (!isValid) {
-        throw new Error('Invalid manager credentials');
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Invalid administrative credentials');
       }
 
-      const session: ManagerSession = {
-        email: MANAGER_CREDENTIALS.email,
-        name: MANAGER_CREDENTIALS.name,
-        loginTime: new Date().toISOString(),
-        token: `mng_tok_${Date.now()}`,
-      };
+      const receivedToken = data.token;
+      try {
+        localStorage.setItem(TOKEN_KEY, receivedToken);
+      } catch {}
 
-      setSession(session);
-      setUser(session);
+      setToken(receivedToken);
+      setUser({
+        email: data.user.email,
+        name: data.user.name,
+        role: data.user.role,
+        loginTime: new Date().toISOString(),
+        token: receivedToken,
+      });
+
       return true;
     } finally {
       setIsLoading(false);
     }
   };
 
-  const logout = () => {
-    clearSession();
+  const logout = async () => {
+    const currentToken = token;
+    try {
+      if (currentToken) {
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${currentToken}` },
+        });
+      }
+    } catch {}
+
+    localStorage.removeItem(TOKEN_KEY);
+    sessionStorage.removeItem(TOKEN_KEY);
     setUser(null);
+    setToken(null);
   };
 
   return (
     <AuthContext.Provider
       value={{
         user,
+        token,
         isAuthenticated: !!user,
         isLoading,
         login,

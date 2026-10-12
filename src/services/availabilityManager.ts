@@ -14,11 +14,20 @@ export interface DateAvailabilityEntry {
   updatedAt: string;
 }
 
-const STORAGE_KEY = 'hh_manager_controlled_availability_v2';
+const STORAGE_KEY = 'hh_manager_controlled_availability_v5';
+const TOKEN_KEY = 'hh_auth_token_v5';
 
 // In-memory cache
 let availabilityCache: Record<string, DateAvailabilityEntry> = {};
 let listeners: Array<() => void> = [];
+
+function getAuthHeader(): Record<string, string> {
+  try {
+    const token = localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY);
+    if (token) return { Authorization: `Bearer ${token}` };
+  } catch {}
+  return {};
+}
 
 // Initialize from localStorage
 function initCache(): void {
@@ -30,21 +39,90 @@ function initCache(): void {
     } else {
       availabilityCache = {};
     }
-  } catch (e) {
-    console.warn('Failed to load manager availability:', e);
+  } catch {
     availabilityCache = {};
   }
 }
 
 initCache();
 
+export async function syncAvailabilityFromServer(): Promise<void> {
+  try {
+    const res = await fetch('/api/availability');
+    if (res.ok) {
+      const data = await res.json();
+      const updated: Record<string, DateAvailabilityEntry> = { ...availabilityCache };
+
+      // Process blackouts
+      if (Array.isArray(data.blackouts)) {
+        for (const b of data.blackouts) {
+          if (!updated[b.date]) {
+            updated[b.date] = {
+              date: b.date,
+              hall_1: { day: true, evening: true },
+              hall_2: { day: true, evening: true },
+              notes: b.reason,
+              updatedAt: b.createdAt,
+            };
+          }
+          const isHall1 = b.resources.includes('all') || b.resources.includes('gents_hall');
+          const isHall2 = b.resources.includes('all') || b.resources.includes('ladies_hall');
+
+          if (b.slot === 'full_day' || b.slot === 'day') {
+            if (isHall1) updated[b.date].hall_1.day = false;
+            if (isHall2) updated[b.date].hall_2.day = false;
+          }
+          if (b.slot === 'full_day' || b.slot === 'evening') {
+            if (isHall1) updated[b.date].hall_1.evening = false;
+            if (isHall2) updated[b.date].hall_2.evening = false;
+          }
+        }
+      }
+
+      // Process active bookings
+      if (Array.isArray(data.bookings)) {
+        for (const b of data.bookings) {
+          if (!updated[b.date]) {
+            updated[b.date] = {
+              date: b.date,
+              hall_1: { day: true, evening: true },
+              hall_2: { day: true, evening: true },
+              notes: 'Reserved',
+              updatedAt: new Date().toISOString(),
+            };
+          }
+          const isHall1 = b.occupiedResources?.includes('gents_hall') || b.hallSelection === 'both' || b.hallSelection === 'hall_1';
+          const isHall2 = b.occupiedResources?.includes('ladies_hall') || b.hallSelection === 'both' || b.hallSelection === 'hall_2';
+
+          if (b.slot === 'day') {
+            if (isHall1) updated[b.date].hall_1.day = false;
+            if (isHall2) updated[b.date].hall_2.day = false;
+          } else if (b.slot === 'evening') {
+            if (isHall1) updated[b.date].hall_1.evening = false;
+            if (isHall2) updated[b.date].hall_2.evening = false;
+          }
+        }
+      }
+
+      availabilityCache = updated;
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(availabilityCache));
+      } catch {}
+      notifyListeners();
+    }
+  } catch (err) {
+    console.warn('Failed to sync availability from server:', err);
+  }
+}
+
+// Initial sync on mount
+syncAvailabilityFromServer();
+
 function persist(): void {
   if (typeof window === 'undefined') return;
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(availabilityCache));
-  } catch (e) {
-    console.error('Failed to persist manager availability:', e);
-  }
+  } catch {}
   notifyListeners();
 }
 
@@ -65,15 +143,10 @@ export function subscribeAvailability(callback: () => void): () => void {
   };
 }
 
-/**
- * Returns the availability entry for a date.
- * If not yet explicitly customized by manager, defaults to 100% available for all halls and slots.
- */
 export function getManagerAvailability(date: string): DateAvailabilityEntry {
   if (availabilityCache[date]) {
     return availabilityCache[date];
   }
-  // Default: clean open slate (Available)
   return {
     date,
     hall_1: { day: true, evening: true },
@@ -87,11 +160,6 @@ export function getAllManagerAvailability(): Record<string, DateAvailabilityEntr
   return { ...availabilityCache };
 }
 
-/**
- * Check if a specific slot is available.
- * Hall 1 and Hall 2 are independent.
- * Combined Hall ('both') is available ONLY IF both Hall 1 AND Hall 2 are available.
- */
 export function isSlotAvailable(hall: HallTarget, date: string, slot: SlotTarget): boolean {
   const entry = getManagerAvailability(date);
 
@@ -101,16 +169,9 @@ export function isSlotAvailable(hall: HallTarget, date: string, slot: SlotTarget
   if (hall === 'hall_2') {
     return entry.hall_2[slot] !== false;
   }
-  // 'both' (Combined Hall): requires both halls to be available
   return entry.hall_1[slot] !== false && entry.hall_2[slot] !== false;
 }
 
-/**
- * Check whole-day availability for a hall.
- * - 'available': both day and evening are available
- * - 'partial': one slot available, one unavailable
- * - 'unavailable': both slots unavailable
- */
 export function getDayAvailabilitySummary(
   hall: HallTarget,
   date: string
@@ -123,10 +184,6 @@ export function getDayAvailabilitySummary(
   return 'partial';
 }
 
-/**
- * Set availability for a single slot on a date.
- * If hall is 'both', applies to both Hall 1 and Hall 2.
- */
 export function setSlotAvailability(
   hall: HallTarget,
   date: string,
@@ -149,19 +206,35 @@ export function setSlotAvailability(
   } else if (hall === 'hall_2') {
     updated.hall_2[slot] = available;
   } else {
-    // 'both': updates both halls
     updated.hall_1[slot] = available;
     updated.hall_2[slot] = available;
   }
 
   availabilityCache[date] = updated;
   persist();
+
+  // Push server blackout if marked unavailable
+  if (!available) {
+    try {
+      fetch('/api/availability/blackout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeader(),
+        },
+        body: JSON.stringify({
+          date,
+          slot,
+          resources: [hall === 'both' ? 'all' : hall === 'hall_2' ? 'ladies_hall' : 'gents_hall'],
+          reason: notes || 'Manager-controlled blackout',
+        }),
+      });
+    } catch {}
+  }
+
   return updated;
 }
 
-/**
- * Set whole-day availability (both Day and Evening slots) for a hall on a date.
- */
 export function setDayAvailability(
   hall: HallTarget,
   date: string,
@@ -185,7 +258,6 @@ export function setDayAvailability(
     updated.hall_2.day = available;
     updated.hall_2.evening = available;
   } else {
-    // 'both'
     updated.hall_1.day = available;
     updated.hall_1.evening = available;
     updated.hall_2.day = available;
@@ -194,20 +266,33 @@ export function setDayAvailability(
 
   availabilityCache[date] = updated;
   persist();
+
+  if (!available) {
+    try {
+      fetch('/api/availability/blackout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeader(),
+        },
+        body: JSON.stringify({
+          date,
+          slot: 'full_day',
+          resources: [hall === 'both' ? 'all' : hall === 'hall_2' ? 'ladies_hall' : 'gents_hall'],
+          reason: notes || 'Manager whole day blackout',
+        }),
+      });
+    } catch {}
+  }
+
   return updated;
 }
 
-/**
- * Reset a date back to default (all available).
- */
 export function resetDateToDefault(date: string): void {
   delete availabilityCache[date];
   persist();
 }
 
-/**
- * Clear all manager overrides (resets entire calendar to default Available).
- */
 export function clearAllManagerAvailability(): void {
   availabilityCache = {};
   persist();

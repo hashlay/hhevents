@@ -10,15 +10,19 @@ import {
 import {
   getBookings,
   saveBooking,
+  saveBookingAsync,
   updateBooking,
+  updateBookingAsync,
   deleteBooking,
   checkSlotAvailability,
   getBookingByIdAndPhone,
+  getBookingByIdAndPhoneAsync,
   generateBookingId,
   getAuditLogs,
   logAuditAction,
+  syncBookingsFromServer,
 } from './storageService';
-import { INITIAL_MAINTENANCE_SCHEDULE, VENUE_INFO } from './hallData';
+import { INITIAL_MAINTENANCE_SCHEDULE } from './hallData';
 
 export {
   getBookings,
@@ -27,6 +31,7 @@ export {
   deleteBooking,
   checkSlotAvailability,
   getBookingByIdAndPhone,
+  getBookingByIdAndPhoneAsync,
   generateBookingId,
 };
 
@@ -52,8 +57,8 @@ export function getStoredBookings(): BookingRequest[] {
 
 export function saveStoredBookings(bookings: BookingRequest[]): void {
   try {
-    localStorage.setItem('hh_events_bookings_v4', JSON.stringify(bookings));
-  } catch (e) {}
+    localStorage.setItem('hh_events_bookings_v5', JSON.stringify(bookings));
+  } catch {}
 }
 
 export function getStoredAuditLogs(): AuditLogRecord[] {
@@ -66,21 +71,21 @@ export function saveAuditLog(record: Omit<AuditLogRecord, 'id' | 'timestamp'>): 
 
 export function getStoredMaintenance(): MaintenanceRecord[] {
   try {
-    const raw = localStorage.getItem('hh_events_maintenance_v4');
+    const raw = localStorage.getItem('hh_events_maintenance_v5');
     if (!raw) {
-      localStorage.setItem('hh_events_maintenance_v4', JSON.stringify(INITIAL_MAINTENANCE_SCHEDULE));
+      localStorage.setItem('hh_events_maintenance_v5', JSON.stringify(INITIAL_MAINTENANCE_SCHEDULE));
       return INITIAL_MAINTENANCE_SCHEDULE;
     }
     return JSON.parse(raw);
-  } catch (e) {
+  } catch {
     return INITIAL_MAINTENANCE_SCHEDULE;
   }
 }
 
 export function saveStoredMaintenance(records: MaintenanceRecord[]): void {
   try {
-    localStorage.setItem('hh_events_maintenance_v4', JSON.stringify(records));
-  } catch (e) {}
+    localStorage.setItem('hh_events_maintenance_v5', JSON.stringify(records));
+  } catch {}
 }
 
 export interface BookingCreationInput {
@@ -94,6 +99,8 @@ export interface BookingCreationInput {
   expectedAttendees?: number;
   additionalInfo?: string;
   estimatedAmount?: number;
+  packageId?: string;
+  packageName?: string;
 }
 
 export function createBooking(input: BookingCreationInput): {
@@ -143,6 +150,68 @@ export function createBooking(input: BookingCreationInput): {
   return { success: true, booking: newBooking };
 }
 
+export async function createBookingAsync(input: BookingCreationInput): Promise<{
+  success: boolean;
+  booking?: BookingRequest;
+  error?: string;
+}> {
+  try {
+    const res = await fetch('/api/bookings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        customerName: input.customerName,
+        phone: input.phone,
+        email: input.email,
+        packageId: input.packageId,
+        hallSelection: input.hall,
+        acOption: input.acOption,
+        date: input.date,
+        slot: input.slot,
+        expectedAttendees: input.expectedAttendees,
+        additionalInfo: input.additionalInfo,
+      }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      return { success: false, error: data.error || 'Failed to submit reservation' };
+    }
+
+    const b = data.booking;
+    const normalized: BookingRequest = {
+      id: b.id,
+      customerName: b.customerName,
+      phone: b.phone,
+      email: b.email,
+      hall: b.hallSelection || input.hall,
+      acOption: b.acOption || input.acOption,
+      date: b.date,
+      slot: b.slot,
+      expectedAttendees: b.expectedAttendees,
+      additionalInfo: b.additionalInfo,
+      status: b.status,
+      estimatedAmount: b.totalAmount,
+      totalEstimate: b.totalAmount,
+      advancePaymentStatus: b.paymentStatus,
+      submittedAt: b.submittedAt,
+      updatedAt: b.updatedAt,
+      applicantName: b.customerName,
+      applicantPhone: b.phone,
+      applicantEmail: b.email,
+      eventDate: b.date,
+      timeSlot: b.slot,
+      adminRemarks: b.adminRemarks,
+    };
+
+    saveBooking(normalized);
+    return { success: true, booking: normalized };
+  } catch (err: any) {
+    // Fallback to local synchronous creation
+    return createBooking(input);
+  }
+}
+
 export function approveBooking(
   id: string,
   userEmail: string = 'manager@hhevents.in'
@@ -150,25 +219,6 @@ export function approveBooking(
   const current = getBookings();
   const booking = current.find((b) => b.id === id);
   if (!booking) return { success: false, error: 'Booking reference not found' };
-
-  // Perform a final real-time conflict check before approval
-  const bookings = getBookings();
-  const hasConflict = bookings.some((b) => {
-    if (b.id === id) return false;
-    const st = (b.status || '').toUpperCase();
-    if (st !== 'APPROVED' && st !== 'CONFIRMED') return false;
-    if (b.date !== booking.date || b.slot !== booking.slot) return false;
-
-    if (booking.hall === 'both') return true;
-    return b.hall === booking.hall || b.hall === 'both';
-  });
-
-  if (hasConflict) {
-    return {
-      success: false,
-      error: `Cannot approve: Conflict detected for ${booking.hall} on ${booking.date} (${booking.slot}). Another approved booking already exists.`,
-    };
-  }
 
   updateBooking(id, {
     status: 'APPROVED',
@@ -218,10 +268,18 @@ export function cancelBooking(
 
 // Async bridge functions for component compatibility
 export async function fetchBookingsAsync(): Promise<BookingRequest[]> {
-  return getBookings();
+  const synced = await syncBookingsFromServer();
+  return synced;
 }
 
 export async function fetchMaintenanceAsync(): Promise<MaintenanceRecord[]> {
+  try {
+    const res = await fetch('/api/maintenance');
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data)) return data;
+    }
+  } catch {}
   return getStoredMaintenance();
 }
 
@@ -232,32 +290,44 @@ export async function updateBookingStatusAsync(
   userEmail: string = 'manager@hhevents.in'
 ): Promise<void> {
   const upper = (newStatus || '').toUpperCase();
-  if (upper === 'APPROVED' || upper === 'CONFIRMED') {
-    const res = approveBooking(id, userEmail);
-    if (!res.success) throw new Error(res.error || 'Failed to approve booking');
-  } else if (upper === 'REJECTED') {
-    const res = rejectBooking(id, remarks || 'Not available on requested date', userEmail);
-    if (!res.success) throw new Error(res.error || 'Failed to reject booking');
-  } else if (upper === 'CANCELLED') {
-    const res = cancelBooking(id, remarks, userEmail);
-    if (!res.success) throw new Error(res.error || 'Failed to cancel booking');
-  } else {
-    updateBooking(id, {
-      status: newStatus as BookingStatus,
-      adminRemarks: remarks,
-    });
+  const ok = await updateBookingAsync(id, {
+    status: upper as any,
+    adminRemarks: remarks,
+  });
+  if (!ok) {
+    throw new Error('Failed to update booking status on server');
   }
 }
 
 export async function updatePaymentStatusAsync(
   id: string,
-  paymentStatus: 'unpaid' | 'paid' | 'waived' | 'advance_paid' | 'fully_paid' | string
+  paymentStatus: 'unpaid' | 'paid' | 'waived' | 'advance_paid' | 'fully_paid' | string,
+  amount?: number
 ): Promise<void> {
+  try {
+    const token = localStorage.getItem('hh_auth_token_v5') || sessionStorage.getItem('hh_auth_token_v5');
+    if (token && amount) {
+      await fetch(`/api/bookings/${id}/payment`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          amount,
+          paymentType: paymentStatus === 'fully_paid' ? 'full' : 'advance',
+          paymentMethod: 'upi',
+        }),
+      });
+      await syncBookingsFromServer();
+      return;
+    }
+  } catch {}
   updateBooking(id, { advancePaymentStatus: paymentStatus as any });
 }
 
 export async function createBookingRequestAsync(payload: any): Promise<BookingRequest> {
-  const result = createBooking({
+  const result = await createBookingAsync({
     customerName: payload.customerName || payload.applicantName || 'Valued Guest',
     phone: payload.phone || payload.applicantPhone || '',
     email: payload.email || payload.applicantEmail || '',
@@ -268,6 +338,8 @@ export async function createBookingRequestAsync(payload: any): Promise<BookingRe
     expectedAttendees: payload.expectedAttendees || payload.estimatedAttendees,
     additionalInfo: payload.additionalInfo || payload.specialRequirements,
     estimatedAmount: payload.totalEstimate || payload.estimatedAmount || 30000,
+    packageId: payload.packageId,
+    packageName: payload.packageName,
   });
 
   if (!result.success || !result.booking) {
@@ -279,10 +351,40 @@ export async function createBookingRequestAsync(payload: any): Promise<BookingRe
 export const createBookingRequest = createBooking;
 
 export async function fetchAuditLogsAsync(): Promise<AuditLogRecord[]> {
+  try {
+    const token = localStorage.getItem('hh_auth_token_v5') || sessionStorage.getItem('hh_auth_token_v5');
+    if (token) {
+      const res = await fetch('/api/audit-logs', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) return data;
+      }
+    }
+  } catch {}
   return getAuditLogs();
 }
 
 export async function createMaintenanceRecordAsync(payload: Omit<MaintenanceRecord, 'id'>): Promise<MaintenanceRecord> {
+  try {
+    const token = localStorage.getItem('hh_auth_token_v5') || sessionStorage.getItem('hh_auth_token_v5');
+    if (token) {
+      const res = await fetch('/api/maintenance', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.maintenance) return data.maintenance;
+      }
+    }
+  } catch {}
+
   const current = getStoredMaintenance();
   const newRec: MaintenanceRecord = {
     ...payload,

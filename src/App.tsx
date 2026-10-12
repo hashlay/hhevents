@@ -32,6 +32,7 @@ import { AdminMaintenancePage } from './pages/admin/AdminMaintenancePage';
 import { AdminHistoryPage } from './pages/admin/AdminHistoryPage';
 import { AdminSettingsPage } from './pages/admin/AdminSettingsPage';
 import { AdminPhotosPage } from './pages/admin/AdminPhotosPage';
+import { AdminPackagesPage } from './pages/admin/AdminPackagesPage';
 
 const AppContent: React.FC = () => {
   const { currentPath, navigate } = useNavigation();
@@ -54,6 +55,8 @@ const AppContent: React.FC = () => {
       case '/admin/bookings':
       case '/admin/requests':
         return <AdminRequestsPage navigate={navigate} />;
+      case '/admin/packages':
+        return <AdminPackagesPage navigate={navigate} />;
       case '/admin/availability':
         return <AdminAvailabilityPage navigate={navigate} />;
       case '/admin/calendar':
