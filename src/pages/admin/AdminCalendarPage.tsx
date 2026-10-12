@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   CalendarDays,
   Clock,
@@ -14,6 +14,8 @@ import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { BookingStatusBadge, TimeSlotBadge } from '../../components/ui/Badge';
 import { getStoredBookings, getStoredMaintenance } from '../../services/bookingStorage';
+import { syncBookingsFromServer } from '../../services/storageService';
+import { BookingRequest } from '../../types';
 
 interface AdminCalendarPageProps {
   navigate: (path: string) => void;
@@ -23,9 +25,32 @@ export const AdminCalendarPage: React.FC<AdminCalendarPageProps> = ({ navigate }
   const [selectedDate, setSelectedDate] = useState<string>(
     new Date().toISOString().split('T')[0]
   );
+  const [bookings, setBookings] = useState<BookingRequest[]>(getStoredBookings());
+  const [maintenance, setMaintenance] = useState(getStoredMaintenance());
+  const [isLoading, setIsLoading] = useState(false);
 
-  const bookings = getStoredBookings();
-  const maintenance = getStoredMaintenance();
+  useEffect(() => {
+    let mounted = true;
+    async function loadData() {
+      setIsLoading(true);
+      try {
+        const fresh = await syncBookingsFromServer();
+        if (mounted) {
+          setBookings(fresh);
+        }
+      } catch (err) {
+        if (mounted) {
+          setBookings(getStoredBookings());
+        }
+      } finally {
+        if (mounted) setIsLoading(false);
+      }
+    }
+    loadData();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const selectedBookings = bookings.filter((b) => (b.date === selectedDate || b.eventDate === selectedDate));
   const selectedMaintenance = maintenance.filter((m) => m.scheduledDate === selectedDate);

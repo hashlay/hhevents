@@ -33,14 +33,14 @@ export const MobileBottomBar: React.FC<MobileBottomBarProps> = ({ currentPath, n
         isVisible ? 'translate-y-0' : 'translate-y-full pointer-events-none'
       }`}
     >
-      <div className="mx-3 mb-2 p-2 rounded-2xl bg-white/95 backdrop-blur-xl border border-[#E8E5E1] shadow-lg flex items-center justify-between gap-2 text-[#161210]">
+      <div className="mx-3 mb-2 p-2 rounded-2xl bg-white/95 backdrop-blur-xl border border-[#E2DACB] shadow-lg flex items-center justify-between gap-2 text-[#252525]">
         {/* Quick Phone Call Button */}
         <a
           href={`tel:${VENUE_INFO.primaryPhone}`}
-          className="flex flex-col items-center justify-center p-2 rounded-xl bg-[#FAF8F5] hover:bg-[#F3EFE9] text-[#58453E] hover:text-[#161210] border border-[#E8E5E1] transition-colors shrink-0 text-center min-w-[62px]"
+          className="flex flex-col items-center justify-center p-2 rounded-xl bg-[#F5F1E8] hover:bg-[#EDE6D8] text-[#173D35] border border-[#E2DACB] transition-colors shrink-0 text-center min-w-[62px]"
           aria-label="Call Venue Manager"
         >
-          <PhoneCall className="w-4 h-4 text-[#C88D23]" />
+          <PhoneCall className="w-4 h-4 text-[#C9AA72]" />
           <span className="text-[10px] font-semibold mt-0.5">Call</span>
         </a>
 
@@ -50,11 +50,11 @@ export const MobileBottomBar: React.FC<MobileBottomBarProps> = ({ currentPath, n
           onClick={() => navigate('/availability')}
           className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs font-semibold transition-all border ${
             currentPath === '/availability'
-              ? 'bg-[#FAF2E4] border-[#EAD8BF] text-[#9A6611]'
-              : 'bg-[#F6F5F4] border-[#E8E5E1] text-[#161210] hover:bg-[#ECEAE8]'
+              ? 'bg-[#173D35] border-[#173D35] text-[#FAF8F5]'
+              : 'bg-[#F5F1E8] border-[#E2DACB] text-[#252525] hover:bg-[#EDE6D8]'
           }`}
         >
-          <CalendarDays className="w-4 h-4 text-[#C88D23] shrink-0" />
+          <CalendarDays className={`w-4 h-4 ${currentPath === '/availability' ? 'text-[#C9AA72]' : 'text-[#173D35]'} shrink-0`} />
           <span className="truncate">Check Dates</span>
         </button>
 
@@ -62,9 +62,9 @@ export const MobileBottomBar: React.FC<MobileBottomBarProps> = ({ currentPath, n
         <button
           type="button"
           onClick={() => navigate('/book')}
-          className="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-[#C88D23] hover:bg-[#B37B1B] text-white font-bold text-xs shadow-sm active:scale-95 transition-all"
+          className="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-[#173D35] hover:bg-[#0F2722] text-[#FAF8F5] font-bold text-xs shadow-sm active:scale-95 transition-all border border-[#C9AA72]/30"
         >
-          <CalendarDays className="w-4 h-4 text-white shrink-0" />
+          <CalendarDays className="w-4 h-4 text-[#C9AA72] shrink-0" />
           <span className="truncate">Book Hall</span>
         </button>
       </div>

@@ -239,22 +239,22 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
   };
 
   return (
-    <div className="min-h-screen bg-[#FDFBF9] text-[#161210] pb-24">
+    <div className="min-h-screen bg-[#F5F1E8] text-[#252525] pb-24">
       {/* Top Banner */}
-      <section className="bg-gradient-to-b from-[#FAF8F5] via-[#FFFDF9] to-[#F6F5F4] py-10 sm:py-14 border-b border-[#E8E5E1]">
+      <section className="bg-gradient-to-b from-[#FAF8F5] via-[#FFFDF9] to-[#FAF8F5] py-10 sm:py-14 border-b border-[#E2DACB]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-4">
             <BackButton fallback="/" variant="light" />
           </div>
           <div className="max-w-3xl space-y-2">
-            <span className="text-xs uppercase font-bold tracking-widest text-[#9A6611] bg-[#FAF2E4] px-3.5 py-1.5 rounded-full border border-[#E8D7BE] inline-flex items-center gap-1.5">
-              <CalendarDays className="w-3.5 h-3.5 text-[#C88D23]" />
+            <span className="text-xs uppercase font-bold tracking-widest text-[#173D35] bg-[#F5F1E8] px-3.5 py-1.5 rounded-full border border-[#E2DACB] inline-flex items-center gap-1.5">
+              <CalendarDays className="w-3.5 h-3.5 text-[#C9AA72]" />
               Official Reservation Desk
             </span>
-            <h1 className="text-3xl sm:text-4xl font-bold text-[#161210] tracking-tight font-serif-heading">
+            <h1 className="text-3xl sm:text-4xl font-bold text-[#252525] tracking-tight font-serif-heading">
               Reserve H H Events &amp; Conventions
             </h1>
-            <p className="text-sm sm:text-base text-[#58453E]">
+            <p className="text-sm sm:text-base text-[#4A4A4A]">
               Opposite Juma Masjid, Akkarangadi, Panemangalore, Bantwal, Karnataka 574231
             </p>
           </div>
@@ -265,7 +265,7 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6">
         {/* Step Progress Tracker */}
         {currentStep !== 'confirmation' && (
-          <div className="bg-white rounded-2xl p-4 sm:p-5 border border-[#E8E5E1] shadow-2xs mb-8">
+          <div className="bg-white rounded-2xl p-4 sm:p-5 border border-[#E2DACB] shadow-2xs mb-8">
             <div className="flex items-center justify-between">
               {stepsList.map((s, idx) => {
                 const isPassed = currentStepIndex > idx;
@@ -278,7 +278,7 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
                           isPassed
                             ? 'bg-emerald-600 text-white'
                             : isCurrent
-                            ? 'bg-[#C88D23] text-white shadow-xs'
+                            ? 'bg-[#C9AA72] text-white shadow-xs'
                             : 'bg-slate-100 text-slate-400'
                         }`}
                       >
@@ -286,7 +286,7 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
                       </div>
                       <span
                         className={`hidden md:block text-xs font-medium ${
-                          isCurrent ? 'font-bold text-[#161210]' : 'text-slate-500'
+                          isCurrent ? 'font-bold text-[#252525]' : 'text-slate-500'
                         }`}
                       >
                         {s.label}
@@ -308,13 +308,13 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
 
         {/* STEP 1: DATE & SESSION SLOT */}
         {currentStep === 'date' && (
-          <div className="bg-white rounded-3xl p-6 sm:p-10 border border-[#E8E5E1] shadow-sm space-y-8 animate-in fade-in">
+          <div className="bg-white rounded-3xl p-6 sm:p-10 border border-[#E2DACB] shadow-sm space-y-8 animate-in fade-in">
             <div className="space-y-1">
-              <span className="text-xs font-bold uppercase tracking-wider text-[#C88D23]">Step 1 of 5</span>
-              <h2 className="text-2xl font-bold text-[#161210] font-serif-heading">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#C9AA72]">Step 1 of 5</span>
+              <h2 className="text-2xl font-bold text-[#252525] font-serif-heading">
                 Select Event Date &amp; Session Slot
               </h2>
-              <p className="text-xs text-[#58453E]">
+              <p className="text-xs text-[#4A4A4A]">
                 Choose your preferred date and session slot. Sessions operate with dedicated turnover intervals.
               </p>
             </div>
@@ -330,9 +330,9 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
                   min={new Date().toISOString().split('T')[0]}
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
-                  className="w-full px-4 py-3 rounded-2xl border border-slate-300 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#C88D23]"
+                  className="w-full px-4 py-3 rounded-2xl border border-slate-300 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#C9AA72]"
                 />
-                <span className="text-[11px] text-[#7E7873] block">
+                <span className="text-[11px] text-[#737373] block">
                   Schedule reference: {OFFICIAL_TARIFF_SCHEDULE}
                 </span>
               </div>
@@ -350,12 +350,12 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
                       onClick={() => setSlot(s.id)}
                       className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
                         slot === s.id
-                          ? 'border-[#C88D23] bg-[#FAF4EA] text-[#161210] ring-1 ring-[#C88D23]'
+                          ? 'border-[#C9AA72] bg-[#F5F1E8] text-[#252525] ring-1 ring-[#C9AA72]'
                           : 'border-slate-200 hover:border-slate-300 text-slate-700'
                       }`}
                     >
                       <span className="font-bold text-sm block">{s.label}</span>
-                      <span className="text-xs font-mono text-[#9A6611] font-semibold mt-1 block">
+                      <span className="text-xs font-mono text-[#173D35] font-semibold mt-1 block">
                         {s.timeRange}
                       </span>
                     </button>
@@ -394,18 +394,18 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
 
         {/* STEP 2: SELECT OFFICIAL PACKAGE */}
         {currentStep === 'package' && (
-          <div className="bg-white rounded-3xl p-6 sm:p-10 border border-[#E8E5E1] shadow-sm space-y-8 animate-in fade-in">
+          <div className="bg-white rounded-3xl p-6 sm:p-10 border border-[#E2DACB] shadow-sm space-y-8 animate-in fade-in">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div className="space-y-1">
-                <span className="text-xs font-bold uppercase tracking-wider text-[#C88D23]">Step 2 of 5</span>
-                <h2 className="text-2xl font-bold text-[#161210] font-serif-heading">
+                <span className="text-xs font-bold uppercase tracking-wider text-[#C9AA72]">Step 2 of 5</span>
+                <h2 className="text-2xl font-bold text-[#252525] font-serif-heading">
                   Choose Your Hall Package
                 </h2>
-                <p className="text-xs text-[#58453E]">
+                <p className="text-xs text-[#4A4A4A]">
                   Select from the 8 official packages. All packages include the commercial kitchen facility.
                 </p>
               </div>
-              <span className="text-xs font-bold text-[#9A6611] bg-[#FAF2E4] px-3 py-1 rounded-full border border-[#E8D7BE] self-start sm:self-auto">
+              <span className="text-xs font-bold text-[#173D35] bg-[#F5F1E8] px-3 py-1 rounded-full border border-[#E2DACB] self-start sm:self-auto">
                 Date: {date} ({slot === 'day' ? 'Day' : 'Evening'})
               </span>
             </div>
@@ -420,7 +420,7 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
                     onClick={() => setSelectedPackageId(pkg.id)}
                     className={`p-5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between ${
                       isSelected
-                        ? 'border-[#C88D23] bg-[#FAF4EA] shadow-md ring-2 ring-[#C88D23]/30'
+                        ? 'border-[#C9AA72] bg-[#F5F1E8] shadow-md ring-2 ring-[#C9AA72]/30'
                         : 'border-slate-200 hover:border-slate-300 bg-white'
                     }`}
                   >
@@ -444,7 +444,7 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
                         </div>
 
                         <div className="text-right">
-                          <span className="text-lg font-black font-mono text-[#C88D23]">
+                          <span className="text-lg font-black font-mono text-[#C9AA72]">
                             ₹{pkg.rent.toLocaleString('en-IN')}
                           </span>
                         </div>
@@ -461,7 +461,7 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
                     </div>
 
                     <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-                      <span className={`font-semibold ${isSelected ? 'text-[#C88D23]' : 'text-slate-400'}`}>
+                      <span className={`font-semibold ${isSelected ? 'text-[#C9AA72]' : 'text-slate-400'}`}>
                         {isSelected ? '✓ Selected' : 'Tap to select'}
                       </span>
                     </div>
@@ -483,19 +483,19 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
 
         {/* STEP 3: SPACE & LAYOUT CONFIGURATION */}
         {currentStep === 'space' && (
-          <div className="bg-white rounded-3xl p-6 sm:p-10 border border-[#E8E5E1] shadow-sm space-y-8 animate-in fade-in">
+          <div className="bg-white rounded-3xl p-6 sm:p-10 border border-[#E2DACB] shadow-sm space-y-8 animate-in fade-in">
             <div className="space-y-1">
-              <span className="text-xs font-bold uppercase tracking-wider text-[#C88D23]">Step 3 of 5</span>
-              <h2 className="text-2xl font-bold text-[#161210] font-serif-heading">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#C9AA72]">Step 3 of 5</span>
+              <h2 className="text-2xl font-bold text-[#252525] font-serif-heading">
                 Physical Space &amp; Layout Assignment
               </h2>
-              <p className="text-xs text-[#58453E]">
+              <p className="text-xs text-[#4A4A4A]">
                 Configure which specific hall section and dining facilities apply to your booking.
               </p>
             </div>
 
             {/* Package Summary Header */}
-            <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-[#E8E5E1] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-[#E2DACB] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <span className="text-xs text-slate-500 block">Selected Package:</span>
                 <strong className="text-base text-slate-900 font-serif-heading">
@@ -507,7 +507,7 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
               </div>
               <button
                 onClick={() => setCurrentStep('package')}
-                className="text-xs text-[#C88D23] font-semibold hover:underline self-start sm:self-auto"
+                className="text-xs text-[#C9AA72] font-semibold hover:underline self-start sm:self-auto"
               >
                 Change Package
               </button>
@@ -525,12 +525,12 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
                     onClick={() => setHallPreference('hall_1')}
                     className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
                       hallPreference === 'hall_1'
-                        ? 'border-[#C88D23] bg-[#FAF4EA] text-[#161210] ring-1 ring-[#C88D23]'
+                        ? 'border-[#C9AA72] bg-[#F5F1E8] text-[#252525] ring-1 ring-[#C9AA72]'
                         : 'border-slate-200 text-slate-700 hover:bg-slate-50'
                     }`}
                   >
                     <div className="flex items-center gap-2">
-                      <Building2 className="w-4 h-4 text-[#C88D23]" />
+                      <Building2 className="w-4 h-4 text-[#C9AA72]" />
                       <strong className="text-sm">Hall 1 (Gents Wing)</strong>
                     </div>
                     <p className="text-xs text-slate-500 mt-1">
@@ -543,12 +543,12 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
                     onClick={() => setHallPreference('hall_2')}
                     className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
                       hallPreference === 'hall_2'
-                        ? 'border-[#C88D23] bg-[#FAF4EA] text-[#161210] ring-1 ring-[#C88D23]'
+                        ? 'border-[#C9AA72] bg-[#F5F1E8] text-[#252525] ring-1 ring-[#C9AA72]'
                         : 'border-slate-200 text-slate-700 hover:bg-slate-50'
                     }`}
                   >
                     <div className="flex items-center gap-2">
-                      <Building2 className="w-4 h-4 text-[#C88D23]" />
+                      <Building2 className="w-4 h-4 text-[#C9AA72]" />
                       <strong className="text-sm">Hall 2 (Ladies Wing)</strong>
                     </div>
                     <p className="text-xs text-slate-500 mt-1">
@@ -591,13 +591,13 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
 
         {/* STEP 4: HOST DETAILS */}
         {currentStep === 'details' && (
-          <div className="bg-white rounded-3xl p-6 sm:p-10 border border-[#E8E5E1] shadow-sm space-y-8 animate-in fade-in">
+          <div className="bg-white rounded-3xl p-6 sm:p-10 border border-[#E2DACB] shadow-sm space-y-8 animate-in fade-in">
             <div className="space-y-1">
-              <span className="text-xs font-bold uppercase tracking-wider text-[#C88D23]">Step 4 of 5</span>
-              <h2 className="text-2xl font-bold text-[#161210] font-serif-heading">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#C9AA72]">Step 4 of 5</span>
+              <h2 className="text-2xl font-bold text-[#252525] font-serif-heading">
                 Enter Host &amp; Contact Details
               </h2>
-              <p className="text-xs text-[#58453E]">
+              <p className="text-xs text-[#4A4A4A]">
                 We use these details for booking verification and sending status updates.
               </p>
             </div>
@@ -612,7 +612,7 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
                   placeholder="e.g. Mohammed Farooq"
-                  className="w-full px-4 py-3 rounded-2xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-[#C88D23]"
+                  className="w-full px-4 py-3 rounded-2xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9AA72]"
                   required
                 />
               </div>
@@ -626,7 +626,7 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="e.g. 9876543210"
-                  className="w-full px-4 py-3 rounded-2xl border border-slate-300 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#C88D23]"
+                  className="w-full px-4 py-3 rounded-2xl border border-slate-300 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#C9AA72]"
                   required
                 />
               </div>
@@ -640,7 +640,7 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="e.g. farooq@gmail.com"
-                  className="w-full px-4 py-3 rounded-2xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-[#C88D23]"
+                  className="w-full px-4 py-3 rounded-2xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9AA72]"
                 />
               </div>
 
@@ -651,7 +651,7 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
                 <select
                   value={eventType}
                   onChange={(e) => setEventType(e.target.value)}
-                  className="w-full px-4 py-3 rounded-2xl border border-slate-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#C88D23]"
+                  className="w-full px-4 py-3 rounded-2xl border border-slate-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#C9AA72]"
                 >
                   <option value="wedding">Wedding Ceremony &amp; Reception</option>
                   <option value="nikah">Nikah Ceremony</option>
@@ -672,7 +672,7 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
                   value={expectedAttendees}
                   onChange={(e) => setExpectedAttendees(e.target.value ? Number(e.target.value) : '')}
                   placeholder="e.g. 500"
-                  className="w-full px-4 py-3 rounded-2xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-[#C88D23]"
+                  className="w-full px-4 py-3 rounded-2xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9AA72]"
                 />
               </div>
 
@@ -685,7 +685,7 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
                   onChange={(e) => setAdditionalInfo(e.target.value)}
                   rows={3}
                   placeholder="e.g. Need kitchen early morning for catering preparation"
-                  className="w-full px-4 py-3 rounded-2xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-[#C88D23]"
+                  className="w-full px-4 py-3 rounded-2xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9AA72]"
                 />
               </div>
             </div>
@@ -703,21 +703,21 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
 
         {/* STEP 5: REVIEW & SUMMARY */}
         {currentStep === 'summary' && (
-          <form onSubmit={handleSubmitBooking} className="bg-white rounded-3xl p-6 sm:p-10 border border-[#E8E5E1] shadow-sm space-y-8 animate-in fade-in">
+          <form onSubmit={handleSubmitBooking} className="bg-white rounded-3xl p-6 sm:p-10 border border-[#E2DACB] shadow-sm space-y-8 animate-in fade-in">
             <div className="space-y-1">
-              <span className="text-xs font-bold uppercase tracking-wider text-[#C88D23]">Step 5 of 5</span>
-              <h2 className="text-2xl font-bold text-[#161210] font-serif-heading">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#C9AA72]">Step 5 of 5</span>
+              <h2 className="text-2xl font-bold text-[#252525] font-serif-heading">
                 Review Reservation Request
               </h2>
-              <p className="text-xs text-[#58453E]">
+              <p className="text-xs text-[#4A4A4A]">
                 Please review your selected package, schedule, and transparent price breakdown.
               </p>
             </div>
 
             {/* Summary Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 rounded-3xl bg-[#FAF8F5] border border-[#E8E5E1]">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 rounded-3xl bg-[#FAF8F5] border border-[#E2DACB]">
               <div className="space-y-3">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-[#C88D23]">Event &amp; Hall Details</h4>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-[#C9AA72]">Event &amp; Hall Details</h4>
                 <div className="space-y-1.5 text-xs">
                   <div className="flex justify-between py-1 border-b border-slate-200">
                     <span className="text-slate-500">Package:</span>
@@ -743,7 +743,7 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
               </div>
 
               <div className="space-y-3">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-[#C88D23]">Financial Summary</h4>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-[#C9AA72]">Financial Summary</h4>
                 <div className="space-y-1.5 text-xs">
                   <div className="flex justify-between py-1 border-b border-slate-200">
                     <span className="text-slate-500">Package Rent:</span>
@@ -774,7 +774,7 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
                   type="checkbox"
                   checked={termsAccepted}
                   onChange={(e) => setTermsAccepted(e.target.checked)}
-                  className="rounded text-[#C88D23] focus:ring-[#C88D23] mt-0.5"
+                  className="rounded text-[#C9AA72] focus:ring-[#C9AA72] mt-0.5"
                   required
                 />
                 <span className="text-slate-700 leading-relaxed">
@@ -802,7 +802,7 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
 
         {/* STEP 6: CONFIRMATION RECEIPT */}
         {currentStep === 'confirmation' && submittedBooking && (
-          <div className="bg-white rounded-3xl p-8 sm:p-12 border border-[#E8E5E1] shadow-lg text-center space-y-6 animate-in zoom-in-95">
+          <div className="bg-white rounded-3xl p-8 sm:p-12 border border-[#E2DACB] shadow-lg text-center space-y-6 animate-in zoom-in-95">
             <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-inner">
               <Check className="w-8 h-8 stroke-[3]" />
             </div>
@@ -821,12 +821,12 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
             </div>
 
             {/* Reference Number Card */}
-            <div className="p-6 rounded-2xl bg-[#FAF8F5] border border-[#E8E5E1] max-w-md mx-auto space-y-2">
+            <div className="p-6 rounded-2xl bg-[#FAF8F5] border border-[#E2DACB] max-w-md mx-auto space-y-2">
               <span className="text-xs text-slate-400 font-bold uppercase tracking-wider block">
                 Official Booking Reference ID
               </span>
               <div className="flex items-center justify-center gap-3">
-                <span className="text-2xl font-black font-mono text-[#C88D23] tracking-wider">
+                <span className="text-2xl font-black font-mono text-[#C9AA72] tracking-wider">
                   {submittedBooking.id}
                 </span>
                 <button

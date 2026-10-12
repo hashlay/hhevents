@@ -2,18 +2,30 @@
 
 @layer base {
   :root {
-    --gold-primary: #C88D23;
-    --gold-light: #DFAB4C;
-    --gold-dark: #9A6611;
-    --gold-tint: #FAF2E4;
-    --burgundy: #CE3522;
-    --bg-page: #FDFBF9;
+    /* Official HH Events & Conventions Master Color Palette */
+    --deep-emerald: #173D35;
+    --champagne-gold: #C9AA72;
+    --warm-cream: #F5F1E8;
+    --charcoal: #252525;
+
+    /* Tonal variations for accessibility & depth */
+    --emerald-dark: #0F2722;
+    --emerald-light: #245A4F;
+    --gold-light: #D9C194;
+    --gold-dark: #A58448;
+    --cream-light: #FAF8F5;
+    --cream-surface: #EDE6D8;
+    
+    /* Legacy aliases mapped gracefully */
+    --gold-primary: #C9AA72;
+    --gold-dark: #A58448;
+    --gold-tint: #F5F1E8;
+    --bg-page: #F5F1E8;
     --bg-card: #FFFFFF;
-    --bg-stone: #F6F5F4;
-    --text-primary: #161210;
-    --text-secondary: #58453E;
-    --text-muted: #7E7873;
-    --border-light: #E8E5E1;
+    --text-primary: #252525;
+    --text-secondary: #4A4A4A;
+    --text-muted: #737373;
+    --border-light: #E2DACB;
   }
 
   html {
@@ -23,9 +35,9 @@
   }
 
   body {
-    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-    background-color: #FDFBF9;
-    color: #161210;
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: #F5F1E8;
+    color: #252525;
     overflow-x: hidden;
     width: 100%;
     -webkit-font-smoothing: antialiased;
@@ -35,80 +47,125 @@
   h1, h2, h3, h4, .font-serif-heading {
     font-family: 'Playfair Display', Georgia, Cambria, 'Times New Roman', Times, serif;
     letter-spacing: -0.015em;
-    color: #161210;
+    color: #252525;
   }
 
-  /* Elegant warm scrollbar */
+  /* Elegant Emerald & Gold Scrollbar */
   ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
   }
   ::-webkit-scrollbar-track {
-    background: #F6F5F4;
+    background: #F5F1E8;
   }
   ::-webkit-scrollbar-thumb {
-    background: #D8D3CC;
+    background: #D9C194;
     border-radius: 4px;
-    border: 2px solid #F6F5F4;
+    border: 2px solid #F5F1E8;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: #C88D23;
+    background: #C9AA72;
   }
 }
 
-/* Banquet Hall Pro Cards & Surfaces */
+/* Emerald & Champagne Gold Brand Surfaces */
+.bg-emerald-brand {
+  background-color: #173D35;
+}
+
+.text-emerald-brand {
+  color: #173D35;
+}
+
+.bg-gold-brand {
+  background-color: #C9AA72;
+}
+
+.text-gold-brand {
+  color: #C9AA72;
+}
+
+.border-gold-brand {
+  border-color: #C9AA72;
+}
+
+.bg-cream-brand {
+  background-color: #F5F1E8;
+}
+
 .banquet-card {
   background-color: #FFFFFF;
-  border: 1px solid #E8E5E1;
-  border-radius: 1rem;
-  box-shadow: 0 2px 10px -2px rgba(22, 18, 16, 0.04), 0 10px 24px -6px rgba(22, 18, 16, 0.05);
+  border: 1px solid #E2DACB;
+  border-radius: 1.25rem;
+  box-shadow: 0 4px 16px -4px rgba(23, 61, 53, 0.05);
   transition: all 0.3s ease;
 }
 
 .banquet-card:hover {
-  border-color: #D6CCA9;
-  box-shadow: 0 12px 30px -8px rgba(200, 141, 35, 0.12), 0 4px 12px -2px rgba(22, 18, 16, 0.04);
+  border-color: #C9AA72;
+  box-shadow: 0 12px 28px -6px rgba(23, 61, 53, 0.1);
 }
 
 .banquet-card-gold {
-  background: linear-gradient(135deg, #FFFDF9 0%, #FAF4EA 100%);
-  border: 1px solid #EAD8BF;
-  border-radius: 1rem;
-  box-shadow: 0 4px 16px -4px rgba(200, 141, 35, 0.08);
+  background: linear-gradient(135deg, #FFFFFF 0%, #FAF8F5 100%);
+  border: 1px solid #D9C194;
+  border-radius: 1.25rem;
+  box-shadow: 0 6px 20px -4px rgba(201, 170, 114, 0.12);
 }
 
 .banquet-gold-text {
-  color: #C88D23;
+  color: #C9AA72;
 }
 
-.banquet-gold-gradient {
-  background: linear-gradient(135deg, #A86D12 0%, #C88D23 50%, #9A6611 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-/* Backward-compatible luxury card aliases mapped to Banquet Hall Pro */
 .luxury-card {
   background-color: #FFFFFF;
-  border: 1px solid #E8E5E1;
+  border: 1px solid #E2DACB;
   border-radius: 1.25rem;
-  box-shadow: 0 4px 20px -4px rgba(22, 18, 16, 0.05);
-  color: #161210;
+  box-shadow: 0 4px 20px -4px rgba(23, 61, 53, 0.06);
+  color: #252525;
 }
 
 .luxury-card-gold {
-  background: linear-gradient(135deg, #FFFDF9 0%, #FAF4EA 100%);
-  border: 1px solid #EAD8BF;
+  background: linear-gradient(135deg, #FFFFFF 0%, #FAF8F5 100%);
+  border: 1px solid #D9C194;
   border-radius: 1.25rem;
-  box-shadow: 0 6px 24px -6px rgba(200, 141, 35, 0.1);
-  color: #161210;
+  box-shadow: 0 6px 24px -6px rgba(201, 170, 114, 0.15);
+  color: #252525;
 }
 
 .luxury-gold-text {
-  color: #C88D23;
+  color: #C9AA72;
 }
 
 /* Mobile Safe Area */
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom, 16px);
+}
+
+/* Print styles for official invoices and receipts */
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+  header, footer, nav, .no-print, button, [role="dialog"] > div > div:last-child {
+    display: none !important;
+  }
+  body * {
+    visibility: hidden;
+  }
+  #printable-receipt, #printable-receipt * {
+    visibility: visible;
+  }
+  #printable-receipt {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 24px !important;
+    box-shadow: none !important;
+    border: 1px solid #d1d5db !important;
+    background: #ffffff !important;
+  }
 }

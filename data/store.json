@@ -1,5 +1,51 @@
 {
-  "bookings": [],
+  "bookings": [
+    {
+      "id": "HH-2026-522205",
+      "customerName": "Mohammed Imran",
+      "phone": "9876543210",
+      "email": "imran@example.com",
+      "packageId": "single-ac-hall",
+      "packageName": "Single AC Hall",
+      "packagePrice": 30000,
+      "occupiedResources": [
+        "gents_hall",
+        "dining_1",
+        "kitchen"
+      ],
+      "hallSelection": "hall_1",
+      "acOption": "ac",
+      "date": "2026-11-20",
+      "slot": "day",
+      "expectedAttendees": 450,
+      "additionalInfo": "Nikah reception ceremony with flower decoration",
+      "eventType": "wedding",
+      "status": "APPROVED",
+      "totalAmount": 30000,
+      "advanceRequired": 7500,
+      "amountPaid": 10000,
+      "balanceDue": 20000,
+      "paymentStatus": "advance_paid",
+      "payments": [
+        {
+          "id": "PAY-1791821834708",
+          "bookingId": "HH-2026-522205",
+          "amount": 10000,
+          "paymentType": "advance",
+          "paymentMethod": "upi",
+          "referenceNo": "UPI-987654321000",
+          "receivedBy": "hheventsconvention@gmail.com",
+          "receiptNumber": "RCP-834708",
+          "notes": "Initial token advance paid via GPay",
+          "createdAt": "2026-10-12T16:17:14.708Z"
+        }
+      ],
+      "submittedAt": "2026-10-12T16:16:24.210Z",
+      "updatedAt": "2026-10-12T16:17:14.722Z",
+      "adminRemarks": "Advance verified. Hall 1 reserved.",
+      "verifiedBy": "hheventsconvention@gmail.com"
+    }
+  ],
   "packages": [
     {
       "id": "full-ac-hall",
@@ -197,6 +243,42 @@
   "maintenance": [],
   "auditLogs": [
     {
+      "id": "LOG-1791821834725-528",
+      "action": "BOOKING_STATUS_APPROVED",
+      "performedBy": "hheventsconvention@gmail.com",
+      "targetEntity": "booking",
+      "targetId": "HH-2026-522205",
+      "details": "Status changed to APPROVED. Remarks: Advance verified. Hall 1 reserved.",
+      "timestamp": "2026-10-12T16:17:14.725Z"
+    },
+    {
+      "id": "LOG-1791821834712-234",
+      "action": "PAYMENT_RECORDED",
+      "performedBy": "hheventsconvention@gmail.com",
+      "targetEntity": "booking",
+      "targetId": "HH-2026-522205",
+      "details": "Payment of ₹10000 (UPI) recorded. Receipt: RCP-834708",
+      "timestamp": "2026-10-12T16:17:14.712Z"
+    },
+    {
+      "id": "LOG-1791821834683-888",
+      "action": "LOGIN_SUCCESS",
+      "performedBy": "hheventsconvention@gmail.com",
+      "targetEntity": "auth",
+      "targetId": "hheventsconvention@gmail.com",
+      "details": "Administrative console login succeeded.",
+      "timestamp": "2026-10-12T16:17:14.683Z"
+    },
+    {
+      "id": "LOG-1791821784213-18",
+      "action": "BOOKING_SUBMITTED",
+      "performedBy": "Mohammed Imran",
+      "targetEntity": "booking",
+      "targetId": "HH-2026-522205",
+      "details": "Booking HH-2026-522205 submitted for Single AC Hall on 2026-11-20 (day)",
+      "timestamp": "2026-10-12T16:16:24.213Z"
+    },
+    {
       "id": "LOG-INIT",
       "action": "SYSTEM_BOOT",
       "performedBy": "system",
@@ -221,5 +303,5 @@
     "termsAndConditions": "Standard venue guidelines apply. Advance deposit is required to confirm the reservation.",
     "updatedAt": "2026-10-12T15:41:59.824Z"
   },
-  "lastUpdated": "2026-10-12T15:41:59.824Z"
+  "lastUpdated": "2026-10-12T16:17:14.725Z"
 }

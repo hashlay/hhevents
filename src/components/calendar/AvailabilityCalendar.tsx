@@ -143,23 +143,23 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
   };
 
   return (
-    <div className={`bg-white rounded-3xl overflow-hidden border border-[#E8E5E1] shadow-sm text-[#161210] ${className}`}>
+    <div className={`bg-white rounded-3xl overflow-hidden border border-[#E2DACB] shadow-sm text-[#252525] ${className}`}>
       {/* 3 Prominent Hall Options/Tabs */}
-      <div className="bg-[#FAF8F5] p-5 sm:p-6 border-b border-[#E8E5E1]">
+      <div className="bg-[#FAF8F5] p-5 sm:p-6 border-b border-[#E2DACB]">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-[#FAF2E4] border border-[#E3D1B5] flex items-center justify-center text-[#C88D23]">
+            <div className="w-8 h-8 rounded-lg bg-[#F5F1E8] border border-[#E2DACB] flex items-center justify-center text-[#C9AA72]">
               <Building2 className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-lg font-bold font-serif-heading text-[#161210] tracking-wide">
+              <h3 className="text-lg font-bold font-serif-heading text-[#252525] tracking-wide">
                 Select Venue Section
               </h3>
-              <p className="text-xs text-[#58453E]">Independent halls bookable separately</p>
+              <p className="text-xs text-[#4A4A4A]">Independent halls bookable separately</p>
             </div>
           </div>
-          <span className="text-xs text-[#9A6611] bg-[#FAF2E4] border border-[#E8D7BE] px-3 py-1 rounded-full font-semibold flex items-center gap-1.5 w-fit">
-            <Clock className="w-3.5 h-3.5 text-[#C88D23]" />
+          <span className="text-xs text-[#173D35] bg-[#F5F1E8] border border-[#E2DACB] px-3 py-1 rounded-full font-semibold flex items-center gap-1.5 w-fit">
+            <Clock className="w-3.5 h-3.5 text-[#C9AA72]" />
             Live Real-Time Calendar
           </span>
         </div>
@@ -172,8 +172,8 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
             onClick={() => setActiveHall('hall_1')}
             className={`p-3.5 rounded-2xl text-left transition-all border cursor-pointer ${
               activeHall === 'hall_1'
-                ? 'bg-[#FAF2E4] text-[#9A6611] border-[#EAD8BF] font-bold shadow-2xs ring-1 ring-[#C88D23]/30'
-                : 'bg-white hover:bg-[#F3EFE9] text-[#161210] border-[#E8E5E1]'
+                ? 'bg-[#F5F1E8] text-[#173D35] border-[#E2DACB] font-bold shadow-2xs ring-1 ring-[#C9AA72]/30'
+                : 'bg-white hover:bg-[#EDE6D8] text-[#252525] border-[#E2DACB]'
             }`}
           >
             <div className="flex items-center justify-between mb-1">
@@ -181,8 +181,8 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
               <span
                 className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded ${
                   activeHall === 'hall_1'
-                    ? 'bg-[#C88D23] text-white'
-                    : 'bg-[#F6F5F4] text-[#7E7873] border border-[#E8E5E1]'
+                    ? 'bg-[#C9AA72] text-white'
+                    : 'bg-[#FAF8F5] text-[#737373] border border-[#E2DACB]'
                 }`}
               >
                 Independent
@@ -190,7 +190,7 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
             </div>
             <p
               className={`text-xs ${
-                activeHall === 'hall_1' ? 'text-[#58453E] font-medium' : 'text-[#7E7873]'
+                activeHall === 'hall_1' ? 'text-[#4A4A4A] font-medium' : 'text-[#737373]'
               }`}
             >
               Single Hall + Dining + Kitchen
@@ -203,8 +203,8 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
             onClick={() => setActiveHall('hall_2')}
             className={`p-3.5 rounded-2xl text-left transition-all border cursor-pointer ${
               activeHall === 'hall_2'
-                ? 'bg-[#FAF2E4] text-[#9A6611] border-[#EAD8BF] font-bold shadow-2xs ring-1 ring-[#C88D23]/30'
-                : 'bg-white hover:bg-[#F3EFE9] text-[#161210] border-[#E8E5E1]'
+                ? 'bg-[#F5F1E8] text-[#173D35] border-[#E2DACB] font-bold shadow-2xs ring-1 ring-[#C9AA72]/30'
+                : 'bg-white hover:bg-[#EDE6D8] text-[#252525] border-[#E2DACB]'
             }`}
           >
             <div className="flex items-center justify-between mb-1">
@@ -212,8 +212,8 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
               <span
                 className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded ${
                   activeHall === 'hall_2'
-                    ? 'bg-[#C88D23] text-white'
-                    : 'bg-[#F6F5F4] text-[#7E7873] border border-[#E8E5E1]'
+                    ? 'bg-[#C9AA72] text-white'
+                    : 'bg-[#FAF8F5] text-[#737373] border border-[#E2DACB]'
                 }`}
               >
                 Independent
@@ -221,7 +221,7 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
             </div>
             <p
               className={`text-xs ${
-                activeHall === 'hall_2' ? 'text-[#58453E] font-medium' : 'text-[#7E7873]'
+                activeHall === 'hall_2' ? 'text-[#4A4A4A] font-medium' : 'text-[#737373]'
               }`}
             >
               Single Hall + Dining + Kitchen
@@ -234,8 +234,8 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
             onClick={() => setActiveHall('both')}
             className={`p-3.5 rounded-2xl text-left transition-all border cursor-pointer ${
               activeHall === 'both'
-                ? 'bg-[#FAF2E4] text-[#9A6611] border-[#EAD8BF] font-bold shadow-2xs ring-1 ring-[#C88D23]/30'
-                : 'bg-white hover:bg-[#F3EFE9] text-[#161210] border-[#E8E5E1]'
+                ? 'bg-[#F5F1E8] text-[#173D35] border-[#E2DACB] font-bold shadow-2xs ring-1 ring-[#C9AA72]/30'
+                : 'bg-white hover:bg-[#EDE6D8] text-[#252525] border-[#E2DACB]'
             }`}
           >
             <div className="flex items-center justify-between mb-1">
@@ -243,8 +243,8 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
               <span
                 className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded ${
                   activeHall === 'both'
-                    ? 'bg-[#C88D23] text-white'
-                    : 'bg-[#F6F5F4] text-[#7E7873] border border-[#E8E5E1]'
+                    ? 'bg-[#C9AA72] text-white'
+                    : 'bg-[#FAF8F5] text-[#737373] border border-[#E2DACB]'
                 }`}
               >
                 Full Venue
@@ -252,7 +252,7 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
             </div>
             <p
               className={`text-xs ${
-                activeHall === 'both' ? 'text-[#58453E] font-medium' : 'text-[#7E7873]'
+                activeHall === 'both' ? 'text-[#4A4A4A] font-medium' : 'text-[#737373]'
               }`}
             >
               Both Halls Reserved Together
@@ -261,7 +261,7 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
         </div>
 
         {/* Informational Guidance bar */}
-        <div className="mt-3 pt-3 border-t border-[#E8E5E1] flex items-center justify-between text-xs text-[#58453E]">
+        <div className="mt-3 pt-3 border-t border-[#E2DACB] flex items-center justify-between text-xs text-[#4A4A4A]">
           <span className="truncate">{getHallDescription(activeHall)}</span>
           <span className="text-emerald-700 font-semibold shrink-0 ml-2">
             &bull; Hall 1 &amp; Hall 2 Book Independently
@@ -270,17 +270,17 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
       </div>
 
       {/* Calendar Header with Navigation */}
-      <div className="p-4 sm:p-6 bg-white border-b border-[#E8E5E1] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="p-4 sm:p-6 bg-white border-b border-[#E2DACB] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#FAF2E4] border border-[#E3D1B5] flex items-center justify-center text-[#C88D23]">
+          <div className="w-10 h-10 rounded-xl bg-[#F5F1E8] border border-[#E2DACB] flex items-center justify-center text-[#C9AA72]">
             <CalendarIcon className="w-5 h-5" />
           </div>
           <div>
-            <h4 className="text-xl font-bold text-[#161210] font-serif-heading">
+            <h4 className="text-xl font-bold text-[#252525] font-serif-heading">
               {monthNames[currentMonth]} {currentYear}
             </h4>
-            <p className="text-xs text-[#58453E]">
-              Showing availability for <strong className="text-[#C88D23]">{getHallDisplayName(activeHall)}</strong>
+            <p className="text-xs text-[#4A4A4A]">
+              Showing availability for <strong className="text-[#C9AA72]">{getHallDisplayName(activeHall)}</strong>
             </p>
           </div>
         </div>
@@ -289,7 +289,7 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
           <button
             type="button"
             onClick={handlePrevMonth}
-            className="p-2 rounded-xl bg-[#FAF8F5] hover:bg-[#F3EFE9] text-[#161210] border border-[#E8E5E1] transition-colors cursor-pointer"
+            className="p-2 rounded-xl bg-[#FAF8F5] hover:bg-[#EDE6D8] text-[#252525] border border-[#E2DACB] transition-colors cursor-pointer"
             aria-label="Previous Month"
           >
             <ChevronLeft className="w-4 h-4" />
@@ -297,14 +297,14 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
           <button
             type="button"
             onClick={handleCurrentMonth}
-            className="px-3.5 py-2 rounded-xl bg-[#FAF8F5] hover:bg-[#F3EFE9] text-xs text-[#161210] border border-[#E8E5E1] transition-colors font-semibold cursor-pointer"
+            className="px-3.5 py-2 rounded-xl bg-[#FAF8F5] hover:bg-[#EDE6D8] text-xs text-[#252525] border border-[#E2DACB] transition-colors font-semibold cursor-pointer"
           >
             Today
           </button>
           <button
             type="button"
             onClick={handleNextMonth}
-            className="p-2 rounded-xl bg-[#FAF8F5] hover:bg-[#F3EFE9] text-[#161210] border border-[#E8E5E1] transition-colors cursor-pointer"
+            className="p-2 rounded-xl bg-[#FAF8F5] hover:bg-[#EDE6D8] text-[#252525] border border-[#E2DACB] transition-colors cursor-pointer"
             aria-label="Next Month"
           >
             <ChevronRight className="w-4 h-4" />
@@ -315,12 +315,12 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
       {/* Main Calendar Body */}
       <div className="p-4 sm:p-6 space-y-6">
         {/* Days of week header */}
-        <div className="grid grid-cols-7 gap-1 sm:gap-2 text-center border-b border-[#F0ECE7] pb-2">
+        <div className="grid grid-cols-7 gap-1 sm:gap-2 text-center border-b border-[#E2DACB] pb-2">
           {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d, i) => (
             <span
               key={d}
               className={`text-[11px] font-bold uppercase tracking-wider ${
-                i === 0 ? 'text-[#C88D23]' : 'text-[#7E7873]'
+                i === 0 ? 'text-[#C9AA72]' : 'text-[#737373]'
               }`}
             >
               {d}
@@ -356,12 +356,12 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
                 onClick={() => handleDateClick(dateStr)}
                 className={`min-h-[60px] sm:min-h-[68px] p-1.5 sm:p-2 rounded-xl text-left transition-all relative flex flex-col justify-between border cursor-pointer ${
                   isSelected
-                    ? 'bg-[#FAF2E4] border-[#C88D23] shadow-xs ring-2 ring-[#C88D23]/30'
+                    ? 'bg-[#F5F1E8] border-[#C9AA72] shadow-xs ring-2 ring-[#C9AA72]/30'
                     : summary === 'unavailable'
                     ? 'bg-rose-50/50 border-rose-200 hover:border-rose-300'
                     : summary === 'partial'
                     ? 'bg-amber-50/40 border-amber-200 hover:border-amber-300'
-                    : 'bg-white border-[#E8E5E1] hover:border-[#D6CCA9] hover:bg-[#FAF8F5]'
+                    : 'bg-white border-[#E2DACB] hover:border-[#D6CCA9] hover:bg-[#FAF8F5]'
                 }`}
               >
                 {/* Day Number and Today Badge */}
@@ -369,16 +369,16 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
                   <span
                     className={`text-xs font-bold ${
                       isSelected
-                        ? 'text-[#9A6611] font-extrabold'
+                        ? 'text-[#173D35] font-extrabold'
                         : summary === 'unavailable'
                         ? 'text-rose-700'
-                        : 'text-[#161210]'
+                        : 'text-[#252525]'
                     }`}
                   >
                     {day}
                   </span>
                   {isToday && (
-                    <span className="text-[9px] font-bold text-[#9A6611] bg-[#FAF2E4] border border-[#E8D7BE] px-1 py-0.2 rounded">
+                    <span className="text-[9px] font-bold text-[#173D35] bg-[#F5F1E8] border border-[#E2DACB] px-1 py-0.2 rounded">
                       Today
                     </span>
                   )}
@@ -418,7 +418,7 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
         </div>
 
         {/* Legend */}
-        <div className="pt-3 border-t border-[#F0ECE7] flex flex-wrap items-center justify-between gap-3 text-xs text-[#58453E]">
+        <div className="pt-3 border-t border-[#E2DACB] flex flex-wrap items-center justify-between gap-3 text-xs text-[#4A4A4A]">
           <div className="flex items-center gap-4">
             <span className="flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
@@ -433,29 +433,29 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
               <span>Booked</span>
             </span>
           </div>
-          <span className="text-[11px] text-[#7E7873]">
+          <span className="text-[11px] text-[#737373]">
             Dot 1: Day (10 AM–3 PM) &bull; Dot 2: Evening (6 PM–10 PM)
           </span>
         </div>
 
         {/* Selected Date Session Breakdown */}
-        <div className="p-5 sm:p-6 rounded-2xl bg-[#FAF8F5] border border-[#E8E5E1] space-y-5">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#E8E5E1] pb-3">
+        <div className="p-5 sm:p-6 rounded-2xl bg-[#FAF8F5] border border-[#E2DACB] space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#E2DACB] pb-3">
             <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-[#C88D23]">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#C9AA72]">
                 Selected Date Schedule
               </span>
-              <h4 className="text-xl font-bold text-[#161210] font-serif-heading mt-0.5">
+              <h4 className="text-xl font-bold text-[#252525] font-serif-heading mt-0.5">
                 {readableDate}
               </h4>
-              <p className="text-xs text-[#58453E]">
+              <p className="text-xs text-[#4A4A4A]">
                 Venue Section:{' '}
-                <strong className="text-[#161210] font-semibold">{getHallDisplayName(activeHall)}</strong>
+                <strong className="text-[#252525] font-semibold">{getHallDisplayName(activeHall)}</strong>
               </p>
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold px-3 py-1 rounded-full bg-[#FAF2E4] border border-[#E8D7BE] text-[#9A6611]">
+              <span className="text-xs font-bold px-3 py-1 rounded-full bg-[#F5F1E8] border border-[#E2DACB] text-[#173D35]">
                 {activeHall === 'both' ? 'Combined Hall' : `${getHallDisplayName(activeHall)} (Independent)`}
               </span>
             </div>
@@ -467,22 +467,22 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
             <div
               className={`p-4 sm:p-5 rounded-2xl border transition-all ${
                 daySlotAvailable
-                  ? 'bg-white border-emerald-200 text-[#161210] shadow-2xs'
-                  : 'bg-white border-rose-200 text-[#58453E]'
+                  ? 'bg-white border-emerald-200 text-[#252525] shadow-2xs'
+                  : 'bg-white border-rose-200 text-[#4A4A4A]'
               }`}
             >
               <div className="flex items-start justify-between gap-3 mb-3">
                 <div>
                   <div className="flex items-center gap-1.5">
-                    <Clock className="w-4 h-4 text-[#C88D23]" />
-                    <span className="text-xs font-bold uppercase tracking-wider text-[#161210]">
+                    <Clock className="w-4 h-4 text-[#C9AA72]" />
+                    <span className="text-xs font-bold uppercase tracking-wider text-[#252525]">
                       Day Session
                     </span>
                   </div>
-                  <p className="text-base font-bold font-mono text-[#161210] mt-0.5">
+                  <p className="text-base font-bold font-mono text-[#252525] mt-0.5">
                     10:00 AM – 3:00 PM
                   </p>
-                  <p className="text-xs text-[#58453E] mt-0.5">
+                  <p className="text-xs text-[#4A4A4A] mt-0.5">
                     Ceremonies, Muhurtham, Nikah &amp; Lunch Feasts
                   </p>
                 </div>
@@ -506,8 +506,8 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
                 </span>
               </div>
 
-              <div className="pt-3 border-t border-[#F0ECE7] flex items-center justify-between">
-                <span className="text-xs text-[#7E7873]">
+              <div className="pt-3 border-t border-[#E2DACB] flex items-center justify-between">
+                <span className="text-xs text-[#737373]">
                   {daySlotAvailable ? 'Open for reservation' : 'Slot reserved on this date'}
                 </span>
                 {daySlotAvailable ? (
@@ -531,22 +531,22 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
             <div
               className={`p-4 sm:p-5 rounded-2xl border transition-all ${
                 eveningSlotAvailable
-                  ? 'bg-white border-emerald-200 text-[#161210] shadow-2xs'
-                  : 'bg-white border-rose-200 text-[#58453E]'
+                  ? 'bg-white border-emerald-200 text-[#252525] shadow-2xs'
+                  : 'bg-white border-rose-200 text-[#4A4A4A]'
               }`}
             >
               <div className="flex items-start justify-between gap-3 mb-3">
                 <div>
                   <div className="flex items-center gap-1.5">
-                    <Clock className="w-4 h-4 text-[#C88D23]" />
-                    <span className="text-xs font-bold uppercase tracking-wider text-[#161210]">
+                    <Clock className="w-4 h-4 text-[#C9AA72]" />
+                    <span className="text-xs font-bold uppercase tracking-wider text-[#252525]">
                       Evening Session
                     </span>
                   </div>
-                  <p className="text-base font-bold font-mono text-[#161210] mt-0.5">
+                  <p className="text-base font-bold font-mono text-[#252525] mt-0.5">
                     6:00 PM – 10:00 PM
                   </p>
-                  <p className="text-xs text-[#58453E] mt-0.5">
+                  <p className="text-xs text-[#4A4A4A] mt-0.5">
                     Grand Receptions, Dinner Banquets &amp; Cultural Galas
                   </p>
                 </div>
@@ -570,8 +570,8 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
                 </span>
               </div>
 
-              <div className="pt-3 border-t border-[#F0ECE7] flex items-center justify-between">
-                <span className="text-xs text-[#7E7873]">
+              <div className="pt-3 border-t border-[#E2DACB] flex items-center justify-between">
+                <span className="text-xs text-[#737373]">
                   {eveningSlotAvailable ? 'Open for reservation' : 'Slot reserved on this date'}
                 </span>
                 {eveningSlotAvailable ? (
@@ -593,10 +593,10 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
           </div>
 
           {/* Operational Clarity Note */}
-          <div className="p-3.5 rounded-xl bg-white border border-[#E8E5E1] text-xs text-[#58453E] flex items-start gap-2.5">
-            <Info className="w-4 h-4 text-[#C88D23] shrink-0 mt-0.5" />
+          <div className="p-3.5 rounded-xl bg-white border border-[#E2DACB] text-xs text-[#4A4A4A] flex items-start gap-2.5">
+            <Info className="w-4 h-4 text-[#C9AA72] shrink-0 mt-0.5" />
             <div className="space-y-0.5">
-              <strong className="text-[#161210]">Dual Independence:</strong>
+              <strong className="text-[#252525]">Dual Independence:</strong>
               <p>
                 Hall 1 and Hall 2 operate independently with dedicated dining halls and kitchens. Combined Hall reserves both spaces together. Availability status updates immediately when modified by venue management.
               </p>

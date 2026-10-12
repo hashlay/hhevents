@@ -16,7 +16,7 @@ interface FooterProps {
 
 export const Footer: React.FC<FooterProps> = ({ navigate }) => {
   return (
-    <footer className="bg-[#161210] text-[#A8A29E] pt-16 pb-12 border-t border-[#29221D]">
+    <footer className="bg-[#173D35] text-slate-200 pt-16 pb-12 border-t border-[#C9AA72]/30">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 mb-12">
           {/* Brand & Overview */}
@@ -25,16 +25,18 @@ export const Footer: React.FC<FooterProps> = ({ navigate }) => {
               <span className="text-2xl font-bold text-white tracking-tight font-serif-heading block">
                 H H Events &amp; Conventions
               </span>
-              <p className="text-xs text-[#DFAB4C] font-medium mt-1">Panemangalore, Bantwal &bull; Hall 1 &amp; Hall 2</p>
+              <p className="text-xs text-[#C9AA72] font-semibold mt-1 tracking-wider uppercase">
+                Panemangalore, Bantwal &bull; Hall 1 &amp; Hall 2
+              </p>
             </div>
 
-            <p className="text-sm text-[#A8A29E] leading-relaxed max-w-sm">
-              Premier destination for weddings, Nikah, celebrations, cultural gatherings, and corporate conventions. Featuring dual independent halls, dedicated dining wings, and complete kitchen facilities.
+            <p className="text-sm text-slate-300 leading-relaxed max-w-sm">
+              Premier destination for weddings, Nikah, celebrations, cultural gatherings, and corporate conventions. Featuring dual independent halls, dedicated dining wings, and complete commercial kitchen facilities.
             </p>
 
             {/* Official Address */}
-            <div className="p-3.5 rounded-xl bg-[#201A17] border border-[#2F2722] text-xs text-[#D6D3D1] space-y-1.5">
-              <span className="font-bold text-[#DFAB4C] block text-[11px] uppercase tracking-wider">
+            <div className="p-3.5 rounded-xl bg-[#0F2722] border border-[#C9AA72]/20 text-xs text-slate-200 space-y-1.5">
+              <span className="font-bold text-[#C9AA72] block text-[11px] uppercase tracking-wider">
                 Venue Address
               </span>
               <p className="leading-relaxed">
@@ -44,7 +46,7 @@ export const Footer: React.FC<FooterProps> = ({ navigate }) => {
                 href={VENUE_INFO.googleMapsUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-[#C88D23] hover:text-[#DFAB4C] font-semibold pt-1"
+                className="inline-flex items-center gap-1 text-[#C9AA72] hover:text-white font-semibold pt-1"
               >
                 <span>View on Google Maps</span>
                 <ExternalLink className="w-3 h-3" />

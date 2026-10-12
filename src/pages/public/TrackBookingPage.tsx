@@ -131,7 +131,7 @@ export const TrackBookingPage: React.FC<{ navigate: (path: string) => void }> = 
         );
       case 'CANCELLED':
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#F6F5F4] text-[#7E7873] border border-[#E8E5E1]">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#FAF8F5] text-[#737373] border border-[#E2DACB]">
             <AlertCircle className="w-3.5 h-3.5" /> CANCELLED
           </span>
         );
@@ -145,22 +145,22 @@ export const TrackBookingPage: React.FC<{ navigate: (path: string) => void }> = 
   };
 
   return (
-    <div className="space-y-16 pb-24 bg-[#FDFBF9] text-[#161210]">
+    <div className="space-y-16 pb-24 bg-[#F5F1E8] text-[#252525]">
       {/* Header Banner */}
-      <section className="bg-gradient-to-b from-[#FAF8F5] via-[#FFFDF9] to-[#F6F5F4] py-14 sm:py-18 border-b border-[#E8E5E1]">
+      <section className="bg-gradient-to-b from-[#FAF8F5] via-[#FFFDF9] to-[#FAF8F5] py-14 sm:py-18 border-b border-[#E2DACB]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-6">
             <BackButton fallback="/" variant="light" />
           </div>
           <div className="max-w-3xl space-y-4">
-            <span className="text-xs uppercase font-bold tracking-widest text-[#9A6611] bg-[#FAF2E4] px-3.5 py-1.5 rounded-full border border-[#E8D7BE] inline-flex items-center gap-1.5">
-              <Search className="w-3.5 h-3.5 text-[#C88D23]" />
+            <span className="text-xs uppercase font-bold tracking-widest text-[#173D35] bg-[#F5F1E8] px-3.5 py-1.5 rounded-full border border-[#E2DACB] inline-flex items-center gap-1.5">
+              <Search className="w-3.5 h-3.5 text-[#C9AA72]" />
               Reservation Tracker
             </span>
-            <h1 className="text-4xl sm:text-5xl font-bold text-[#161210] tracking-tight font-serif-heading">
+            <h1 className="text-4xl sm:text-5xl font-bold text-[#252525] tracking-tight font-serif-heading">
               Track Reservation Status
             </h1>
-            <p className="text-base sm:text-lg text-[#58453E] leading-relaxed">
+            <p className="text-base sm:text-lg text-[#4A4A4A] leading-relaxed">
               Enter your booking reference code or registered mobile phone number to check review progress, payment records, and allocated hall wings.
             </p>
           </div>
@@ -169,27 +169,27 @@ export const TrackBookingPage: React.FC<{ navigate: (path: string) => void }> = 
 
       {/* Search Input Box */}
       <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <form onSubmit={handleSearch} className="bg-white rounded-3xl p-6 sm:p-8 border border-[#E8E5E1] shadow-sm space-y-4">
+        <form onSubmit={handleSearch} className="bg-white rounded-3xl p-6 sm:p-8 border border-[#E2DACB] shadow-sm space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold text-[#161210] uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-bold text-[#252525] uppercase tracking-wider mb-1.5">
                 Booking Reference ID *
               </label>
               <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#7E7873]" />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#737373]" />
                 <input
                   type="text"
                   value={bookingIdQuery}
                   onChange={(e) => setBookingIdQuery(e.target.value)}
                   placeholder="e.g. HH-2026-104921"
-                  className="w-full pl-11 pr-4 py-3 rounded-xl border border-[#D8D3CC] text-sm text-[#161210] focus:ring-2 focus:ring-[#C88D23] focus:outline-none bg-white font-mono"
+                  className="w-full pl-11 pr-4 py-3 rounded-xl border border-[#E2DACB] text-sm text-[#252525] focus:ring-2 focus:ring-[#C9AA72] focus:outline-none bg-white font-mono"
                   required
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-[#161210] uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-bold text-[#252525] uppercase tracking-wider mb-1.5">
                 Registered Mobile Phone
               </label>
               <input
@@ -197,7 +197,7 @@ export const TrackBookingPage: React.FC<{ navigate: (path: string) => void }> = 
                 value={phoneQuery}
                 onChange={(e) => setPhoneQuery(e.target.value)}
                 placeholder="e.g. 9876543210 (Optional verification)"
-                className="w-full px-4 py-3 rounded-xl border border-[#D8D3CC] text-sm text-[#161210] focus:ring-2 focus:ring-[#C88D23] focus:outline-none bg-white font-mono"
+                className="w-full px-4 py-3 rounded-xl border border-[#E2DACB] text-sm text-[#252525] focus:ring-2 focus:ring-[#C9AA72] focus:outline-none bg-white font-mono"
               />
             </div>
           </div>
@@ -228,11 +228,11 @@ export const TrackBookingPage: React.FC<{ navigate: (path: string) => void }> = 
           )}
 
           {booking && (
-            <div className="bg-white rounded-3xl p-6 sm:p-10 border border-[#E8E5E1] shadow-md space-y-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#F0ECE7] pb-6">
+            <div className="bg-white rounded-3xl p-6 sm:p-10 border border-[#E2DACB] shadow-md space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#E2DACB] pb-6">
                 <div>
-                  <span className="text-xs text-[#7E7873] uppercase tracking-wider block">Reservation Reference</span>
-                  <h3 className="text-2xl font-bold font-mono text-[#161210] mt-0.5">
+                  <span className="text-xs text-[#737373] uppercase tracking-wider block">Reservation Reference</span>
+                  <h3 className="text-2xl font-bold font-mono text-[#252525] mt-0.5">
                     {booking.id}
                   </h3>
                 </div>
@@ -241,20 +241,20 @@ export const TrackBookingPage: React.FC<{ navigate: (path: string) => void }> = 
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 text-xs">
                 <div>
-                  <span className="text-[#7E7873] block uppercase">Host Name</span>
-                  <span className="font-bold text-[#161210] text-sm">{booking.customerName}</span>
+                  <span className="text-[#737373] block uppercase">Host Name</span>
+                  <span className="font-bold text-[#252525] text-sm">{booking.customerName}</span>
                 </div>
                 <div>
-                  <span className="text-[#7E7873] block uppercase">Package</span>
-                  <span className="font-bold text-[#161210] text-sm">{booking.packageName || 'Official Hall Package'}</span>
+                  <span className="text-[#737373] block uppercase">Package</span>
+                  <span className="font-bold text-[#252525] text-sm">{booking.packageName || 'Official Hall Package'}</span>
                 </div>
                 <div>
-                  <span className="text-[#7E7873] block uppercase">Event Date</span>
-                  <span className="font-bold text-[#161210] text-sm">{booking.date}</span>
+                  <span className="text-[#737373] block uppercase">Event Date</span>
+                  <span className="font-bold text-[#252525] text-sm">{booking.date}</span>
                 </div>
                 <div>
-                  <span className="text-[#7E7873] block uppercase">Session Slot</span>
-                  <span className="font-bold text-[#161210] text-sm uppercase">
+                  <span className="text-[#737373] block uppercase">Session Slot</span>
+                  <span className="font-bold text-[#252525] text-sm uppercase">
                     {booking.slot === 'day' ? 'Day (10 AM - 3 PM)' : 'Evening (6 PM - 10 PM)'}
                   </span>
                 </div>
@@ -269,21 +269,21 @@ export const TrackBookingPage: React.FC<{ navigate: (path: string) => void }> = 
               )}
 
               {/* Financial Status */}
-              <div className="p-5 rounded-2xl bg-[#FAF8F5] border border-[#E8E5E1] grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+              <div className="p-5 rounded-2xl bg-[#FAF8F5] border border-[#E2DACB] grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
                 <div>
-                  <span className="text-[#7E7873] block uppercase">Total Rent</span>
-                  <span className="text-xl font-bold text-[#161210]">
+                  <span className="text-[#737373] block uppercase">Total Rent</span>
+                  <span className="text-xl font-bold text-[#252525]">
                     ₹{(booking.totalAmount || booking.estimatedAmount || 0).toLocaleString('en-IN')}.00
                   </span>
                 </div>
                 <div>
-                  <span className="text-[#7E7873] block uppercase">Advance Paid</span>
+                  <span className="text-[#737373] block uppercase">Advance Paid</span>
                   <span className="text-xl font-bold text-emerald-700">
                     ₹{(booking.amountPaid || 0).toLocaleString('en-IN')}.00
                   </span>
                 </div>
                 <div>
-                  <span className="text-[#7E7873] block uppercase">Balance Due</span>
+                  <span className="text-[#737373] block uppercase">Balance Due</span>
                   <span className="text-xl font-bold text-amber-700">
                     ₹{(booking.balanceDue !== undefined ? booking.balanceDue : (booking.totalAmount || 0)).toLocaleString('en-IN')}.00
                   </span>
@@ -293,9 +293,9 @@ export const TrackBookingPage: React.FC<{ navigate: (path: string) => void }> = 
               <div className="pt-2 flex flex-wrap items-center justify-between gap-4">
                 <a
                   href={`tel:${VENUE_INFO.primaryPhone}`}
-                  className="inline-flex items-center gap-1.5 text-xs text-[#161210] font-semibold hover:text-[#C88D23]"
+                  className="inline-flex items-center gap-1.5 text-xs text-[#252525] font-semibold hover:text-[#C9AA72]"
                 >
-                  <PhoneCall className="w-3.5 h-3.5 text-[#C88D23]" />
+                  <PhoneCall className="w-3.5 h-3.5 text-[#C9AA72]" />
                   <span>Call Venue Management: {VENUE_INFO.primaryPhone}</span>
                 </a>
 

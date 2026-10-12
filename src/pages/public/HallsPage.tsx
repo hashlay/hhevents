@@ -26,22 +26,22 @@ export const HallsPage: React.FC<HallsPageProps> = ({ navigate }) => {
   const { getPhotoUrl } = useVenuePhotos();
 
   return (
-    <div className="space-y-16 pb-24 bg-[#FDFBF9] text-[#161210]">
+    <div className="space-y-16 pb-24 bg-[#F5F1E8] text-[#252525]">
       {/* Header Banner */}
-      <section className="bg-gradient-to-b from-[#FAF8F5] via-[#FFFDF9] to-[#F6F5F4] py-14 sm:py-18 border-b border-[#E8E5E1]">
+      <section className="bg-gradient-to-b from-[#FAF8F5] via-[#FFFDF9] to-[#FAF8F5] py-14 sm:py-18 border-b border-[#E2DACB]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-6">
             <BackButton fallback="/" variant="light" />
           </div>
           <div className="max-w-3xl space-y-4">
-            <span className="text-xs uppercase font-bold tracking-widest text-[#9A6611] bg-[#FAF2E4] px-3.5 py-1.5 rounded-full border border-[#E8D7BE] inline-flex items-center gap-1.5">
-              <Building2 className="w-3.5 h-3.5 text-[#C88D23]" />
+            <span className="text-xs uppercase font-bold tracking-widest text-[#173D35] bg-[#F5F1E8] px-3.5 py-1.5 rounded-full border border-[#E2DACB] inline-flex items-center gap-1.5">
+              <Building2 className="w-3.5 h-3.5 text-[#C9AA72]" />
               Venue Architecture &amp; Capacities
             </span>
-            <h1 className="text-4xl sm:text-5xl font-bold text-[#161210] tracking-tight font-serif-heading">
+            <h1 className="text-4xl sm:text-5xl font-bold text-[#252525] tracking-tight font-serif-heading">
               Our Halls: Hall 1 &amp; Hall 2
             </h1>
-            <p className="text-base sm:text-lg text-[#58453E] leading-relaxed">
+            <p className="text-base sm:text-lg text-[#4A4A4A] leading-relaxed">
               H H Events &amp; Conventions offers two independently bookable halls designed to host concurrent or standalone gatherings with total acoustic and logistical privacy in Panemangalore.
             </p>
           </div>
@@ -50,16 +50,16 @@ export const HallsPage: React.FC<HallsPageProps> = ({ navigate }) => {
 
       {/* Dual Independent Booking Highlight Banner */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="p-6 sm:p-8 rounded-2xl bg-gradient-to-br from-[#FFFDF9] to-[#FAF4EA] border border-[#EAD8BF] flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm">
+        <div className="p-6 sm:p-8 rounded-2xl bg-gradient-to-br from-[#FFFDF9] to-[#F5F1E8] border border-[#E2DACB] flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm">
           <div className="space-y-1.5 text-center md:text-left">
-            <div className="inline-flex items-center gap-1.5 text-xs font-bold text-[#9A6611] uppercase tracking-wide">
-              <DoorOpen className="w-4 h-4 text-[#C88D23]" />
+            <div className="inline-flex items-center gap-1.5 text-xs font-bold text-[#173D35] uppercase tracking-wide">
+              <DoorOpen className="w-4 h-4 text-[#C9AA72]" />
               Dual Independent Architecture
             </div>
-            <h2 className="text-xl sm:text-2xl font-bold text-[#161210] font-serif-heading">
+            <h2 className="text-xl sm:text-2xl font-bold text-[#252525] font-serif-heading">
               Need Hall 1, Hall 2, or Both? Book Exactly What Fits Your Event
             </h2>
-            <p className="text-xs sm:text-sm text-[#58453E] max-w-2xl leading-relaxed">
+            <p className="text-xs sm:text-sm text-[#4A4A4A] max-w-2xl leading-relaxed">
               Each hall has its own independent entrance, banquet seating, dining wings, and dedicated kitchen facilities. Even if one hall is reserved, the other remains fully available for booking.
             </p>
           </div>
@@ -84,7 +84,7 @@ export const HallsPage: React.FC<HallsPageProps> = ({ navigate }) => {
             return (
               <div
                 key={hall.id}
-                className="bg-white rounded-3xl border border-[#E8E5E1] overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col lg:flex-row"
+                className="bg-white rounded-3xl border border-[#E2DACB] overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col lg:flex-row"
               >
                 {/* Visual Image */}
                 <div className="lg:w-1/2 relative bg-[#FAF8F5] min-h-[300px] lg:min-h-full flex items-center justify-center overflow-hidden">
@@ -95,13 +95,13 @@ export const HallsPage: React.FC<HallsPageProps> = ({ navigate }) => {
                       className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
                     />
                   ) : (
-                    <div className="text-center p-8 space-y-2 text-[#7E7873]">
-                      <Camera className="w-12 h-12 text-[#C88D23] mx-auto" />
-                      <h4 className="text-base font-bold text-[#161210]">{hall.name} Photograph</h4>
+                    <div className="text-center p-8 space-y-2 text-[#737373]">
+                      <Camera className="w-12 h-12 text-[#C9AA72] mx-auto" />
+                      <h4 className="text-base font-bold text-[#252525]">{hall.name} Photograph</h4>
                       <p className="text-xs">Official authentic photograph slot</p>
                     </div>
                   )}
-                  <div className="absolute top-4 left-4 bg-white/95 backdrop-blur-md text-[#161210] text-xs font-bold px-3 py-1.5 rounded-lg border border-[#E8E5E1] shadow-2xs">
+                  <div className="absolute top-4 left-4 bg-white/95 backdrop-blur-md text-[#252525] text-xs font-bold px-3 py-1.5 rounded-lg border border-[#E2DACB] shadow-2xs">
                     {hall.name.toUpperCase()} &bull; INDEPENDENT SECTION
                   </div>
                 </div>
@@ -110,64 +110,64 @@ export const HallsPage: React.FC<HallsPageProps> = ({ navigate }) => {
                 <div className="lg:w-1/2 p-6 sm:p-10 flex flex-col justify-between space-y-6">
                   <div>
                     <div className="flex items-center gap-2 mb-2">
-                      <span className="text-[11px] uppercase font-bold tracking-wider text-[#9A6611] bg-[#FAF2E4] px-2.5 py-0.5 rounded border border-[#E8D7BE]">
+                      <span className="text-[11px] uppercase font-bold tracking-wider text-[#173D35] bg-[#F5F1E8] px-2.5 py-0.5 rounded border border-[#E2DACB]">
                         Independent Booking
                       </span>
-                      <span className="text-xs text-[#7E7873]">Panemangalore Campus</span>
+                      <span className="text-xs text-[#737373]">Panemangalore Campus</span>
                     </div>
 
-                    <h2 className="text-2xl sm:text-3xl font-bold text-[#161210] font-serif-heading">
+                    <h2 className="text-2xl sm:text-3xl font-bold text-[#252525] font-serif-heading">
                       {hall.displayName}
                     </h2>
-                    <p className="text-sm text-[#58453E] mt-2 leading-relaxed">
+                    <p className="text-sm text-[#4A4A4A] mt-2 leading-relaxed">
                       {hall.description}
                     </p>
 
                     {/* Official Pricing Breakdown */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6">
-                      <div className="p-4 rounded-xl bg-[#FAF8F5] border border-[#E8E5E1] text-xs">
+                      <div className="p-4 rounded-xl bg-[#FAF8F5] border border-[#E2DACB] text-xs">
                         <div className="flex items-center gap-1.5 font-bold text-sky-800">
                           <ThermometerSnowflake className="w-4 h-4 text-sky-600" />
                           <span>Single AC Hall</span>
                         </div>
-                        <span className="text-xl font-bold text-[#161210] block mt-1">₹{hall.pricing.ac.toLocaleString()}.00</span>
-                        <span className="text-[11px] text-[#7E7873]">Single Dining + Kitchen included</span>
+                        <span className="text-xl font-bold text-[#252525] block mt-1">₹{hall.pricing.ac.toLocaleString()}.00</span>
+                        <span className="text-[11px] text-[#737373]">Single Dining + Kitchen included</span>
                       </div>
 
-                      <div className="p-4 rounded-xl bg-[#FAF8F5] border border-[#E8E5E1] text-xs">
+                      <div className="p-4 rounded-xl bg-[#FAF8F5] border border-[#E2DACB] text-xs">
                         <div className="flex items-center gap-1.5 font-bold text-emerald-800">
                           <Wind className="w-4 h-4 text-emerald-600" />
                           <span>Single Non AC Hall</span>
                         </div>
-                        <span className="text-xl font-bold text-[#161210] block mt-1">₹{hall.pricing.nonAc.toLocaleString()}.00</span>
-                        <span className="text-[11px] text-[#7E7873]">Single Dining + Kitchen included</span>
+                        <span className="text-xl font-bold text-[#252525] block mt-1">₹{hall.pricing.nonAc.toLocaleString()}.00</span>
+                        <span className="text-[11px] text-[#737373]">Single Dining + Kitchen included</span>
                       </div>
 
-                      <div className="p-4 rounded-xl bg-[#FAF8F5] border border-[#E8E5E1] text-xs">
+                      <div className="p-4 rounded-xl bg-[#FAF8F5] border border-[#E2DACB] text-xs">
                         <div className="flex items-center gap-1.5 font-bold text-purple-800">
                           <ThermometerSnowflake className="w-4 h-4 text-purple-600" />
                           <span>Single AC (Double Dining)</span>
                         </div>
-                        <span className="text-xl font-bold text-[#161210] block mt-1">₹{(hall.pricing.acWithDoubleDining ?? 45000).toLocaleString()}.00</span>
-                        <span className="text-[11px] text-[#7E7873]">Double Dining + Kitchen</span>
+                        <span className="text-xl font-bold text-[#252525] block mt-1">₹{(hall.pricing.acWithDoubleDining ?? 45000).toLocaleString()}.00</span>
+                        <span className="text-[11px] text-[#737373]">Double Dining + Kitchen</span>
                       </div>
 
-                      <div className="p-4 rounded-xl bg-[#FAF8F5] border border-[#E8E5E1] text-xs">
+                      <div className="p-4 rounded-xl bg-[#FAF8F5] border border-[#E2DACB] text-xs">
                         <div className="flex items-center gap-1.5 font-bold text-amber-800">
                           <Wind className="w-4 h-4 text-amber-600" />
                           <span>Single Non AC (Double Dining)</span>
                         </div>
-                        <span className="text-xl font-bold text-[#161210] block mt-1">₹{(hall.pricing.nonAcWithDoubleDining ?? 30000).toLocaleString()}.00</span>
-                        <span className="text-[11px] text-[#7E7873]">Double Dining + Kitchen</span>
+                        <span className="text-xl font-bold text-[#252525] block mt-1">₹{(hall.pricing.nonAcWithDoubleDining ?? 30000).toLocaleString()}.00</span>
+                        <span className="text-[11px] text-[#737373]">Double Dining + Kitchen</span>
                       </div>
                     </div>
 
                     {/* Features List */}
                     <div className="mt-6 space-y-2">
-                      <span className="text-xs uppercase font-bold tracking-wider text-[#161210] block">
+                      <span className="text-xs uppercase font-bold tracking-wider text-[#252525] block">
                         Included Facilities:
                       </span>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-[#58453E]">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-[#4A4A4A]">
                         {hall.features.map((feat, fidx) => (
                           <div key={fidx} className="flex items-center gap-2">
                             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
@@ -186,7 +186,7 @@ export const HallsPage: React.FC<HallsPageProps> = ({ navigate }) => {
                     </div>
                   </div>
 
-                  <div className="pt-6 border-t border-[#F0ECE7] flex flex-wrap items-center justify-between gap-4">
+                  <div className="pt-6 border-t border-[#E2DACB] flex flex-wrap items-center justify-between gap-4">
                     <div className="text-xs text-emerald-700 font-semibold bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
                       Kitchen Included in All Packages
                     </div>
@@ -213,38 +213,38 @@ export const HallsPage: React.FC<HallsPageProps> = ({ navigate }) => {
           })}
 
           {/* Combined Hall Card */}
-          <div className="bg-gradient-to-br from-[#FFFDF9] via-[#FAF4EA] to-[#FFFDF9] rounded-3xl border border-[#EAD8BF] p-6 sm:p-10 shadow-sm relative overflow-hidden">
+          <div className="bg-gradient-to-br from-[#FFFDF9] via-[#F5F1E8] to-[#FFFDF9] rounded-3xl border border-[#E2DACB] p-6 sm:p-10 shadow-sm relative overflow-hidden">
             <div className="relative z-10 max-w-4xl space-y-6">
-              <span className="text-xs uppercase font-bold tracking-widest text-[#9A6611] bg-[#FAF2E4] px-3 py-1 rounded-full border border-[#E8D7BE] inline-flex items-center gap-1.5">
-                <Users className="w-3.5 h-3.5 text-[#C88D23]" />
+              <span className="text-xs uppercase font-bold tracking-widest text-[#173D35] bg-[#F5F1E8] px-3 py-1 rounded-full border border-[#E2DACB] inline-flex items-center gap-1.5">
+                <Users className="w-3.5 h-3.5 text-[#C9AA72]" />
                 Grand Campus Reservation
               </span>
-              <h2 className="text-3xl sm:text-4xl font-bold text-[#161210] font-serif-heading">
+              <h2 className="text-3xl sm:text-4xl font-bold text-[#252525] font-serif-heading">
                 {COMBINED_PACKAGE.name}
               </h2>
-              <p className="text-sm sm:text-base text-[#58453E] leading-relaxed">
+              <p className="text-sm sm:text-base text-[#4A4A4A] leading-relaxed">
                 Reserve the entire venue — Hall 1 and Hall 2 combined. Features dedicated Gents Hall &amp; Ladies Hall, Gents Dining &amp; Ladies Dining wings, and catering kitchens for mega celebrations and grand conventions up to 3,000 persons.
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="p-4 rounded-xl bg-white border border-[#EAD8BF] shadow-2xs">
-                  <div className="flex items-center gap-2 font-bold text-[#9A6611] text-sm">
-                    <ThermometerSnowflake className="w-4 h-4 text-[#C88D23]" />
+                <div className="p-4 rounded-xl bg-white border border-[#E2DACB] shadow-2xs">
+                  <div className="flex items-center gap-2 font-bold text-[#173D35] text-sm">
+                    <ThermometerSnowflake className="w-4 h-4 text-[#C9AA72]" />
                     <span>Full AC Hall Package</span>
                   </div>
-                  <span className="text-2xl font-bold text-[#161210] block mt-1">₹{COMBINED_PACKAGE.pricing.ac.toLocaleString()}.00</span>
-                  <p className="text-xs text-[#7E7873] mt-1">
+                  <span className="text-2xl font-bold text-[#252525] block mt-1">₹{COMBINED_PACKAGE.pricing.ac.toLocaleString()}.00</span>
+                  <p className="text-xs text-[#737373] mt-1">
                     Gents &amp; Ladies Hall + Gents &amp; Ladies Dining + Kitchen
                   </p>
                 </div>
 
-                <div className="p-4 rounded-xl bg-white border border-[#EAD8BF] shadow-2xs">
+                <div className="p-4 rounded-xl bg-white border border-[#E2DACB] shadow-2xs">
                   <div className="flex items-center gap-2 font-bold text-emerald-800 text-sm">
                     <Wind className="w-4 h-4 text-emerald-600" />
                     <span>Full Non AC Hall Package</span>
                   </div>
-                  <span className="text-2xl font-bold text-[#161210] block mt-1">₹{COMBINED_PACKAGE.pricing.nonAc.toLocaleString()}.00</span>
-                  <p className="text-xs text-[#7E7873] mt-1">
+                  <span className="text-2xl font-bold text-[#252525] block mt-1">₹{COMBINED_PACKAGE.pricing.nonAc.toLocaleString()}.00</span>
+                  <p className="text-xs text-[#737373] mt-1">
                     Gents &amp; Ladies Hall + Gents &amp; Ladies Dining + Kitchen
                   </p>
                 </div>

@@ -10,17 +10,18 @@ import {
   RefreshCw,
   Sliders,
   CalendarDays,
+  IndianRupee,
+  Receipt,
+  Package,
+  CreditCard,
+  Eye,
+  AlertCircle
 } from 'lucide-react';
 import { AdminLayout } from '../../components/layout/AdminLayout';
-import { Card, CardContent } from '../../components/ui/Card';
+import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { BookingStatusBadge } from '../../components/ui/Badge';
-import {
-  getBookings,
-  checkSlotAvailability,
-  approveBooking,
-  rejectBooking,
-} from '../../services/storageService';
+import { getBookings, checkSlotAvailability } from '../../services/storageService';
 import { useToast } from '../../context/ToastContext';
 import { BookingRequest } from '../../types';
 
@@ -33,13 +34,26 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ navigate
   const [bookings, setBookings] = useState<BookingRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const loadData = () => {
+  const loadData = async () => {
     setIsLoading(true);
     try {
-      const all = getBookings();
-      setBookings(all);
-    } catch (e: any) {
-      showToast(e?.message || 'Error loading dashboard statistics', 'error');
+      const res = await fetch('/api/bookings', {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('hh_auth_token_v5') || ''}`,
+        },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setBookings(data);
+          setIsLoading(false);
+          return;
+        }
+      }
+      // Fallback
+      setBookings(getBookings());
+    } catch {
+      setBookings(getBookings());
     } finally {
       setIsLoading(false);
     }
@@ -57,12 +71,26 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ navigate
   const approvedBookings = bookings.filter(
     (b) => (b.status || '').toUpperCase() === 'APPROVED' || (b.status || '').toUpperCase() === 'CONFIRMED'
   );
-  const rejectedBookings = bookings.filter(
-    (b) => (b.status || '').toUpperCase() === 'REJECTED'
+  const completedBookings = bookings.filter(
+    (b) => (b.status || '').toUpperCase() === 'COMPLETED'
   );
-  const upcomingBookings = approvedBookings.filter((b) => b.date >= today);
 
-  // Hall 1 & Hall 2 Today's Real-time Status
+  // Financial Metrics
+  const totalAgreedRevenue = approvedBookings.reduce(
+    (sum, b) => sum + (b.totalEstimate || b.estimatedAmount || 0),
+    0
+  );
+
+  const totalAdvancePaid = bookings.reduce((sum, b) => {
+    if ((b as any).payments && Array.isArray((b as any).payments)) {
+      return sum + (b as any).payments.reduce((pSum: number, p: any) => pSum + (p.paymentType === 'refund' ? -p.amount : p.amount), 0);
+    }
+    return sum + ((b as any).amountPaid || (b.advancePaymentStatus === 'fully_paid' ? (b.totalEstimate || b.estimatedAmount || 0) : b.advancePaymentStatus === 'advance_paid' ? Math.round((b.totalEstimate || b.estimatedAmount || 0) * 0.25) : 0));
+  }, 0);
+
+  const outstandingBalance = Math.max(0, totalAgreedRevenue - totalAdvancePaid);
+
+  // Real-time Hall Availability for Today
   const hall1TodayDay = checkSlotAvailability('hall_1', today, 'day');
   const hall1TodayEve = checkSlotAvailability('hall_1', today, 'evening');
   const hall2TodayDay = checkSlotAvailability('hall_2', today, 'day');
@@ -72,8 +100,8 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ navigate
     <AdminLayout
       currentPath="/admin/dashboard"
       navigate={navigate}
-      title="Management Dashboard"
-      subtitle="H H Events & Conventions reservation control center and hall operations"
+      title="Management Operations Dashboard"
+      subtitle="H H Events & Conventions reservation overview, live venue status, and financial ledger"
       actionButton={
         <div className="flex items-center gap-2">
           <Button
@@ -90,281 +118,228 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ navigate
             size="sm"
             leftIcon={<Inbox className="w-4 h-4" />}
           >
-            Manage Bookings ({pendingBookings.length})
+            Review Bookings ({pendingBookings.length})
           </Button>
         </div>
       }
     >
       <div className="space-y-8">
-        {/* Requirement 19: Dashboard Cards */}
-        {/* Row 1: The 4 Core Booking Status Cards */}
+        {/* Core KPI Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
           {/* 1. Pending Requests */}
-          <Card className="p-5 flex items-center justify-between border-slate-200 hover:border-amber-400 transition-colors shadow-2xs">
+          <Card className="p-5 flex items-center justify-between border-slate-200 hover:border-amber-400 transition-colors shadow-2xs bg-white">
             <div>
               <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 Pending Requests
               </span>
-              <h3 className="text-3xl font-extrabold text-amber-600 mt-1">
+              <h3 className="text-3xl font-extrabold text-amber-600 mt-1 font-mono">
                 {pendingBookings.length}
               </h3>
-              <p className="text-[11px] text-slate-400 mt-0.5">Awaiting manager clearance</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Awaiting review clearance</p>
             </div>
             <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
               <Clock className="w-6 h-6" />
             </div>
           </Card>
 
-          {/* 2. Approved Bookings */}
-          <Card className="p-5 flex items-center justify-between border-slate-200 hover:border-emerald-400 transition-colors shadow-2xs">
+          {/* 2. Confirmed & Approved */}
+          <Card className="p-5 flex items-center justify-between border-slate-200 hover:border-emerald-400 transition-colors shadow-2xs bg-white">
             <div>
               <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Approved Bookings
+                Confirmed Events
               </span>
-              <h3 className="text-3xl font-extrabold text-emerald-600 mt-1">
+              <h3 className="text-3xl font-extrabold text-emerald-700 mt-1 font-mono">
                 {approvedBookings.length}
               </h3>
-              <p className="text-[11px] text-slate-400 mt-0.5">Confirmed on master schedule</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Spaces locked in schedule</p>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
               <CheckCircle2 className="w-6 h-6" />
             </div>
           </Card>
 
-          {/* 3. Rejected Bookings */}
-          <Card className="p-5 flex items-center justify-between border-slate-200 hover:border-rose-400 transition-colors shadow-2xs">
+          {/* 3. Agreed Revenue Ledger */}
+          <Card className="p-5 flex items-center justify-between border-slate-200 hover:border-[#173D35] transition-colors shadow-2xs bg-white">
             <div>
               <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Rejected Bookings
+                Agreed Revenue
               </span>
-              <h3 className="text-3xl font-extrabold text-rose-600 mt-1">
-                {rejectedBookings.length}
+              <h3 className="text-2xl font-black text-[#173D35] mt-1 font-mono">
+                ₹{totalAgreedRevenue.toLocaleString('en-IN')}
               </h3>
-              <p className="text-[11px] text-slate-400 mt-0.5">Declined or conflicted requests</p>
-            </div>
-            <div className="w-12 h-12 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
-              <XCircle className="w-6 h-6" />
-            </div>
-          </Card>
-
-          {/* 4. Upcoming Bookings */}
-          <Card className="p-5 flex items-center justify-between border-slate-200 hover:border-sky-400 transition-colors shadow-2xs">
-            <div>
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Upcoming Bookings
-              </span>
-              <h3 className="text-3xl font-extrabold text-sky-600 mt-1">
-                {upcomingBookings.length}
-              </h3>
-              <p className="text-[11px] text-slate-400 mt-0.5">Scheduled for today &amp; future</p>
-            </div>
-            <div className="w-12 h-12 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center">
-              <Calendar className="w-6 h-6" />
-            </div>
-          </Card>
-        </div>
-
-        {/* Row 2: Hall 1 Status & Hall 2 Status (Requirement 19) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {/* Hall 1 Status Card */}
-          <Card className="p-6 border-slate-200 shadow-sm space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-slate-900 text-amber-400 flex items-center justify-center font-bold">
-                  H1
-                </div>
-                <div>
-                  <h4 className="text-base font-bold text-slate-900 font-serif-heading">
-                    Hall 1 Status (Main Hall)
-                  </h4>
-                  <p className="text-xs text-slate-500">600 Seating • AC &amp; Non-AC Configurable</p>
-                </div>
-              </div>
-              <span className="text-xs font-mono font-bold text-slate-500">Today: {today}</span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 pt-1">
-              <div
-                className={`p-3.5 rounded-xl border ${
-                  hall1TodayDay.available
-                    ? 'bg-emerald-50/60 border-emerald-200'
-                    : 'bg-rose-50/60 border-rose-200'
-                }`}
-              >
-                <span className="text-[11px] font-bold text-slate-500 block uppercase">
-                  Morning (10 AM–3 PM)
-                </span>
-                <span
-                  className={`text-sm font-extrabold mt-1 inline-block ${
-                    hall1TodayDay.available ? 'text-emerald-700' : 'text-rose-700'
-                  }`}
-                >
-                  {hall1TodayDay.available ? 'AVAILABLE' : 'RESERVED'}
-                </span>
-              </div>
-
-              <div
-                className={`p-3.5 rounded-xl border ${
-                  hall1TodayEve.available
-                    ? 'bg-emerald-50/60 border-emerald-200'
-                    : 'bg-rose-50/60 border-rose-200'
-                }`}
-              >
-                <span className="text-[11px] font-bold text-slate-500 block uppercase">
-                  Evening (6 PM–10 PM)
-                </span>
-                <span
-                  className={`text-sm font-extrabold mt-1 inline-block ${
-                    hall1TodayEve.available ? 'text-emerald-700' : 'text-rose-700'
-                  }`}
-                >
-                  {hall1TodayEve.available ? 'AVAILABLE' : 'RESERVED'}
-                </span>
-              </div>
-            </div>
-          </Card>
-
-          {/* Hall 2 Status Card */}
-          <Card className="p-6 border-slate-200 shadow-sm space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-slate-900 text-amber-400 flex items-center justify-center font-bold">
-                  H2
-                </div>
-                <div>
-                  <h4 className="text-base font-bold text-slate-900 font-serif-heading">
-                    Hall 2 Status (Banquet Hall)
-                  </h4>
-                  <p className="text-xs text-slate-500">600 Dining • Independent Reservation</p>
-                </div>
-              </div>
-              <span className="text-xs font-mono font-bold text-slate-500">Today: {today}</span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 pt-1">
-              <div
-                className={`p-3.5 rounded-xl border ${
-                  hall2TodayDay.available
-                    ? 'bg-emerald-50/60 border-emerald-200'
-                    : 'bg-rose-50/60 border-rose-200'
-                }`}
-              >
-                <span className="text-[11px] font-bold text-slate-500 block uppercase">
-                  Morning (10 AM–3 PM)
-                </span>
-                <span
-                  className={`text-sm font-extrabold mt-1 inline-block ${
-                    hall2TodayDay.available ? 'text-emerald-700' : 'text-rose-700'
-                  }`}
-                >
-                  {hall2TodayDay.available ? 'AVAILABLE' : 'RESERVED'}
-                </span>
-              </div>
-
-              <div
-                className={`p-3.5 rounded-xl border ${
-                  hall2TodayEve.available
-                    ? 'bg-emerald-50/60 border-emerald-200'
-                    : 'bg-rose-50/60 border-rose-200'
-                }`}
-              >
-                <span className="text-[11px] font-bold text-slate-500 block uppercase">
-                  Evening (6 PM–10 PM)
-                </span>
-                <span
-                  className={`text-sm font-extrabold mt-1 inline-block ${
-                    hall2TodayEve.available ? 'text-emerald-700' : 'text-rose-700'
-                  }`}
-                >
-                  {hall2TodayEve.available ? 'AVAILABLE' : 'RESERVED'}
-                </span>
-              </div>
-            </div>
-          </Card>
-        </div>
-
-        {/* Priority Pending Queue Table */}
-        <Card className="overflow-hidden border-slate-200 shadow-sm">
-          <div className="p-5 bg-white border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <h3 className="text-base font-bold text-slate-900 font-serif-heading">
-                Pending Booking Requests Awaiting Action
-              </h3>
-              <p className="text-xs text-slate-500">
-                Customer applications pending manager approval or availability clearance
+              <p className="text-[11px] text-emerald-700 mt-0.5">
+                Paid: ₹{totalAdvancePaid.toLocaleString('en-IN')}
               </p>
             </div>
+            <div className="w-12 h-12 rounded-xl bg-emerald-50 text-[#173D35] flex items-center justify-center">
+              <Receipt className="w-6 h-6 text-[#173D35]" />
+            </div>
+          </Card>
+
+          {/* 4. Outstanding Balance Due */}
+          <Card className="p-5 flex items-center justify-between border-slate-200 hover:border-amber-400 transition-colors shadow-2xs bg-white">
+            <div>
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                Outstanding Balance
+              </span>
+              <h3 className="text-2xl font-black text-amber-700 mt-1 font-mono">
+                ₹{outstandingBalance.toLocaleString('en-IN')}
+              </h3>
+              <p className="text-[11px] text-slate-400 mt-0.5">To be remitted before events</p>
+            </div>
+            <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center">
+              <CreditCard className="w-6 h-6" />
+            </div>
+          </Card>
+        </div>
+
+        {/* Venue Operational Status for Today */}
+        <div className="p-6 rounded-3xl bg-white border border-slate-200 shadow-sm space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Building2 className="w-5 h-5 text-[#173D35]" />
+              <h3 className="text-base font-bold text-slate-900 font-serif-heading">
+                Today's Real-Time Hall Availability ({today})
+              </h3>
+            </div>
+            <Button
+              onClick={() => navigate('/admin/availability')}
+              variant="outline"
+              size="sm"
+              leftIcon={<Sliders className="w-3.5 h-3.5" />}
+            >
+              Adjust Calendar
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
+            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
+              <span className="text-slate-500 uppercase font-bold text-[10px] block">Hall 1 &bull; Day Session</span>
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-slate-800">10:00 AM – 3:00 PM</span>
+                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                  hall1TodayDay.available ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+                }`}>
+                  {hall1TodayDay.available ? 'Available' : 'Reserved'}
+                </span>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
+              <span className="text-slate-500 uppercase font-bold text-[10px] block">Hall 1 &bull; Evening Session</span>
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-slate-800">6:00 PM – 10:00 PM</span>
+                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                  hall1TodayEve.available ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+                }`}>
+                  {hall1TodayEve.available ? 'Available' : 'Reserved'}
+                </span>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
+              <span className="text-slate-500 uppercase font-bold text-[10px] block">Hall 2 &bull; Day Session</span>
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-slate-800">10:00 AM – 3:00 PM</span>
+                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                  hall2TodayDay.available ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+                }`}>
+                  {hall2TodayDay.available ? 'Available' : 'Reserved'}
+                </span>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
+              <span className="text-slate-500 uppercase font-bold text-[10px] block">Hall 2 &bull; Evening Session</span>
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-slate-800">6:00 PM – 10:00 PM</span>
+                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                  hall2TodayEve.available ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+                }`}>
+                  {hall2TodayEve.available ? 'Available' : 'Reserved'}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Recent Applications Table */}
+        <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-base font-bold text-slate-900 font-serif-heading">
+                Recent Booking Applications
+              </h3>
+              <p className="text-xs text-slate-500">Latest reservation requests submitted via customer portal</p>
+            </div>
+
             <Button
               onClick={() => navigate('/admin/bookings')}
               variant="outline"
               size="sm"
-              rightIcon={<ArrowRight className="w-4 h-4" />}
+              rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
             >
-              View All Bookings
+              View All ({bookings.length})
             </Button>
           </div>
 
-          {pendingBookings.length === 0 ? (
-            <div className="p-10 text-center text-slate-400 text-xs">
-              No pending applications in queue. All booking requests have been processed.
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 text-slate-600 uppercase font-semibold border-b border-slate-200">
-                  <tr>
-                    <th className="py-3 px-4">Booking ID</th>
-                    <th className="py-3 px-4">Customer</th>
-                    <th className="py-3 px-4">Phone</th>
-                    <th className="py-3 px-4">Hall</th>
-                    <th className="py-3 px-4">Slot</th>
-                    <th className="py-3 px-4">Date</th>
-                    <th className="py-3 px-4">AC Option</th>
-                    <th className="py-3 px-4 text-right">Actions</th>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs text-left">
+              <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase text-[10px]">
+                <tr>
+                  <th className="p-3">Reference</th>
+                  <th className="p-3">Applicant / Host</th>
+                  <th className="p-3">Package / Space</th>
+                  <th className="p-3">Event Date</th>
+                  <th className="p-3">Rent Total</th>
+                  <th className="p-3">Status</th>
+                  <th className="p-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {bookings.slice(0, 5).map((b) => (
+                  <tr key={b.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="p-3 font-mono font-bold text-[#173D35]">{b.id}</td>
+                    <td className="p-3 font-semibold text-slate-900">
+                      <div>{b.customerName}</div>
+                      <span className="text-[11px] text-slate-400 font-mono">{b.phone}</span>
+                    </td>
+                    <td className="p-3 text-slate-700">
+                      {b.packageName || (b.hall === 'both' ? 'Full Combined Hall' : 'Single Hall')}
+                    </td>
+                    <td className="p-3 text-slate-700 font-mono">
+                      <div>{b.date}</div>
+                      <span className="text-[10px] text-slate-400 uppercase">{b.slot} Session</span>
+                    </td>
+                    <td className="p-3 font-mono font-bold text-slate-900">
+                      ₹{(b.totalEstimate || b.estimatedAmount || 0).toLocaleString('en-IN')}
+                    </td>
+                    <td className="p-3">
+                      <BookingStatusBadge status={b.status} />
+                    </td>
+                    <td className="p-3 text-right">
+                      <Button
+                        onClick={() => navigate('/admin/bookings')}
+                        variant="outline"
+                        size="sm"
+                        className="py-1 px-2 text-[11px]"
+                      >
+                        Manage
+                      </Button>
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {pendingBookings.slice(0, 5).map((b) => (
-                    <tr key={b.id} className="hover:bg-slate-50/60">
-                      <td className="py-3.5 px-4 font-mono font-bold text-slate-900">
-                        {b.id}
-                      </td>
-                      <td className="py-3.5 px-4 font-semibold text-slate-900">
-                        {b.customerName || b.applicantName}
-                      </td>
-                      <td className="py-3.5 px-4 text-slate-600">
-                        {b.phone || b.applicantPhone}
-                      </td>
-                      <td className="py-3.5 px-4 font-medium text-slate-800">
-                        {b.hall === 'hall_1' ? 'Hall 1' : b.hall === 'hall_2' ? 'Hall 2' : 'Both Halls'}
-                      </td>
-                      <td className="py-3.5 px-4 text-slate-600">
-                        {b.slot === 'day' ? '10 AM–3 PM' : '6 PM–10 PM'}
-                      </td>
-                      <td className="py-3.5 px-4 font-mono text-slate-900">
-                        {b.date}
-                      </td>
-                      <td className="py-3.5 px-4 uppercase text-[10px] font-bold">
-                        <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-800">
-                          {b.acOption}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 text-right">
-                        <Button
-                          onClick={() => navigate('/admin/bookings')}
-                          variant="gold"
-                          size="sm"
-                        >
-                          Review &amp; Act
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </Card>
+                ))}
+                {bookings.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="p-8 text-center text-slate-400">
+                      No booking applications recorded yet.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </AdminLayout>
   );

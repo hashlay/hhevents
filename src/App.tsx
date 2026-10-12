@@ -104,7 +104,7 @@ const AppContent: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#FDFBF9] text-[#161210] selection:bg-[#F3E8D8] selection:text-[#9A6611]">
+    <div className="min-h-screen flex flex-col bg-[#F5F1E8] text-[#252525] selection:bg-[#F3E8D8] selection:text-[#173D35]">
       <ScrollProgress />
       <ToastContainer />
 
