@@ -112,14 +112,14 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
           {/* Brand header */}
           <div className="p-6 border-b border-slate-800 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center font-extrabold shadow-sm">
+              <div className="w-9 h-9 rounded-xl bg-[#173D35] text-[#C9AA72] flex items-center justify-center font-extrabold border border-[#C9AA72]/30 shadow-sm">
                 <Building2 className="w-5 h-5" />
               </div>
               <div>
                 <span className="text-base font-bold text-white tracking-tight font-serif-heading">
                   H H Events
                 </span>
-                <span className="block text-[10px] uppercase font-bold tracking-wider text-amber-400">
+                <span className="block text-[10px] uppercase font-bold tracking-wider text-[#C9AA72]">
                   Management Console
                 </span>
               </div>
@@ -146,11 +146,11 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
                   }}
                   className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors text-left ${
                     isActive
-                      ? 'bg-amber-500 text-slate-950 font-semibold shadow-xs'
+                      ? 'bg-[#173D35] text-[#FAF8F5] font-semibold shadow-xs border-l-2 border-[#C9AA72]'
                       : 'text-slate-300 hover:bg-slate-800 hover:text-white'
                   }`}
                 >
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-slate-950' : 'text-slate-400'}`} />
+                  <Icon className={`w-4 h-4 ${isActive ? 'text-[#C9AA72]' : 'text-slate-400'}`} />
                   <span>{item.label}</span>
                 </button>
               );
@@ -162,14 +162,14 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
         <div className="p-4 border-t border-slate-800 space-y-3">
           <div className="flex items-center justify-between p-2 rounded-lg bg-slate-800/60 border border-slate-700/50">
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-full bg-amber-600/30 text-amber-300 flex items-center justify-center font-bold text-xs shrink-0">
+              <div className="w-8 h-8 rounded-full bg-[#173D35] text-[#C9AA72] flex items-center justify-center font-bold text-xs shrink-0 border border-[#C9AA72]/30">
                 HH
               </div>
               <div className="min-w-0">
                 <p className="text-xs font-semibold text-white truncate">
                   {user?.name || user?.displayName || 'Venue Manager'}
                 </p>
-                <span className="text-[10px] text-amber-400 block uppercase tracking-wider">
+                <span className="text-[10px] text-[#C9AA72] block uppercase tracking-wider">
                   {user?.role?.replace('_', ' ') || 'Admin'}
                 </span>
               </div>

@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
-import { Camera, Upload, X, ChevronRight, ChevronLeft, ArrowRight } from 'lucide-react';
+import { Camera, X, ChevronRight, ChevronLeft, ArrowRight } from 'lucide-react';
 import { GALLERY_ITEMS } from '../../services/hallData';
 import { Button } from '../../components/ui/Button';
 import { BackButton } from '../../components/ui/BackButton';
 import { useVenuePhotos } from '../../hooks/useVenuePhotos';
-import { RealPhotoManager } from '../../components/photos/RealPhotoManager';
 
 interface GalleryPageProps {
   navigate: (path: string) => void;
@@ -14,7 +13,6 @@ export const GalleryPage: React.FC<GalleryPageProps> = ({ navigate }) => {
   const { getPhotoUrl } = useVenuePhotos();
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [activePhotoIndex, setActivePhotoIndex] = useState<number | null>(null);
-  const [showPhotoManagerModal, setShowPhotoManagerModal] = useState<boolean>(false);
 
   const categories = ['All', 'Main Hall', 'Dining Wings', 'Stage & Dais', 'Exterior', 'Lawn & Open Air'];
 
@@ -41,15 +39,6 @@ export const GalleryPage: React.FC<GalleryPageProps> = ({ navigate }) => {
 
   return (
     <div className="space-y-16 pb-24 bg-[#F5F1E8] text-[#252525]">
-      {/* Photo Manager Modal */}
-      {showPhotoManagerModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="relative max-w-4xl w-full bg-white rounded-3xl p-6 sm:p-8 shadow-2xl max-h-[90vh] overflow-y-auto border border-[#E2DACB]">
-            <RealPhotoManager standalone onClose={() => setShowPhotoManagerModal(false)} />
-          </div>
-        </div>
-      )}
-
       {/* Header Banner */}
       <section className="bg-gradient-to-b from-[#FAF8F5] via-[#FFFDF9] to-[#FAF8F5] py-14 sm:py-18 border-b border-[#E2DACB]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -60,17 +49,17 @@ export const GalleryPage: React.FC<GalleryPageProps> = ({ navigate }) => {
             <div className="max-w-3xl space-y-4">
               <span className="text-xs uppercase font-bold tracking-widest text-[#173D35] bg-[#F5F1E8] px-3.5 py-1.5 rounded-full border border-[#E2DACB] inline-flex items-center gap-1.5">
                 <Camera className="w-3.5 h-3.5 text-[#C9AA72]" />
-                Verified Visual Showcase
+                Venue Showcase
               </span>
               <h1 className="text-4xl sm:text-5xl font-bold text-[#252525] tracking-tight font-serif-heading">
-                H H Events Visual Gallery
+                Venue Gallery
               </h1>
               <p className="text-base sm:text-lg text-[#4A4A4A] leading-relaxed">
-                Authentic photographs of H H Events &amp; Conventions in Panemangalore — featuring the air-conditioned Main Convention Hall, golden banquet seating, covered feast dining wings, outdoor courtyard, and illuminated entrance portico.
+                Explore the event spaces of H H Events &amp; Conventions in Panemangalore — featuring the air-conditioned convention halls, banquet dining wings, stage setups, and entrance.
               </p>
               <div className="pt-1 flex items-center gap-3 text-xs text-[#4A4A4A] font-semibold">
                 <span className="bg-[#F5F1E8] text-[#173D35] px-3.5 py-1 rounded-full border border-[#E2DACB]">
-                  15 Authentic Photographs
+                  Hall 1 &amp; Hall 2 Spaces
                 </span>
                 <span>&bull;</span>
                 <span>Opposite Juma Masjid, Panemangalore</span>
@@ -79,12 +68,11 @@ export const GalleryPage: React.FC<GalleryPageProps> = ({ navigate }) => {
 
             <div className="shrink-0 flex flex-col sm:flex-row gap-3">
               <Button
-                onClick={() => setShowPhotoManagerModal(true)}
-                variant="outline"
+                onClick={() => navigate('/book')}
+                variant="gold"
                 size="md"
-                leftIcon={<Upload className="w-4 h-4" />}
               >
-                Manage Venue Photos
+                Book This Venue
               </Button>
             </div>
           </div>

@@ -2,15 +2,9 @@ import React from 'react';
 import {
   Building2,
   ShieldCheck,
-  Award,
   Users,
   Clock,
-  CheckCircle,
-  FileText,
-  ThermometerSnowflake,
-  Zap,
   Car,
-  ExternalLink,
   MapPin,
   ArrowRight,
 } from 'lucide-react';
@@ -125,8 +119,8 @@ export const AboutPage: React.FC<AboutPageProps> = ({ navigate }) => {
             </div>
 
             <div className="p-5 rounded-2xl bg-[#FAF8F5] border border-[#E2DACB] space-y-2">
-              <Zap className="w-6 h-6 text-[#C9AA72]" />
-              <h4 className="font-bold text-sm text-[#252525]">Zero Power Interruption</h4>
+              <ShieldCheck className="w-6 h-6 text-[#C9AA72]" />
+              <h4 className="font-bold text-sm text-[#252525]">Continuous Power Backup</h4>
               <p className="text-xs text-[#4A4A4A] leading-relaxed">
                 Industrial generator backup covers all air conditioning units and stage equipment.
               </p>

@@ -77,23 +77,22 @@ export const PricingPage: React.FC<PricingPageProps> = ({ navigate }) => {
           </div>
           <div className="max-w-3xl space-y-4">
             <span className="text-xs uppercase font-bold tracking-widest text-[#173D35] bg-[#F5F1E8] px-3.5 py-1.5 rounded-full border border-[#E2DACB] inline-flex items-center gap-1.5">
-              <Receipt className="w-3.5 h-3.5 text-[#C9AA72]" />
               Official Tariff Schedule
             </span>
             <h1 className="text-4xl sm:text-5xl font-bold text-[#252525] tracking-tight font-serif-heading">
-              Official Tariff &amp; Packages
+              Hall Packages &amp; Tariff
             </h1>
             <p className="text-base sm:text-lg text-[#4A4A4A] leading-relaxed">
-              Transparent, confirmed package pricing for H H Events &amp; Conventions — Opposite Juma Masjid, Akkarangadi, Panemangalore, Bantwal.
+              Standard pricing schedule for H H Events &amp; Conventions. Commercial kitchen facility and stage dais are included across all packages.
             </p>
             <div className="pt-2 flex flex-wrap items-center gap-3 text-xs text-[#4A4A4A] font-semibold">
               <span className="bg-[#F5F1E8] text-[#173D35] px-3.5 py-1 rounded-full border border-[#E2DACB]">
-                Official Schedule: {OFFICIAL_TARIFF_SCHEDULE}
+                Tariff: {OFFICIAL_TARIFF_SCHEDULE}
               </span>
               <span>&bull;</span>
               <span className="text-emerald-700">Kitchen Included in All Packages</span>
               <span>&bull;</span>
-              <span className="text-[#C9AA72]">Flexible Multi-Hall &amp; Dining Combinations</span>
+              <span className="text-[#C9AA72]">Opposite Juma Masjid, Bantwal</span>
             </div>
           </div>
         </div>
@@ -102,18 +101,6 @@ export const PricingPage: React.FC<PricingPageProps> = ({ navigate }) => {
       {/* Official Tariff Card Showcase */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-white rounded-3xl p-6 sm:p-10 border border-[#E2DACB] shadow-sm space-y-8">
-          {/* Header of Tariff Card */}
-          <div className="text-center max-w-2xl mx-auto space-y-2 border-b border-[#E2DACB] pb-6">
-            <h2 className="text-2xl sm:text-3xl font-bold text-[#252525] font-serif-heading">
-              H H Events &amp; Conventions
-            </h2>
-            <p className="text-xs sm:text-sm text-[#4A4A4A] font-medium">
-              Opposite Juma Masjid, Akkarangadi, Panemangalore, Bantwal 574231
-            </p>
-            <div className="inline-block px-4 py-1.5 rounded-full bg-[#F5F1E8] text-[#173D35] text-xs font-bold uppercase tracking-wider border border-[#E2DACB]">
-              Schedule: {OFFICIAL_TARIFF_SCHEDULE}
-            </div>
-          </div>
 
           {/* Quick Filter Buttons */}
           <div className="flex flex-wrap items-center justify-between gap-3 pt-1">

@@ -101,8 +101,8 @@ export const HallsPage: React.FC<HallsPageProps> = ({ navigate }) => {
                       <p className="text-xs">Official authentic photograph slot</p>
                     </div>
                   )}
-                  <div className="absolute top-4 left-4 bg-white/95 backdrop-blur-md text-[#252525] text-xs font-bold px-3 py-1.5 rounded-lg border border-[#E2DACB] shadow-2xs">
-                    {hall.name.toUpperCase()} &bull; INDEPENDENT SECTION
+                  <div className="absolute top-4 left-4 bg-white/95 backdrop-blur-md text-[#252525] text-xs font-semibold px-3 py-1.5 rounded-lg border border-[#E2DACB] shadow-2xs">
+                    {hall.name} &bull; Independent Wing
                   </div>
                 </div>
 

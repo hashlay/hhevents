@@ -20,7 +20,6 @@ import {
   UtensilsCrossed,
   ChefHat,
   Package as PackageIcon,
-  Sparkles,
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { BackButton } from '../../components/ui/BackButton';
@@ -462,7 +461,7 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
 
                     <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
                       <span className={`font-semibold ${isSelected ? 'text-[#C9AA72]' : 'text-slate-400'}`}>
-                        {isSelected ? '✓ Selected' : 'Tap to select'}
+                        {isSelected ? 'Selected' : 'Select'}
                       </span>
                     </div>
                   </div>

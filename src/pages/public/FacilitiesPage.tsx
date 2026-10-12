@@ -48,14 +48,14 @@ export const FacilitiesPage: React.FC<FacilitiesPageProps> = ({ navigate }) => {
         <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#E2DACB] pb-4">
           <div>
             <h2 className="text-2xl sm:text-3xl font-bold text-[#252525] font-serif-heading">
-              Confirmed Facilities (Official Source of Truth)
+              Our Venue Facilities
             </h2>
             <p className="text-xs sm:text-sm text-[#4A4A4A] mt-1">
-              Strictly authenticated facilities matching the official H H Events tariff &amp; package schedule
+              Hall spaces, dining wings, and catering amenities available for your events.
             </p>
           </div>
           <span className="text-xs font-semibold text-[#173D35] bg-[#F5F1E8] px-3.5 py-1.5 rounded-full border border-[#E2DACB] w-fit">
-            5 Official Facilities
+            5 Core Facilities
           </span>
         </div>
 
@@ -81,14 +81,11 @@ export const FacilitiesPage: React.FC<FacilitiesPageProps> = ({ navigate }) => {
                     />
                   ) : (
                     <div className="text-center p-6 space-y-2 text-[#737373]">
-                      <Camera className="w-10 h-10 text-[#C9AA72] mx-auto" />
+                      <Camera className="w-8 h-8 text-[#C9AA72] mx-auto" />
                       <h4 className="text-sm font-bold text-[#252525]">{facility.name}</h4>
-                      <span className="text-[11px] block">Official facility photograph</span>
+                      <span className="text-[11px] block">Facility photograph</span>
                     </div>
                   )}
-                  <div className="absolute top-3 left-3 bg-white/95 backdrop-blur-md text-[#252525] text-xs font-bold px-3 py-1 rounded-md border border-[#E2DACB] shadow-2xs">
-                    OFFICIAL FACILITY
-                  </div>
                 </div>
 
                 <div className="p-6 flex-1 flex flex-col justify-between space-y-4">

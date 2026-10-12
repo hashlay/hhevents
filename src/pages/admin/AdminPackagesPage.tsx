@@ -8,7 +8,6 @@ import {
   XCircle,
   Save,
   RotateCcw,
-  Sparkles,
   Info,
   Building2,
   UtensilsCrossed,
