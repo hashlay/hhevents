@@ -361,19 +361,49 @@ export async function getDb(): Promise<DatabaseSchema> {
   return dbCache;
 }
 
+const BACKUP_DIR = path.join(DB_DIR, 'backups');
+let writeCount = 0;
+
 export async function persistDb(): Promise<void> {
   if (!dbCache) return;
 
-  // Queue writes sequentially through writeLock
+  // Queue writes sequentially through writeLock mutex
   writeLock = writeLock.then(async () => {
     try {
       if (!fs.existsSync(DB_DIR)) {
         fs.mkdirSync(DB_DIR, { recursive: true });
       }
+
       dbCache!.lastUpdated = new Date().toISOString();
-      await fs.promises.writeFile(DB_FILE, JSON.stringify(dbCache, null, 2), 'utf-8');
+      const content = JSON.stringify(dbCache, null, 2);
+
+      // 1. Atomic write via temporary file
+      const tempFile = path.join(DB_DIR, `store.json.tmp.${Date.now()}`);
+      await fs.promises.writeFile(tempFile, content, 'utf-8');
+      await fs.promises.rename(tempFile, DB_FILE);
+
+      // 2. Periodic automated backup snapshot
+      writeCount += 1;
+      if (writeCount % 10 === 1 || !fs.existsSync(BACKUP_DIR)) {
+        if (!fs.existsSync(BACKUP_DIR)) {
+          fs.mkdirSync(BACKUP_DIR, { recursive: true });
+        }
+        const backupFile = path.join(BACKUP_DIR, `store-backup-${Date.now()}.json`);
+        await fs.promises.writeFile(backupFile, content, 'utf-8');
+
+        // Retain latest 10 backups
+        try {
+          const files = await fs.promises.readdir(BACKUP_DIR);
+          if (files.length > 10) {
+            const sorted = files.sort();
+            for (let i = 0; i < sorted.length - 10; i++) {
+              await fs.promises.unlink(path.join(BACKUP_DIR, sorted[i])).catch(() => {});
+            }
+          }
+        } catch {}
+      }
     } catch (err) {
-      console.error('Failed to write store.json:', err);
+      console.error('Failed to write store.json atomically:', err);
     }
   });
 

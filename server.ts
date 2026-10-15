@@ -3,7 +3,16 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import { getDb, persistDb, logAudit, BookingRecord, PaymentTransaction, HallPackage } from "./server/db";
 import { resolveRequiredResources, checkResourceConflict } from "./server/conflictEngine";
-import { verifyCredentials, createSession, getSession, revokeSession, requireAdminAuth } from "./server/auth";
+import {
+  verifyCredentials,
+  createSession,
+  getSession,
+  revokeSession,
+  requireAdminAuth,
+  checkLoginRateLimit,
+  recordFailedLogin,
+  resetLoginRateLimit,
+} from "./server/auth";
 
 async function startServer() {
   const app = express();
@@ -41,9 +50,18 @@ async function startServer() {
   });
 
   // ==========================================
-  // 2. AUTHENTICATION ENDPOINTS (SERVER-ENFORCED)
+  // 2. AUTHENTICATION ENDPOINTS (SERVER-ENFORCED WITH RATE LIMITING)
   // ==========================================
   app.post("/api/auth/login", async (req, res) => {
+    const clientIp = String(req.ip || req.socket.remoteAddress || "127.0.0.1");
+    const rateCheck = checkLoginRateLimit(clientIp);
+    if (!rateCheck.allowed) {
+      return res.status(429).json({
+        error: `Too many failed login attempts. Access temporarily locked for ${rateCheck.retryAfterSeconds} seconds.`,
+        retryAfterSeconds: rateCheck.retryAfterSeconds,
+      });
+    }
+
     const { email, phone, password } = req.body;
     if (!email || !phone || !password) {
       return res.status(400).json({ error: "Email, phone number, and password are required." });
@@ -51,9 +69,12 @@ async function startServer() {
 
     const isValid = verifyCredentials(email, phone, password);
     if (!isValid) {
+      recordFailedLogin(clientIp);
+      await logAudit("LOGIN_FAILED", String(email || "unknown"), "auth", "login", `Failed login attempt from IP ${clientIp}`);
       return res.status(401).json({ error: "Invalid administrative credentials." });
     }
 
+    resetLoginRateLimit(clientIp);
     const session = createSession();
     await logAudit("LOGIN_SUCCESS", session.email, "auth", session.email, "Administrative console login succeeded.");
 

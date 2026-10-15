@@ -124,76 +124,27 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, navigate }) => {
             : 'bg-white border-b border-[#E2DACB]'
         }`}
       >
-        {/* Top Utility Bar: Smooth moving ticker with clean gold dividers & no dead space */}
-        <div className="bg-[#173D35] text-[#FAF8F5] text-xs h-9 flex items-center border-b border-[#245A4F]/70 overflow-hidden select-none">
-          <div className="w-full flex items-center justify-between">
-            {/* Fixed Left: Official Venue Emblem & Badge */}
-            <div className="hidden md:flex items-center gap-2 pl-4 pr-3 shrink-0 border-r border-[#C9AA72]/30 text-[#D9C194] text-[11px] font-bold tracking-wider uppercase h-9">
-              <Sparkles className="w-3.5 h-3.5 text-[#C9AA72] shrink-0" />
-              <span className="whitespace-nowrap font-serif-heading">H H Events</span>
+        {/* Top Utility Bar: Static, clean executive header with verified venue details */}
+        <div className="bg-[#173D35] text-[#FAF8F5] text-xs h-9 flex items-center border-b border-[#245A4F]/70 select-none">
+          <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4">
+            {/* Left: Venue Location */}
+            <div className="flex items-center gap-2 text-[#F5F1E8] text-[11.5px] truncate">
+              <MapPin className="w-3.5 h-3.5 text-[#C9AA72] shrink-0" />
+              <span className="truncate">Opposite Juma Masjid, Akkarangadi, Panemangalore 574231</span>
             </div>
 
-            {/* Moving Center: Smooth Continuous Marquee Ticker with Edge Fade Masks */}
-            <div className="flex-1 overflow-hidden ticker-mask relative py-1 mx-1 sm:mx-2">
-              <div className="animate-ticker">
-                {/* Segment repeated twice for seamless infinite loop */}
-                {[0, 1].map((copyIndex) => (
-                  <div key={copyIndex} className="flex items-center shrink-0">
-                    {/* Item 1: Location */}
-                    <span className="inline-flex items-center gap-1.5 text-[#F5F1E8] font-medium text-[11.5px] whitespace-nowrap">
-                      <MapPin className="w-3.5 h-3.5 text-[#C9AA72] shrink-0" />
-                      <span>Opposite Juma Masjid, Akkarangadi, Panemangalore 574231</span>
-                    </span>
-
-                    {/* Divider Line */}
-                    <span className="w-[1px] h-3 bg-[#C9AA72]/40 mx-4 inline-block shrink-0" />
-
-                    {/* Item 2: Sessions */}
-                    <span className="inline-flex items-center gap-1.5 text-[#D9C194] font-medium text-[11.5px] whitespace-nowrap">
-                      <Clock className="w-3.5 h-3.5 text-[#C9AA72] shrink-0" />
-                      <span>Sessions: Day (10:00 AM – 3:00 PM) &bull; Evening (6:00 PM – 10:00 PM)</span>
-                    </span>
-
-                    {/* Divider Line */}
-                    <span className="w-[1px] h-3 bg-[#C9AA72]/40 mx-4 inline-block shrink-0" />
-
-                    {/* Item 3: Space & Capacity */}
-                    <span className="inline-flex items-center gap-1.5 text-[#F5F1E8] font-medium text-[11.5px] whitespace-nowrap">
-                      <Building2 className="w-3.5 h-3.5 text-[#C9AA72] shrink-0" />
-                      <span>Grand AC Convention Halls &bull; 600 to 3,000 Floating Capacity</span>
-                    </span>
-
-                    {/* Divider Line */}
-                    <span className="w-[1px] h-3 bg-[#C9AA72]/40 mx-4 inline-block shrink-0" />
-
-                    {/* Item 4: Bookings Open */}
-                    <span className="inline-flex items-center gap-1.5 text-[#D9C194] font-medium text-[11.5px] whitespace-nowrap">
-                      <CalendarDays className="w-3.5 h-3.5 text-[#C9AA72] shrink-0" />
-                      <span>Online Booking &amp; Reservations Open for 2026 – 2027 Events</span>
-                    </span>
-
-                    {/* Divider Line */}
-                    <span className="w-[1px] h-3 bg-[#C9AA72]/40 mx-4 inline-block shrink-0" />
-
-                    {/* Item 5: Dining & Kitchen */}
-                    <span className="inline-flex items-center gap-1.5 text-[#F5F1E8] font-medium text-[11.5px] whitespace-nowrap">
-                      <span className="text-[#C9AA72] font-bold text-xs">🍽️</span>
-                      <span>Twin Dining Wings &amp; Fully Equipped Commercial Kitchen Included</span>
-                    </span>
-
-                    {/* Divider Line */}
-                    <span className="w-[1px] h-3 bg-[#C9AA72]/40 mx-4 inline-block shrink-0" />
-                  </div>
-                ))}
-              </div>
+            {/* Center: Session Times */}
+            <div className="hidden md:flex items-center gap-2 text-[#D9C194] text-[11.5px] whitespace-nowrap shrink-0">
+              <Clock className="w-3.5 h-3.5 text-[#C9AA72] shrink-0" />
+              <span>Day Session (10:00 AM – 3:00 PM) &bull; Evening Session (6:00 PM – 10:00 PM)</span>
             </div>
 
-            {/* Fixed Right: Quick Direct Contact Pill */}
-            <div className="flex items-center pr-4 pl-3 shrink-0 border-l border-[#C9AA72]/30 h-9">
+            {/* Right: Direct Desk Phone */}
+            <div className="flex items-center shrink-0">
               <a
                 href={`tel:${VENUE_INFO.primaryPhone}`}
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#122E27] hover:bg-[#1C463C] border border-[#C9AA72]/30 hover:border-[#C9AA72] text-[#F5F1E8] hover:text-[#D9C194] text-[11px] font-semibold transition-all shadow-2xs whitespace-nowrap"
-                title="Call Venue Inquiries Desk"
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#122E27] hover:bg-[#1C463C] border border-[#C9AA72]/40 hover:border-[#C9AA72] text-[#F5F1E8] hover:text-[#D9C194] text-[11px] font-semibold transition-all whitespace-nowrap"
+                title="Call Venue Desk"
               >
                 <PhoneCall className="w-3 h-3 text-[#C9AA72] shrink-0" />
                 <span>{VENUE_INFO.primaryPhone}</span>
