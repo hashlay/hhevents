@@ -30,6 +30,12 @@ function normalizePhone(rawPhone: string): string {
   return digits;
 }
 
+function timingSafeStringEqual(a: string, b: string): boolean {
+  const hashA = crypto.createHash('sha256').update(a).digest();
+  const hashB = crypto.createHash('sha256').update(b).digest();
+  return crypto.timingSafeEqual(hashA, hashB);
+}
+
 export function verifyCredentials(email: string, phone: string, pass: string): boolean {
   if (!email || !phone || !pass) return false;
 
@@ -42,12 +48,12 @@ export function verifyCredentials(email: string, phone: string, pass: string): b
   const cleanPassword = pass.trim();
   const targetPassword = SERVER_AUTH_CONFIG.password.trim();
 
-  const emailMatch = cleanEmail === targetEmail;
+  const emailMatch = timingSafeStringEqual(cleanEmail, targetEmail);
   const phoneMatch =
-    cleanPhone === targetPhone ||
+    timingSafeStringEqual(cleanPhone, targetPhone) ||
     (cleanPhone.length >= 10 && cleanPhone.endsWith(targetPhone)) ||
     (targetPhone.length >= 10 && targetPhone.endsWith(cleanPhone));
-  const passwordMatch = cleanPassword === targetPassword;
+  const passwordMatch = timingSafeStringEqual(cleanPassword, targetPassword);
 
   return emailMatch && phoneMatch && passwordMatch;
 }

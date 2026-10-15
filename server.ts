@@ -378,6 +378,99 @@ async function startServer() {
     res.json({ success: true, booking });
   });
 
+  // Reschedule booking with concurrency-safe conflict verification
+  app.patch("/api/bookings/:id/reschedule", requireAdminAuth, async (req, res) => {
+    const { id } = req.params;
+    const { date, slot, reason } = req.body;
+
+    if (!date || !slot) {
+      return res.status(400).json({ error: "New date and session slot are required." });
+    }
+
+    const db = await getDb();
+    const booking = db.bookings.find((b) => b.id === id);
+    if (!booking) {
+      return res.status(404).json({ error: "Booking reference not found" });
+    }
+
+    const admin = (req as any).adminSession;
+
+    // Verify conflict on the new target date and slot
+    const conflict = checkResourceConflict(db, date, slot, booking.occupiedResources, booking.id);
+    if (!conflict.available) {
+      return res.status(409).json({
+        error: `Cannot reschedule: Space conflict on ${date} (${slot}). ${conflict.conflictReason}`,
+        conflictingResources: conflict.conflictingResources,
+      });
+    }
+
+    const oldDate = booking.date;
+    const oldSlot = booking.slot;
+
+    booking.date = date;
+    booking.slot = slot;
+    booking.updatedAt = new Date().toISOString();
+    booking.adminRemarks = `${booking.adminRemarks || ''}\nRescheduled from ${oldDate} (${oldSlot}) to ${date} (${slot}) by ${admin.email}. Reason: ${reason || 'Customer request'}`.trim();
+
+    await persistDb();
+    await logAudit(
+      "BOOKING_RESCHEDULED",
+      admin.email,
+      "booking",
+      id,
+      `Rescheduled from ${oldDate} (${oldSlot}) to ${date} (${slot}). Reason: ${reason || "None"}`
+    );
+
+    res.json({ success: true, booking });
+  });
+
+  // Cancel booking and release reserved physical resources
+  app.post("/api/bookings/:id/cancel", requireAdminAuth, async (req, res) => {
+    const { id } = req.params;
+    const { reason, refundAmount } = req.body;
+
+    const db = await getDb();
+    const booking = db.bookings.find((b) => b.id === id);
+    if (!booking) {
+      return res.status(404).json({ error: "Booking reference not found" });
+    }
+
+    const admin = (req as any).adminSession;
+    booking.status = "CANCELLED";
+    booking.rejectionReason = reason || "Cancelled by venue management / client request";
+    booking.updatedAt = new Date().toISOString();
+
+    if (refundAmount && Number(refundAmount) > 0) {
+      const refundNum = Number(refundAmount);
+      const refundPayment: PaymentTransaction = {
+        id: `REF-${Date.now()}`,
+        bookingId: id,
+        amount: refundNum,
+        paymentType: "refund",
+        paymentMethod: "other",
+        referenceNo: `REFUND-${Date.now()}`,
+        receivedBy: admin.email,
+        receiptNumber: `REF-${Date.now().toString().slice(-6)}`,
+        notes: `Refund processed on cancellation: ${reason || ''}`,
+        createdAt: new Date().toISOString(),
+      };
+      booking.payments.push(refundPayment);
+      booking.amountPaid = booking.payments.reduce((sum, p) => sum + (p.paymentType === 'refund' ? -p.amount : p.amount), 0);
+      booking.balanceDue = Math.max(0, booking.totalAmount - booking.amountPaid);
+    }
+
+    await persistDb();
+    await logAudit(
+      "BOOKING_CANCELLED",
+      admin.email,
+      "booking",
+      id,
+      `Booking cancelled. Reason: ${reason || "None"}`
+    );
+
+    res.json({ success: true, booking });
+  });
+
   // Record payment in payment ledger
   app.post("/api/bookings/:id/payment", requireAdminAuth, async (req, res) => {
     const { id } = req.params;
@@ -507,7 +600,7 @@ async function startServer() {
     }
   });
 
-  app.post("/api/photos/upload", async (req, res) => {
+  app.post("/api/photos/upload", requireAdminAuth, async (req, res) => {
     try {
       const { slotId, dataUrl } = req.body;
       if (!slotId || !dataUrl) {
@@ -569,7 +662,7 @@ async function startServer() {
     }
   });
 
-  app.delete("/api/photos/:slotId", async (req, res) => {
+  app.delete("/api/photos/:slotId", requireAdminAuth, async (req, res) => {
     try {
       const { slotId } = req.params;
       const fs = await import("fs/promises");

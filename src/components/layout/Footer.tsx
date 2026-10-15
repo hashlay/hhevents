@@ -127,15 +127,6 @@ export const Footer: React.FC<FooterProps> = ({ navigate }) => {
                   Contact Management
                 </button>
               </li>
-              <li className="pt-2 border-t border-[#29221D]">
-                <button
-                  onClick={() => navigate('/admin/login')}
-                  className="text-[#78716C] hover:text-white flex items-center gap-1 text-xs cursor-pointer"
-                >
-                  <ShieldCheck className="w-3.5 h-3.5 text-[#C88D23]" />
-                  Management Login
-                </button>
-              </li>
             </ul>
           </div>
 

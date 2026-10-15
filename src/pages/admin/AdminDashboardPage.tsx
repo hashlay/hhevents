@@ -2,20 +2,16 @@ import React, { useState, useEffect } from 'react';
 import {
   Inbox,
   CheckCircle2,
-  XCircle,
   Calendar,
   Building2,
   Clock,
   ArrowRight,
   RefreshCw,
   Sliders,
-  CalendarDays,
-  IndianRupee,
   Receipt,
-  Package,
   CreditCard,
-  Eye,
-  AlertCircle
+  ShieldCheck,
+  TrendingUp,
 } from 'lucide-react';
 import { AdminLayout } from '../../components/layout/AdminLayout';
 import { Card } from '../../components/ui/Card';
@@ -100,124 +96,141 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ navigate
     <AdminLayout
       currentPath="/admin/dashboard"
       navigate={navigate}
-      title="Management Operations Dashboard"
-      subtitle="H H Events & Conventions reservation overview, live venue status, and financial ledger"
+      title="Operations Management Console"
+      subtitle="Executive overview of H H Events & Conventions reservation pipeline, financial ledger, and real-time venue status."
       actionButton={
         <div className="flex items-center gap-2">
           <Button
-            onClick={loadData}
+            onClick={() => {
+              loadData();
+              showToast('Refreshed latest booking pipeline', 'info');
+            }}
             variant="outline"
             size="sm"
-            leftIcon={<RefreshCw className="w-3.5 h-3.5" />}
+            leftIcon={<RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />}
+            className="cursor-pointer"
           >
-            Refresh
+            Sync Data
           </Button>
           <Button
             onClick={() => navigate('/admin/bookings')}
             variant="gold"
             size="sm"
             leftIcon={<Inbox className="w-4 h-4" />}
+            className="cursor-pointer font-bold"
           >
-            Review Bookings ({pendingBookings.length})
+            Review Applications ({pendingBookings.length})
           </Button>
         </div>
       }
     >
-      <div className="space-y-8">
+      <div className="space-y-6 sm:space-y-8">
         {/* Core KPI Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
           {/* 1. Pending Requests */}
-          <Card className="p-5 flex items-center justify-between border-slate-200 hover:border-amber-400 transition-colors shadow-2xs bg-white">
+          <Card className="p-5 flex items-center justify-between border-[#E2DACB] hover:border-[#C9AA72] transition-all shadow-xs bg-white rounded-2xl group">
             <div>
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Pending Requests
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+                Pending Clearance
               </span>
               <h3 className="text-3xl font-extrabold text-amber-600 mt-1 font-mono">
                 {pendingBookings.length}
               </h3>
-              <p className="text-[11px] text-slate-400 mt-0.5">Awaiting review clearance</p>
+              <p className="text-[11px] text-slate-500 mt-1 flex items-center gap-1">
+                <span>Requires manager review</span>
+              </p>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-xl bg-amber-50 border border-amber-200/60 text-amber-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
               <Clock className="w-6 h-6" />
             </div>
           </Card>
 
           {/* 2. Confirmed & Approved */}
-          <Card className="p-5 flex items-center justify-between border-slate-200 hover:border-emerald-400 transition-colors shadow-2xs bg-white">
+          <Card className="p-5 flex items-center justify-between border-[#E2DACB] hover:border-[#173D35] transition-all shadow-xs bg-white rounded-2xl group">
             <div>
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Confirmed Events
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+                Confirmed Bookings
               </span>
-              <h3 className="text-3xl font-extrabold text-emerald-700 mt-1 font-mono">
+              <h3 className="text-3xl font-extrabold text-emerald-800 mt-1 font-mono">
                 {approvedBookings.length}
               </h3>
-              <p className="text-[11px] text-slate-400 mt-0.5">Spaces locked in schedule</p>
+              <p className="text-[11px] text-emerald-700 mt-1 font-medium">
+                Spaces locked &amp; scheduled
+              </p>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-200/60 text-emerald-700 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
               <CheckCircle2 className="w-6 h-6" />
             </div>
           </Card>
 
           {/* 3. Agreed Revenue Ledger */}
-          <Card className="p-5 flex items-center justify-between border-slate-200 hover:border-[#173D35] transition-colors shadow-2xs bg-white">
+          <Card className="p-5 flex items-center justify-between border-[#E2DACB] hover:border-[#C9AA72] transition-all shadow-xs bg-white rounded-2xl group">
             <div>
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
                 Agreed Revenue
               </span>
               <h3 className="text-2xl font-black text-[#173D35] mt-1 font-mono">
                 ₹{totalAgreedRevenue.toLocaleString('en-IN')}
               </h3>
-              <p className="text-[11px] text-emerald-700 mt-0.5">
+              <p className="text-[11px] text-emerald-700 mt-1 font-semibold">
                 Paid: ₹{totalAdvancePaid.toLocaleString('en-IN')}
               </p>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-emerald-50 text-[#173D35] flex items-center justify-center">
+            <div className="w-12 h-12 rounded-xl bg-[#FAF8F5] border border-[#E2DACB] text-[#173D35] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
               <Receipt className="w-6 h-6 text-[#173D35]" />
             </div>
           </Card>
 
           {/* 4. Outstanding Balance Due */}
-          <Card className="p-5 flex items-center justify-between border-slate-200 hover:border-amber-400 transition-colors shadow-2xs bg-white">
+          <Card className="p-5 flex items-center justify-between border-[#E2DACB] hover:border-amber-400 transition-all shadow-xs bg-white rounded-2xl group">
             <div>
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
                 Outstanding Balance
               </span>
               <h3 className="text-2xl font-black text-amber-700 mt-1 font-mono">
                 ₹{outstandingBalance.toLocaleString('en-IN')}
               </h3>
-              <p className="text-[11px] text-slate-400 mt-0.5">To be remitted before events</p>
+              <p className="text-[11px] text-slate-500 mt-1">To collect before event start</p>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-xl bg-amber-50 border border-amber-200/60 text-amber-700 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
               <CreditCard className="w-6 h-6" />
             </div>
           </Card>
         </div>
 
         {/* Venue Operational Status for Today */}
-        <div className="p-6 rounded-3xl bg-white border border-slate-200 shadow-sm space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Building2 className="w-5 h-5 text-[#173D35]" />
-              <h3 className="text-base font-bold text-slate-900 font-serif-heading">
-                Today's Real-Time Hall Availability ({today})
-              </h3>
+        <div className="p-6 rounded-2xl bg-white border border-[#E2DACB] shadow-xs space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-[#FAF8F5] border border-[#E2DACB] flex items-center justify-center text-[#173D35]">
+                <Building2 className="w-4 h-4 text-[#C9AA72]" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-[#173D35] font-serif-heading">
+                  Today's Live Hall Availability ({today})
+                </h3>
+                <p className="text-xs text-[#737373]">Real-time occupancy status across all bookable session intervals</p>
+              </div>
             </div>
             <Button
               onClick={() => navigate('/admin/availability')}
               variant="outline"
               size="sm"
               leftIcon={<Sliders className="w-3.5 h-3.5" />}
+              className="cursor-pointer"
             >
-              Adjust Calendar
+              Adjust Availability
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
-            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
-              <span className="text-slate-500 uppercase font-bold text-[10px] block">Hall 1 &bull; Day Session</span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 text-xs">
+            <div className="p-3.5 rounded-xl bg-[#FAF8F5] border border-[#E2DACB] space-y-1.5">
+              <span className="text-slate-500 uppercase font-bold text-[10px] tracking-wider block">
+                Hall 1 &bull; Day Session
+              </span>
               <div className="flex items-center justify-between">
                 <span className="font-semibold text-slate-800">10:00 AM – 3:00 PM</span>
-                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                   hall1TodayDay.available ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
                 }`}>
                   {hall1TodayDay.available ? 'Available' : 'Reserved'}
@@ -225,11 +238,13 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ navigate
               </div>
             </div>
 
-            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
-              <span className="text-slate-500 uppercase font-bold text-[10px] block">Hall 1 &bull; Evening Session</span>
+            <div className="p-3.5 rounded-xl bg-[#FAF8F5] border border-[#E2DACB] space-y-1.5">
+              <span className="text-slate-500 uppercase font-bold text-[10px] tracking-wider block">
+                Hall 1 &bull; Evening Session
+              </span>
               <div className="flex items-center justify-between">
                 <span className="font-semibold text-slate-800">6:00 PM – 10:00 PM</span>
-                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                   hall1TodayEve.available ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
                 }`}>
                   {hall1TodayEve.available ? 'Available' : 'Reserved'}
@@ -237,11 +252,13 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ navigate
               </div>
             </div>
 
-            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
-              <span className="text-slate-500 uppercase font-bold text-[10px] block">Hall 2 &bull; Day Session</span>
+            <div className="p-3.5 rounded-xl bg-[#FAF8F5] border border-[#E2DACB] space-y-1.5">
+              <span className="text-slate-500 uppercase font-bold text-[10px] tracking-wider block">
+                Hall 2 &bull; Day Session
+              </span>
               <div className="flex items-center justify-between">
                 <span className="font-semibold text-slate-800">10:00 AM – 3:00 PM</span>
-                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                   hall2TodayDay.available ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
                 }`}>
                   {hall2TodayDay.available ? 'Available' : 'Reserved'}
@@ -249,11 +266,13 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ navigate
               </div>
             </div>
 
-            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
-              <span className="text-slate-500 uppercase font-bold text-[10px] block">Hall 2 &bull; Evening Session</span>
+            <div className="p-3.5 rounded-xl bg-[#FAF8F5] border border-[#E2DACB] space-y-1.5">
+              <span className="text-slate-500 uppercase font-bold text-[10px] tracking-wider block">
+                Hall 2 &bull; Evening Session
+              </span>
               <div className="flex items-center justify-between">
                 <span className="font-semibold text-slate-800">6:00 PM – 10:00 PM</span>
-                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                   hall2TodayEve.available ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
                 }`}>
                   {hall2TodayEve.available ? 'Available' : 'Reserved'}
@@ -264,13 +283,15 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ navigate
         </div>
 
         {/* Recent Applications Table */}
-        <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 space-y-4">
-          <div className="flex items-center justify-between">
+        <div className="bg-white rounded-2xl border border-[#E2DACB] shadow-xs p-6 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h3 className="text-base font-bold text-slate-900 font-serif-heading">
+              <h3 className="text-base font-bold text-[#173D35] font-serif-heading">
                 Recent Booking Applications
               </h3>
-              <p className="text-xs text-slate-500">Latest reservation requests submitted via customer portal</p>
+              <p className="text-xs text-[#737373]">
+                Customer reservation requests requiring manager review or settlement
+              </p>
             </div>
 
             <Button
@@ -278,6 +299,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ navigate
               variant="outline"
               size="sm"
               rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
+              className="cursor-pointer"
             >
               View All ({bookings.length})
             </Button>
@@ -285,31 +307,31 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ navigate
 
           <div className="overflow-x-auto">
             <table className="w-full text-xs text-left">
-              <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase text-[10px]">
+              <thead className="bg-[#FAF8F5] border-b border-[#E2DACB] text-slate-600 uppercase text-[10px] font-bold tracking-wider">
                 <tr>
                   <th className="p-3">Reference</th>
                   <th className="p-3">Applicant / Host</th>
                   <th className="p-3">Package / Space</th>
                   <th className="p-3">Event Date</th>
-                  <th className="p-3">Rent Total</th>
+                  <th className="p-3">Rent Estimate</th>
                   <th className="p-3">Status</th>
                   <th className="p-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
-                {bookings.slice(0, 5).map((b) => (
-                  <tr key={b.id} className="hover:bg-slate-50 transition-colors">
+              <tbody className="divide-y divide-[#F0EBE1]">
+                {bookings.slice(0, 6).map((b) => (
+                  <tr key={b.id} className="hover:bg-[#FAF8F5]/60 transition-colors">
                     <td className="p-3 font-mono font-bold text-[#173D35]">{b.id}</td>
-                    <td className="p-3 font-semibold text-slate-900">
-                      <div>{b.customerName}</div>
-                      <span className="text-[11px] text-slate-400 font-mono">{b.phone}</span>
+                    <td className="p-3">
+                      <div className="font-semibold text-slate-900">{b.customerName}</div>
+                      <span className="text-[11px] text-slate-500 font-mono">{b.phone}</span>
                     </td>
                     <td className="p-3 text-slate-700">
                       {b.packageName || (b.hall === 'both' ? 'Full Combined Hall' : 'Single Hall')}
                     </td>
                     <td className="p-3 text-slate-700 font-mono">
                       <div>{b.date}</div>
-                      <span className="text-[10px] text-slate-400 uppercase">{b.slot} Session</span>
+                      <span className="text-[10px] text-slate-500 uppercase">{b.slot} Session</span>
                     </td>
                     <td className="p-3 font-mono font-bold text-slate-900">
                       ₹{(b.totalEstimate || b.estimatedAmount || 0).toLocaleString('en-IN')}
@@ -322,7 +344,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ navigate
                         onClick={() => navigate('/admin/bookings')}
                         variant="outline"
                         size="sm"
-                        className="py-1 px-2 text-[11px]"
+                        className="py-1 px-2.5 text-[11px] cursor-pointer"
                       >
                         Manage
                       </Button>

@@ -48,6 +48,8 @@ const AppContent: React.FC = () => {
     }
 
     switch (currentPath) {
+      case '/admin':
+        return isAuthenticated ? <AdminDashboardPage navigate={navigate} /> : <AdminLoginPage navigate={navigate} />;
       case '/admin/login':
         return <AdminLoginPage navigate={navigate} />;
       case '/admin/dashboard':
