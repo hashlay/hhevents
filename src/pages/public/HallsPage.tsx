@@ -17,6 +17,7 @@ import { Button } from '../../components/ui/Button';
 import { BackButton } from '../../components/ui/BackButton';
 import { HALL_STRUCTURE, COMBINED_PACKAGE, VENUE_INFO } from '../../services/hallData';
 import { useVenuePhotos } from '../../hooks/useVenuePhotos';
+import { VENUE_DEFAULT_ASSETS } from '../../services/photoStorage';
 
 interface HallsPageProps {
   navigate: (path: string) => void;
@@ -87,22 +88,18 @@ export const HallsPage: React.FC<HallsPageProps> = ({ navigate }) => {
                 className="bg-white rounded-3xl border border-[#E2DACB] overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col lg:flex-row"
               >
                 {/* Visual Image */}
-                <div className="lg:w-1/2 relative bg-[#FAF8F5] min-h-[300px] lg:min-h-full flex items-center justify-center overflow-hidden">
-                  {hallPhoto ? (
-                    <img
-                      src={hallPhoto}
-                      alt={hall.name}
-                      className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
-                    />
-                  ) : (
-                    <div className="text-center p-8 space-y-2 text-[#737373]">
-                      <Camera className="w-12 h-12 text-[#C9AA72] mx-auto" />
-                      <h4 className="text-base font-bold text-[#252525]">{hall.name} Photograph</h4>
-                      <p className="text-xs">Official authentic photograph slot</p>
-                    </div>
-                  )}
+                <div className="lg:w-1/2 relative bg-[#FAF8F5] min-h-[320px] lg:min-h-full flex items-center justify-center overflow-hidden">
+                  <img
+                    src={hallPhoto || (isHall1 ? VENUE_DEFAULT_ASSETS.hallBlackGold : VENUE_DEFAULT_ASSETS.hallYellow)}
+                    alt={`${hall.name} - ${isHall1 ? 'Black & Gold Seating Arrangement' : 'Yellow Seating Arrangement'}`}
+                    className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
+                    loading="lazy"
+                  />
                   <div className="absolute top-4 left-4 bg-white/95 backdrop-blur-md text-[#252525] text-xs font-semibold px-3 py-1.5 rounded-lg border border-[#E2DACB] shadow-2xs">
-                    {hall.name} &bull; Independent Wing
+                    {hall.name} &bull; {isHall1 ? 'Black & Gold Seating Arrangement' : 'Yellow Seating Arrangement'}
+                  </div>
+                  <div className="absolute bottom-4 left-4 right-4 bg-[#071512]/85 backdrop-blur-md text-[#F5F1E8] text-[11px] px-3 py-1.5 rounded-lg border border-white/10">
+                    * Physical allocation ({isHall1 ? 'Hall 1' : 'Hall 2'}) awaiting venue owner confirmation
                   </div>
                 </div>
 

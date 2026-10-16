@@ -14,12 +14,18 @@ export const GalleryPage: React.FC<GalleryPageProps> = ({ navigate }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [activePhotoIndex, setActivePhotoIndex] = useState<number | null>(null);
 
-  const categories = ['All', 'Main Hall', 'Dining Wings', 'Stage & Dais', 'Exterior', 'Lawn & Open Air'];
+  const categories = [
+    'All',
+    'Venue Exterior',
+    'Event Halls',
+    'Dining Facilities',
+    'Architectural Concepts',
+  ];
 
   const filteredItems =
     selectedCategory === 'All'
       ? GALLERY_ITEMS
-      : GALLERY_ITEMS.filter((item) => item.category.toLowerCase() === selectedCategory.toLowerCase());
+      : GALLERY_ITEMS.filter((item) => item.category === selectedCategory);
 
   const activePhoto = activePhotoIndex !== null ? filteredItems[activePhotoIndex] : null;
 
@@ -55,11 +61,11 @@ export const GalleryPage: React.FC<GalleryPageProps> = ({ navigate }) => {
                 Venue Gallery
               </h1>
               <p className="text-base sm:text-lg text-[#4A4A4A] leading-relaxed">
-                Explore the event spaces of H H Events &amp; Conventions in Panemangalore — featuring the air-conditioned convention halls, banquet dining wings, stage setups, and entrance.
+                Explore the authentic photographs of H H Events &amp; Conventions in Panemangalore — showcasing our building exterior, event halls, and covered dining wings.
               </p>
               <div className="pt-1 flex items-center gap-3 text-xs text-[#4A4A4A] font-semibold">
                 <span className="bg-[#F5F1E8] text-[#173D35] px-3.5 py-1 rounded-full border border-[#E2DACB]">
-                  Hall 1 &amp; Hall 2 Spaces
+                  Authentic Venue Imagery
                 </span>
                 <span>&bull;</span>
                 <span>Opposite Juma Masjid, Panemangalore</span>
@@ -89,7 +95,7 @@ export const GalleryPage: React.FC<GalleryPageProps> = ({ navigate }) => {
                 onClick={() => setSelectedCategory(cat)}
                 className={`px-4 py-2 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                   selectedCategory === cat
-                    ? 'bg-[#C9AA72] text-white shadow-xs'
+                    ? 'bg-[#173D35] text-white shadow-xs'
                     : 'bg-[#FAF8F5] text-[#4A4A4A] hover:bg-[#EDE6D8] border border-[#E2DACB]'
                 }`}
               >
@@ -99,7 +105,7 @@ export const GalleryPage: React.FC<GalleryPageProps> = ({ navigate }) => {
           </div>
 
           <span className="text-xs text-[#737373] font-medium">
-            Showing {filteredItems.length} Photographs
+            Showing {filteredItems.length} Photographs &amp; Concepts
           </span>
         </div>
       </section>
@@ -108,7 +114,7 @@ export const GalleryPage: React.FC<GalleryPageProps> = ({ navigate }) => {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredItems.map((item, index) => {
-            const photoUrl = getPhotoUrl(item.id);
+            const photoUrl = getPhotoUrl(item.id, item.imageUrl);
 
             return (
               <div
@@ -132,18 +138,31 @@ export const GalleryPage: React.FC<GalleryPageProps> = ({ navigate }) => {
                     </div>
                   )}
 
+                  {/* Category Pill */}
                   <div className="absolute top-3 left-3 bg-white/95 backdrop-blur-md px-2.5 py-1 rounded-md text-[10px] font-bold text-[#252525] shadow-2xs border border-[#E2DACB]">
                     {item.category}
                   </div>
+
+                  {/* Concept Badge (If architectural render) */}
+                  {item.isConcept && (
+                    <div className="absolute bottom-3 left-3 right-3 bg-amber-950/85 backdrop-blur-md px-2.5 py-1 rounded-md text-[10.5px] font-semibold text-amber-200 border border-amber-600/50 text-center">
+                      Architectural Visualization &bull; Not Actual Photograph
+                    </div>
+                  )}
                 </div>
 
-                <div className="p-4 space-y-1">
-                  <h3 className="font-bold text-sm text-[#252525] group-hover:text-[#C9AA72] transition-colors">
+                <div className="p-4 space-y-1.5">
+                  <h3 className="font-bold text-sm text-[#252525] group-hover:text-[#173D35] transition-colors">
                     {item.title}
                   </h3>
                   <p className="text-xs text-[#4A4A4A] line-clamp-2 leading-relaxed">
                     {item.description}
                   </p>
+                  {item.note && (
+                    <p className="text-[10px] text-amber-800 font-medium italic pt-0.5">
+                      * {item.note}
+                    </p>
+                  )}
                 </div>
               </div>
             );
@@ -164,9 +183,16 @@ export const GalleryPage: React.FC<GalleryPageProps> = ({ navigate }) => {
             {/* Top Bar */}
             <div className="p-4 border-b border-[#E2DACB] flex items-center justify-between bg-[#FAF8F5]">
               <div>
-                <h3 className="text-lg font-bold text-[#252525] font-serif-heading">
-                  {activePhoto.title}
-                </h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-bold text-[#252525] font-serif-heading">
+                    {activePhoto.title}
+                  </h3>
+                  {activePhoto.isConcept && (
+                    <span className="bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 rounded text-[10px] font-bold uppercase">
+                      Concept Render
+                    </span>
+                  )}
+                </div>
                 <span className="text-xs text-[#C9AA72] font-semibold">
                   {activePhoto.category} &bull; Photo {activePhotoIndex + 1} of {filteredItems.length}
                 </span>
@@ -183,18 +209,11 @@ export const GalleryPage: React.FC<GalleryPageProps> = ({ navigate }) => {
 
             {/* Photo View */}
             <div className="relative max-h-[70vh] bg-black flex items-center justify-center overflow-hidden">
-              {getPhotoUrl(activePhoto.id) ? (
-                <img
-                  src={getPhotoUrl(activePhoto.id)!}
-                  alt={activePhoto.title}
-                  className="max-h-[70vh] w-auto max-w-full object-contain"
-                />
-              ) : (
-                <div className="p-16 text-center text-white">
-                  <Camera className="w-12 h-12 text-[#D9C194] mx-auto mb-2" />
-                  <p>{activePhoto.title}</p>
-                </div>
-              )}
+              <img
+                src={getPhotoUrl(activePhoto.id, activePhoto.imageUrl) || activePhoto.imageUrl}
+                alt={activePhoto.title}
+                className="max-h-[70vh] w-auto max-w-full object-contain"
+              />
 
               {/* Navigation Arrows */}
               <button
@@ -217,9 +236,21 @@ export const GalleryPage: React.FC<GalleryPageProps> = ({ navigate }) => {
 
             {/* Photo Caption & CTA */}
             <div className="p-5 bg-white border-t border-[#E2DACB] flex flex-col sm:flex-row items-center justify-between gap-4">
-              <p className="text-xs sm:text-sm text-[#4A4A4A] max-w-2xl leading-relaxed">
-                {activePhoto.description}
-              </p>
+              <div className="space-y-1 max-w-2xl">
+                <p className="text-xs sm:text-sm text-[#4A4A4A] leading-relaxed">
+                  {activePhoto.description}
+                </p>
+                {activePhoto.isConcept && (
+                  <p className="text-xs text-amber-800 font-semibold">
+                    Notice: This is a computer-generated architectural visualization. It is not an authentic photograph of the completed facility.
+                  </p>
+                )}
+                {activePhoto.note && (
+                  <p className="text-xs text-amber-800 italic">
+                    * {activePhoto.note}
+                  </p>
+                )}
+              </div>
               <Button
                 onClick={() => {
                   setActivePhotoIndex(null);

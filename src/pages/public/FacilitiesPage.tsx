@@ -96,6 +96,16 @@ export const FacilitiesPage: React.FC<FacilitiesPageProps> = ({ navigate }) => {
                     <p className="text-xs sm:text-sm text-[#4A4A4A] mt-2 leading-relaxed">
                       {facility.details}
                     </p>
+                    {facility.id === 'gents-ladies-dining' && (
+                      <p className="text-[11px] text-amber-800 italic pt-1">
+                        * Facility designation (Covered Dining &amp; Service Area) awaiting owner confirmation.
+                      </p>
+                    )}
+                    {facility.id === 'kitchen' && (
+                      <p className="text-[11px] text-[#737373] italic pt-1">
+                        * Commercial catering kitchen photograph awaiting physical venue capture.
+                      </p>
+                    )}
                   </div>
 
                   <div className="pt-4 border-t border-[#E2DACB]">

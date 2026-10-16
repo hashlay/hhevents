@@ -64,8 +64,8 @@ const PHOTO_SLOTS: PhotoSlotDefinition[] = [
   ...GALLERY_ITEMS.map((item) => ({
     id: item.id,
     label: `${item.title}`,
-    category: 'Official 15-Photo Gallery',
-    recommendedAspect: '4:3 Landscape',
+    category: 'Gallery Showcase',
+    recommendedAspect: '16:9 Landscape',
     description: item.description,
   })),
 ];
@@ -326,8 +326,16 @@ export const RealPhotoManager: React.FC<RealPhotoManagerProps> = ({ onClose, sta
                       alt={currentSlotDef.label}
                       className="w-full h-full object-cover"
                     />
-                    <div className="absolute top-3 left-3 bg-slate-950/80 backdrop-blur-xs text-emerald-400 text-xs font-bold px-2.5 py-1 rounded border border-emerald-800">
-                      Real Photo Active
+                    <div className="absolute top-3 left-3 flex items-center gap-2">
+                      {currentPhoto.uploadedAt === 'system-default' ? (
+                        <span className="bg-emerald-950/85 backdrop-blur-xs text-emerald-300 text-xs font-bold px-2.5 py-1 rounded border border-emerald-700">
+                          Default Venue Photo Active
+                        </span>
+                      ) : (
+                        <span className="bg-sky-950/85 backdrop-blur-xs text-sky-300 text-xs font-bold px-2.5 py-1 rounded border border-sky-700">
+                          Custom Admin Photo Active
+                        </span>
+                      )}
                     </div>
                   </>
                 ) : (
@@ -362,10 +370,12 @@ export const RealPhotoManager: React.FC<RealPhotoManagerProps> = ({ onClose, sta
                     isLoading={isUploading}
                     leftIcon={<Upload className="w-4 h-4" />}
                   >
-                    {currentPhoto ? 'Replace Real Photo' : 'Upload Real Photo'}
+                    {currentPhoto && currentPhoto.uploadedAt !== 'system-default'
+                      ? 'Replace Custom Photo'
+                      : 'Upload Custom Override'}
                   </Button>
 
-                  {currentPhoto && (
+                  {currentPhoto && currentPhoto.uploadedAt !== 'system-default' && (
                     <Button
                       onClick={() => handleRemovePhoto(currentSlotDef.id)}
                       variant="outline"
@@ -373,7 +383,7 @@ export const RealPhotoManager: React.FC<RealPhotoManagerProps> = ({ onClose, sta
                       className="text-rose-600 border-rose-200 hover:bg-rose-50"
                       leftIcon={<Trash2 className="w-4 h-4" />}
                     >
-                      Remove
+                      Reset to Venue Default
                     </Button>
                   )}
                 </div>

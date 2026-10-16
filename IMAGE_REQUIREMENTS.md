@@ -1,41 +1,67 @@
 # HH Events & Conventions — Official Photography & Asset Requirements
 
-To deliver an authentic, prestigious, and non-generic website for **H H Events & Conventions (Panemangalore, Bantwal)**, real photographs of the physical venue are required.
-
-> [!IMPORTANT]
-> In accordance with project quality standards, stock photography and AI-generated depictions will **not** be fabricated as the real venue. All placeholder areas will maintain an intentional, elegant photographic frame until authentic photos are provided.
-
----
-
-## 1. Required Asset Checklist
-
-| Asset Key | Item Description | Recommended Resolution | Aspect Ratio | Target Placement |
-| :--- | :--- | :--- | :--- | :--- |
-| `hero_main_hall` | **Grand Main Convention Hall** (Wide-angle, stage view, high ceiling & chandelier lighting) | 1920 × 1080 px or higher | 16:9 | Homepage Hero & Header Banner |
-| `gents_hall` | **Hall 1 (Gents Hall Section)** (Seating arrangement, acoustic lights, dais) | 1200 × 800 px | 3:2 or 4:3 | Halls Page, Booking Selection |
-| `ladies_hall` | **Hall 2 (Ladies Hall Section)** (Independent entrance, seating, podium) | 1200 × 800 px | 3:2 or 4:3 | Halls Page, Booking Selection |
-| `dining_area_1` | **Dining Hall Wing 1** (Banquet tables, handwash bays, natural ventilation) | 1200 × 800 px | 3:2 | Facilities, Package Details |
-| `dining_area_2` | **Dining Hall Wing 2** (Dual dining wing layout) | 1200 × 800 px | 3:2 | Facilities, Double Dining Package |
-| `catering_kitchen` | **Equipped Catering Kitchen** (High-capacity burners, prep counters, service ingress) | 1200 × 800 px | 3:2 | Facilities, Package Inclusion Strip |
-| `stage_dais` | **Stage & Backdrop Setup** (Floral or lighting decoration on main stage) | 1200 × 800 px | 3:2 | Gallery, Wedding Showcase |
-| `venue_exterior` | **Building Facade & Main Entrance** (Exterior view from main road opposite Juma Masjid) | 1920 × 1080 px | 16:9 | About Page, Location & Maps |
-| `parking_area` | **Guest Parking Facility** (Ample parking space & vehicular ingress) | 1200 × 800 px | 3:2 | Facilities Page, Logistics |
-| `brand_logo` | **Official H H Events Wordmark / Logo** (High-resolution transparent vector or PNG) | 512 × 512 px (or SVG) | 1:1 or Vector | Navbar, Footer, Receipts, Favicon |
-| `gallery_1` to `gallery_6` | **Event Occasions in Action** (Real Nikah, Wedding Reception, or Banquet setups) | 1200 × 800 px | 3:2 | Gallery Showcase |
+**Last Updated:** 2026-10-16  
+**Venue:** H H Events & Conventions, Akkarangadi, Panemangalore, Bantwal, Karnataka 574231  
+**Asset Folder:** `public/assets/venue/photos/HH_Events_Venue_Images/` and `public/assets/branding/`  
 
 ---
 
-## 2. File Format & Technical Guidelines
+## 1. Asset Status Matrix
 
-- **Formats:** JPG, PNG, or WebP.
-- **Optimization:** Crisp resolution without heavy camera shake or extreme lens distortion.
-- **Color Temperature:** Natural warm lighting that complements the **Deep Emerald (`#173D35`)** and **Champagne Gold (`#C9AA72`)** venue brand.
-- **Destination Directory:** Place files into `public/assets/venue/photos/` or upload via the built-in Admin Photo Console (`/admin/photos`).
+### A. Supplied Authentic Photographs & Assets
+
+| Asset File | Displayed Subject | Target Placements | Status |
+| :--- | :--- | :--- | :---: |
+| `01_venue_exterior.jpg` (and `.webp`) | **Real Building Exterior & Illuminated Signage** (Wide angle showing front portico, golden 3D signage, paved courtyard, warm string lighting) | Homepage Hero, About Page, Gallery | `SUPPLIED & INTEGRATED` |
+| `02_event_hall_black_gold.jpg` (and `.webp`) | **Event Hall — Black & Gold Seating Arrangement** (Central processional walkway, decorated dais, ceiling fans & spotlights) | Homepage Event Spaces, Halls Page, Gallery | `SUPPLIED & INTEGRATED` |
+| `03_event_hall_yellow.jpg` (and `.webp`) | **Event Hall — Yellow Seating Arrangement** (Yellow custom-branded HH chair covers, central aisle, decorated ceremony dais) | Homepage Event Spaces, Halls Page, Gallery | `SUPPLIED & INTEGRATED` |
+| `05_dining_area_seating.jpg` (and `.webp`) | **Dining Area (Seated Banquet Wing)** (Rows of dining tables, red-and-black banquet chairs, metal roof with ceiling fans) | Homepage Dining Preview, Facilities Page, Gallery | `SUPPLIED & INTEGRATED` |
+| `06_dining_area_open.jpg` (and `.webp`) | **Covered Dining & Service Area** (Spacious covered floor, stainless-steel food counters, tiled flooring, overhead fans) | Homepage Dining Preview, Facilities Page, Gallery | `SUPPLIED & INTEGRATED` |
+| `public/assets/branding/hh-logo.png` | **Official HH Monogram Logo** (Lossless transparent metallic gold monogram) | Navbar, Footer, Admin Login, Admin Dashboard, Favicons | `SUPPLIED & INTEGRATED` |
 
 ---
 
-## 3. Temporary Fallback Protocol
+### B. Architectural Visualizations (Concept Renders — Labeled Honestly)
 
-While awaiting these official assets:
-1. The website displays clean, architectural photography place-cards with subtle gold borders and descriptive captions.
-2. No fake stock models, generic stock banquet halls, or AI hallucinatory images will be passed off as the Panemangalore venue.
+| Asset File | Depiction | Placement | Handling Requirements | Status |
+| :--- | :--- | :--- | :--- | :---: |
+| `04_outdoor_event_concept.jpg` (and `.webp`) | **Outdoor Banquet Area — Architectural Concept** (Round banquet tables, lawn setup, royal palms under evening sky) | Gallery ("Architectural Concepts") | Must be labeled strictly as **"Architectural Visualization"**. Never claimed as operational physical lawn. | `SUPPLIED & INTEGRATED (CONCEPT)` |
+| `07_parking_concept.jpg` (and `.webp`) | **Parking Plaza — Architectural Concept** (3D aerial rendering of building exterior, entrance, and planned parking lot) | Gallery ("Architectural Concepts") | Must be labeled strictly as **"Architectural Visualization"**. Never claimed as actual parking photograph. | `SUPPLIED & INTEGRATED (CONCEPT)` |
+
+---
+
+### C. Awaiting Venue Owner Confirmations
+
+1. **Hall 1 vs Hall 2 Physical Mapping:**
+   - Image 02 displays a hall with Black & Gold seating.
+   - Image 03 displays a hall with Yellow seating.
+   - *Confirmation Required:* Does Image 02 represent Hall 1 (Gents) and Image 03 represent Hall 2 (Ladies), or are these two separate decor arrangements of the same physical hall space?
+   - *Current Website Handling:* Neutral labels used ("Event Hall — Black & Gold Seating" / "Event Hall — Yellow Seating") with an explicit notice that physical mapping is awaiting owner confirmation.
+
+2. **Designation of Image 06:**
+   - Image 06 displays a large covered area with stainless steel counters and tiled flooring.
+   - *Confirmation Required:* Is this the Gents Dining Wing, a buffet pavilion, or a multipurpose service wing?
+   - *Current Website Handling:* Labeled as "Covered Dining & Service Area". Never labeled as a kitchen.
+
+3. **Architectural Concepts Display Policy:**
+   - *Confirmation Required:* Confirm whether the venue owner wishes to keep the two architectural 3D visualizations (`04_outdoor_event_concept` and `07_parking_concept`) in the public gallery or restrict the website strictly to authentic photographs.
+
+---
+
+### D. Photographs Still Awaiting Physical Capture
+
+The following genuine physical venue photographs are still pending physical capture from the venue owner:
+
+| Asset Requirement | Specifications | Target Placement | Priority |
+| :--- | :--- | :--- | :---: |
+| **Commercial Catering Kitchen** | Wide-angle shot of the actual commercial food prep kitchen, high-pressure burners, prep counters, and service ingress. | Facilities Page, Package Inclusions | **HIGH** |
+| **Real Guest Parking Grounds** | Authentic daytime photograph of vehicular access, entrance gate, and parking grounds. | Location Page, Facilities Page | **MEDIUM** |
+| **Stage & Dais Close-Up** | Detailed close-up of the wedding stage setup, backdrop floral work, and bridal seating dais. | Gallery, Wedding Showcase | **LOW** |
+
+---
+
+## 2. Integration & Management Protocol
+
+- **Authoritative Image Serving:** All local images are served directly from `public/assets/venue/photos/HH_Events_Venue_Images/`.
+- **Performance Derivatives:** Optimized WebP derivatives (`.webp`) have been generated alongside the original `.jpg` files for sub-second page loads.
+- **Admin Overrides:** Venue managers can replace or update any slot at any time via the authenticated Admin Console (`/admin/photos`). When an override is deleted, the system cleanly reverts to these local defaults.
