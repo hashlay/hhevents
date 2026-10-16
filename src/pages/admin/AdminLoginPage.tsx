@@ -80,12 +80,13 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({ navigate }) => {
 
         {/* Brand header */}
         <div className="text-center space-y-2">
-          {/* Luxury Monogram Badge */}
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#173D35] to-[#0A1E19] border border-[#C9AA72]/50 text-[#F5F1E8] flex items-center justify-center mx-auto shadow-xl shadow-black/40">
-            <div className="flex flex-col items-center justify-center leading-none">
-              <span className="font-serif-heading font-extrabold text-lg tracking-widest text-[#D9C194]">HH</span>
-              <span className="w-5 h-[1.5px] bg-[#C9AA72]/70 mt-1" />
-            </div>
+          {/* Official HH Logo */}
+          <div className="flex justify-center pb-1">
+            <img
+              src="/assets/branding/hh-logo.png"
+              alt="H H Events Official Logo"
+              className="h-16 w-auto object-contain mx-auto"
+            />
           </div>
 
           <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight font-serif-heading pt-1">

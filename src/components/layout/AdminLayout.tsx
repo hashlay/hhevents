@@ -115,9 +115,11 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
               className="py-1 px-2.5"
             />
           )}
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#173D35] to-[#0A1E19] border border-[#C9AA72]/40 text-[#D9C194] flex items-center justify-center font-bold text-xs">
-            HH
-          </div>
+          <img
+            src="/assets/branding/hh-logo.png"
+            alt="HH Logo"
+            className="h-7 w-auto object-contain shrink-0"
+          />
           <div>
             <span className="font-bold text-sm block leading-tight">H H Events</span>
             <span className="text-[9px] block text-[#C9AA72] font-semibold tracking-wider uppercase">MANAGEMENT CONSOLE</span>
@@ -152,12 +154,11 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
           {/* Brand header */}
           <div className="p-5 border-b border-[#183E34] flex items-center justify-between bg-[#081814]">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#173D35] to-[#0A1E19] text-[#D9C194] flex items-center justify-center font-bold text-sm border border-[#C9AA72]/40 shadow-sm shrink-0">
-                <div className="flex flex-col items-center justify-center leading-none">
-                  <span className="font-serif-heading font-extrabold text-xs tracking-wider">HH</span>
-                  <span className="w-3 h-[1px] bg-[#C9AA72]/60 mt-0.5" />
-                </div>
-              </div>
+              <img
+                src="/assets/branding/hh-logo.png"
+                alt="HH Events Official Logo"
+                className="h-8 w-auto object-contain shrink-0"
+              />
               <div className="min-w-0">
                 <span className="text-sm font-bold text-white tracking-tight font-serif-heading block truncate">
                   H H Events

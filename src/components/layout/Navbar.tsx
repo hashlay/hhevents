@@ -162,13 +162,12 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, navigate }) => {
               onClick={() => handleLinkClick('/')}
               className="flex items-center gap-3 text-left group focus:outline-none cursor-pointer shrink-0 py-1"
             >
-              {/* Luxury Monogram Crest Badge */}
-              <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-[#173D35] to-[#0D241F] border border-[#C9AA72]/40 shadow-xs flex items-center justify-center text-[#F5F1E8] group-hover:border-[#C9AA72] group-hover:shadow transition-all shrink-0">
-                <div className="flex flex-col items-center justify-center leading-none">
-                  <span className="font-serif-heading font-bold text-xs sm:text-sm tracking-wider text-[#D9C194]">HH</span>
-                  <span className="w-3 h-[1px] bg-[#C9AA72]/60 mt-0.5" />
-                </div>
-              </div>
+              {/* Official HH Monogram Logo */}
+              <img
+                src="/assets/branding/hh-logo.png"
+                alt="HH Events & Conventions Logo"
+                className="h-10 sm:h-11 w-auto object-contain shrink-0"
+              />
 
               {/* Typography Wordmark */}
               <div className="flex flex-col shrink-0">
@@ -344,9 +343,11 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, navigate }) => {
             {/* Drawer Header */}
             <div className="p-4 border-b border-[#E2DACB] flex items-center justify-between bg-[#173D35] text-white">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-[#0D241F] border border-[#C9AA72]/40 flex items-center justify-center">
-                  <span className="font-serif-heading font-bold text-xs text-[#D9C194]">HH</span>
-                </div>
+                <img
+                  src="/assets/branding/hh-logo.png"
+                  alt="HH Logo"
+                  className="h-8 w-auto object-contain shrink-0"
+                />
                 <div>
                   <span className="font-bold text-white text-base font-serif-heading block leading-tight">
                     H H Events &amp; Conventions

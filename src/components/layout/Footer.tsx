@@ -21,13 +21,20 @@ export const Footer: React.FC<FooterProps> = ({ navigate }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 mb-12">
           {/* Brand & Overview */}
           <div className="lg:col-span-2 space-y-4">
-            <div>
-              <span className="text-2xl font-bold text-white tracking-tight font-serif-heading block">
-                H H Events &amp; Conventions
-              </span>
-              <p className="text-xs text-[#C9AA72] font-semibold mt-1 tracking-wider uppercase">
-                Panemangalore, Bantwal &bull; Hall 1 &amp; Hall 2
-              </p>
+            <div className="space-y-3">
+              <img
+                src="/assets/branding/hh-logo.png"
+                alt="H H Events & Conventions Logo"
+                className="h-10 w-auto object-contain"
+              />
+              <div>
+                <span className="text-2xl font-bold text-white tracking-tight font-serif-heading block">
+                  H H Events &amp; Conventions
+                </span>
+                <p className="text-xs text-[#C9AA72] font-semibold mt-1 tracking-wider uppercase">
+                  Panemangalore, Bantwal &bull; Hall 1 &amp; Hall 2
+                </p>
+              </div>
             </div>
 
             <p className="text-sm text-slate-300 leading-relaxed max-w-sm">
