@@ -332,7 +332,7 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
         <div className="grid grid-cols-7 gap-1 sm:gap-2">
           {/* Offset blank cells */}
           {Array.from({ length: firstDayIndex }).map((_, i) => (
-            <div key={`blank-${i}`} className="min-h-[58px] sm:min-h-[64px] rounded-xl bg-[#FAF8F5]/60" />
+            <div key={`blank-${i}`} className="min-h-[50px] sm:min-h-[64px] rounded-xl bg-[#FAF8F5]/60" />
           ))}
 
           {/* Month days */}
@@ -354,20 +354,21 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
                 key={dateStr}
                 type="button"
                 onClick={() => handleDateClick(dateStr)}
-                className={`min-h-[60px] sm:min-h-[68px] p-1.5 sm:p-2 rounded-xl text-left transition-all relative flex flex-col justify-between border cursor-pointer ${
+                className={`min-h-[52px] sm:min-h-[68px] p-1 sm:p-2 rounded-xl text-left transition-all relative flex flex-col justify-between items-center sm:items-stretch border cursor-pointer ${
                   isSelected
-                    ? 'bg-[#F5F1E8] border-[#C9AA72] shadow-xs ring-2 ring-[#C9AA72]/30'
+                    ? 'bg-[#F5F1E8] border-[#C9AA72] shadow-xs ring-2 ring-[#C9AA72]/40'
                     : summary === 'unavailable'
                     ? 'bg-rose-50/50 border-rose-200 hover:border-rose-300'
                     : summary === 'partial'
                     ? 'bg-amber-50/40 border-amber-200 hover:border-amber-300'
                     : 'bg-white border-[#E2DACB] hover:border-[#D6CCA9] hover:bg-[#FAF8F5]'
                 }`}
+                aria-label={`${dateStr}: ${summary === 'unavailable' ? 'Booked' : summary === 'partial' ? '1 Session Open' : 'Available'}`}
               >
                 {/* Day Number and Today Badge */}
                 <div className="flex items-center justify-between w-full">
                   <span
-                    className={`text-xs font-bold ${
+                    className={`text-[11px] sm:text-xs font-bold leading-tight ${
                       isSelected
                         ? 'text-[#173D35] font-extrabold'
                         : summary === 'unavailable'
@@ -378,31 +379,34 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
                     {day}
                   </span>
                   {isToday && (
-                    <span className="text-[9px] font-bold text-[#173D35] bg-[#F5F1E8] border border-[#E2DACB] px-1 py-0.2 rounded">
+                    <span className="hidden sm:inline text-[9px] font-bold text-[#173D35] bg-[#F5F1E8] border border-[#E2DACB] px-1 py-0.2 rounded">
                       Today
                     </span>
                   )}
+                  {isToday && (
+                    <span className="sm:hidden w-1.5 h-1.5 rounded-full bg-[#C9AA72]" title="Today" />
+                  )}
                 </div>
 
-                {/* Session status dots */}
+                {/* Session status dots (Day dot, Evening dot) */}
                 <div className="flex items-center gap-1 my-0.5">
                   <span
                     title={`Day Session (10 AM–3 PM): ${daySlotOpen ? 'Available' : 'Unavailable'}`}
-                    className={`w-2 h-2 rounded-full ${
+                    className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full shrink-0 ${
                       daySlotOpen ? 'bg-emerald-500' : 'bg-rose-500'
                     }`}
                   />
                   <span
                     title={`Evening Session (6 PM–10 PM): ${eveSlotOpen ? 'Available' : 'Unavailable'}`}
-                    className={`w-2 h-2 rounded-full ${
+                    className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full shrink-0 ${
                       eveSlotOpen ? 'bg-emerald-500' : 'bg-rose-500'
                     }`}
                   />
                 </div>
 
-                {/* Text indicator */}
+                {/* Text indicator on sm and larger, compact dot bar on narrow mobile */}
                 <span
-                  className={`text-[9px] font-bold leading-tight ${
+                  className={`text-[9px] font-bold leading-tight truncate max-w-full hidden sm:block ${
                     summary === 'unavailable'
                       ? 'text-rose-700'
                       : summary === 'partial'
@@ -412,6 +416,17 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
                 >
                   {summary === 'unavailable' ? 'Booked' : summary === 'partial' ? '1 Open' : 'Open'}
                 </span>
+                <span
+                  className={`sm:hidden text-[8px] font-bold leading-none ${
+                    summary === 'unavailable'
+                      ? 'text-rose-700'
+                      : summary === 'partial'
+                      ? 'text-amber-700'
+                      : 'text-emerald-700'
+                  }`}
+                >
+                  {summary === 'unavailable' ? '✕' : summary === 'partial' ? '½' : '✓'}
+                </span>
               </button>
             );
           })}
@@ -419,7 +434,7 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
 
         {/* Legend */}
         <div className="pt-3 border-t border-[#E2DACB] flex flex-wrap items-center justify-between gap-3 text-xs text-[#4A4A4A]">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 sm:gap-4 text-[11px] sm:text-xs">
             <span className="flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
               <span>Available</span>
@@ -433,7 +448,7 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
               <span>Booked</span>
             </span>
           </div>
-          <span className="text-[11px] text-[#737373]">
+          <span className="text-[10px] sm:text-[11px] text-[#737373]">
             Dot 1: Day (10 AM–3 PM) &bull; Dot 2: Evening (6 PM–10 PM)
           </span>
         </div>
@@ -506,7 +521,7 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
                 </span>
               </div>
 
-              <div className="pt-3 border-t border-[#E2DACB] flex items-center justify-between">
+              <div className="pt-3 border-t border-[#E2DACB] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                 <span className="text-xs text-[#737373]">
                   {daySlotAvailable ? 'Open for reservation' : 'Slot reserved on this date'}
                 </span>
@@ -515,6 +530,7 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
                     onClick={() => handleBook('day')}
                     variant="gold"
                     size="sm"
+                    className="w-full sm:w-auto justify-center"
                     rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
                   >
                     Book Day Session
@@ -570,7 +586,7 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
                 </span>
               </div>
 
-              <div className="pt-3 border-t border-[#E2DACB] flex items-center justify-between">
+              <div className="pt-3 border-t border-[#E2DACB] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                 <span className="text-xs text-[#737373]">
                   {eveningSlotAvailable ? 'Open for reservation' : 'Slot reserved on this date'}
                 </span>
@@ -579,6 +595,7 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
                     onClick={() => handleBook('evening')}
                     variant="gold"
                     size="sm"
+                    className="w-full sm:w-auto justify-center"
                     rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
                   >
                     Book Evening Session

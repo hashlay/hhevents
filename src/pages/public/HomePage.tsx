@@ -77,29 +77,28 @@ export const HomePage: React.FC<HomePageProps> = ({ navigate }) => {
 
   return (
     <div className="space-y-16 lg:space-y-24 pb-20 bg-[#F5F1E8] text-[#252525]">
-      {/* 1. HERO SECTION — Authentic Building Exterior with Readable Left Overlay */}
-      <section className="relative overflow-hidden bg-[#071512] text-white">
+      {/* 1. HERO SECTION — DESKTOP VIEWPORT (Preserved with fixed contrast) */}
+      <section className="hidden lg:block relative overflow-hidden bg-[#071512] text-white">
         {/* Full Photographic Background showing Real Building & Illuminated Signage */}
         <div className="absolute inset-0 z-0">
           <img
             src={heroPhoto}
             alt="H H Events & Conventions Building Exterior with Illuminated Signage"
-            className="w-full h-full object-cover object-center lg:object-right"
+            className="w-full h-full object-cover object-right"
             loading="eager"
           />
           {/* Subtle Scrim: Gradient over left portion preserves text readability without obscuring the illuminated HH signage and entrance */}
           <div className="absolute inset-0 bg-gradient-to-r from-[#071512]/95 via-[#071512]/80 to-transparent lg:w-3/5" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#071512] via-transparent to-black/30 lg:hidden" />
         </div>
 
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-28 lg:py-36">
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-28 lg:py-36">
           <div className="max-w-2xl space-y-6">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#122E27]/90 backdrop-blur-md border border-[#C9AA72]/40 text-[#D9C194] text-xs font-semibold tracking-wide">
               <MapPin className="w-3.5 h-3.5 text-[#C9AA72]" />
               <span>Opposite Juma Masjid, Panemangalore, Bantwal</span>
             </div>
 
-            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-white leading-[1.15] font-serif-heading drop-shadow-sm">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-white leading-[1.15] font-serif-heading drop-shadow-sm">
               A Beautiful Venue for Your Special Occasions
             </h1>
 
@@ -120,9 +119,8 @@ export const HomePage: React.FC<HomePageProps> = ({ navigate }) => {
 
               <Button
                 onClick={() => navigate('/pricing')}
-                variant="outline"
+                variant="outline-light"
                 size="lg"
-                className="bg-black/30 text-white border-white/40 hover:bg-white/10 hover:border-white"
                 rightIcon={<ArrowRight className="w-4 h-4" />}
               >
                 Explore Packages
@@ -139,6 +137,76 @@ export const HomePage: React.FC<HomePageProps> = ({ navigate }) => {
                 <Building2 className="w-3.5 h-3.5 text-[#C9AA72]" />
                 <span>Dual Independent Halls &bull; Commercial Kitchen</span>
               </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 1b. DEDICATED MOBILE & TABLET HERO COMPOSITION */}
+      <section className="block lg:hidden bg-[#071512] text-white">
+        <div className="px-4 py-8 sm:px-6 sm:py-12 space-y-5 max-w-2xl mx-auto">
+          {/* Eyebrow */}
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#122E27] border border-[#C9AA72]/40 text-[#D9C194] text-[11px] sm:text-xs font-semibold tracking-wide">
+            <MapPin className="w-3.5 h-3.5 text-[#C9AA72] shrink-0" />
+            <span className="truncate">Opposite Juma Masjid, Panemangalore, Bantwal</span>
+          </div>
+
+          {/* Fluid Headline */}
+          <h1 className="text-2xl sm:text-4xl font-bold tracking-tight text-white leading-tight font-serif-heading">
+            A Beautiful Venue for Your Special Occasions
+          </h1>
+
+          {/* Description */}
+          <p className="text-sm sm:text-base text-[#F5F1E8]/90 leading-relaxed font-normal">
+            Explore our event spaces, dining facilities, and hall packages in Panemangalore, Bantwal.
+          </p>
+
+          {/* Action Buttons: Stack vertically on narrow mobile, side-by-side on tablet */}
+          <div className="pt-1 flex flex-col sm:flex-row gap-3">
+            <Button
+              onClick={() => navigate('/availability')}
+              variant="gold"
+              size="md"
+              className="w-full sm:flex-1 justify-center min-h-[46px]"
+              rightIcon={<CalendarDays className="w-4 h-4" />}
+            >
+              Check Availability
+            </Button>
+
+            <Button
+              onClick={() => navigate('/pricing')}
+              variant="outline-light"
+              size="md"
+              className="w-full sm:flex-1 justify-center min-h-[46px]"
+              rightIcon={<ArrowRight className="w-4 h-4" />}
+            >
+              Explore Packages
+            </Button>
+          </div>
+
+          {/* Actual Building Exterior Photo (16:9 Frame with illuminated signage clearly visible) */}
+          <div className="relative aspect-16/9 w-full rounded-2xl overflow-hidden border border-[#C9AA72]/30 shadow-xl bg-[#0F2722]">
+            <img
+              src={heroPhoto}
+              alt="H H Events & Conventions Building Exterior with Illuminated Signage"
+              className="w-full h-full object-cover object-center"
+              loading="eager"
+            />
+            <div className="absolute bottom-2.5 left-2.5 right-2.5 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10 text-[11px] text-[#F5F1E8] flex items-center justify-between">
+              <span className="font-semibold text-[#D9C194]">H H Events Campus</span>
+              <span>Panemangalore</span>
+            </div>
+          </div>
+
+          {/* Session Information below hero photo */}
+          <div className="p-4 rounded-2xl bg-[#0F2722] border border-[#C9AA72]/20 text-xs text-[#D9C194] space-y-2">
+            <div className="flex items-center gap-2">
+              <Clock className="w-3.5 h-3.5 text-[#C9AA72] shrink-0" />
+              <span className="leading-tight">Day (10 AM–3 PM) &bull; Evening (6 PM–10 PM)</span>
+            </div>
+            <div className="flex items-center gap-2 pt-1 border-t border-white/10">
+              <Building2 className="w-3.5 h-3.5 text-[#C9AA72] shrink-0" />
+              <span className="leading-tight">Dual Independent Halls &bull; Commercial Kitchen</span>
             </div>
           </div>
         </div>

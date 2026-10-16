@@ -384,6 +384,7 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
                 size="md"
                 disabled={!!conflictReason}
                 rightIcon={<ArrowRight className="w-4 h-4" />}
+                className="w-full sm:w-auto justify-center"
               >
                 Proceed to Package Selection
               </Button>
@@ -469,11 +470,11 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
               })}
             </div>
 
-            <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-              <Button onClick={handlePrevStep} variant="outline" size="md" leftIcon={<ArrowLeft className="w-4 h-4" />}>
+            <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-4 border-t border-slate-100">
+              <Button onClick={handlePrevStep} variant="outline" size="md" leftIcon={<ArrowLeft className="w-4 h-4" />} className="w-full sm:w-auto justify-center">
                 Back
               </Button>
-              <Button onClick={handleNextStep} variant="gold" size="md" rightIcon={<ArrowRight className="w-4 h-4" />}>
+              <Button onClick={handleNextStep} variant="gold" size="md" rightIcon={<ArrowRight className="w-4 h-4" />} className="w-full sm:w-auto justify-center">
                 Configure Space &amp; Layout
               </Button>
             </div>
@@ -577,11 +578,11 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
               </div>
             </div>
 
-            <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-              <Button onClick={handlePrevStep} variant="outline" size="md" leftIcon={<ArrowLeft className="w-4 h-4" />}>
+            <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-4 border-t border-slate-100">
+              <Button onClick={handlePrevStep} variant="outline" size="md" leftIcon={<ArrowLeft className="w-4 h-4" />} className="w-full sm:w-auto justify-center">
                 Back
               </Button>
-              <Button onClick={handleNextStep} variant="gold" size="md" rightIcon={<ArrowRight className="w-4 h-4" />}>
+              <Button onClick={handleNextStep} variant="gold" size="md" rightIcon={<ArrowRight className="w-4 h-4" />} className="w-full sm:w-auto justify-center">
                 Host &amp; Event Details
               </Button>
             </div>
@@ -689,11 +690,11 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
               </div>
             </div>
 
-            <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-              <Button onClick={handlePrevStep} variant="outline" size="md" leftIcon={<ArrowLeft className="w-4 h-4" />}>
+            <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-4 border-t border-slate-100">
+              <Button onClick={handlePrevStep} variant="outline" size="md" leftIcon={<ArrowLeft className="w-4 h-4" />} className="w-full sm:w-auto justify-center">
                 Back
               </Button>
-              <Button onClick={handleNextStep} variant="gold" size="md" rightIcon={<ArrowRight className="w-4 h-4" />}>
+              <Button onClick={handleNextStep} variant="gold" size="md" rightIcon={<ArrowRight className="w-4 h-4" />} className="w-full sm:w-auto justify-center">
                 Review Summary &amp; Terms
               </Button>
             </div>
@@ -782,8 +783,8 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
               </label>
             </div>
 
-            <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-              <Button type="button" onClick={handlePrevStep} variant="outline" size="md" leftIcon={<ArrowLeft className="w-4 h-4" />}>
+            <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-4 border-t border-slate-100">
+              <Button type="button" onClick={handlePrevStep} variant="outline" size="md" leftIcon={<ArrowLeft className="w-4 h-4" />} className="w-full sm:w-auto justify-center">
                 Back
               </Button>
               <Button
@@ -792,6 +793,7 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
                 size="md"
                 disabled={isSubmitting || !termsAccepted}
                 leftIcon={<CheckCircle2 className="w-4 h-4" />}
+                className="w-full sm:w-auto justify-center"
               >
                 {isSubmitting ? 'Submitting Reservation...' : 'Submit Booking Request'}
               </Button>

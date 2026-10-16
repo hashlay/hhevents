@@ -29,6 +29,28 @@ export const GalleryPage: React.FC<GalleryPageProps> = ({ navigate }) => {
 
   const activePhoto = activePhotoIndex !== null ? filteredItems[activePhotoIndex] : null;
 
+  React.useEffect(() => {
+    if (activePhotoIndex !== null) {
+      document.body.style.overflow = 'hidden';
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') {
+          setActivePhotoIndex(null);
+        } else if (e.key === 'ArrowRight') {
+          setActivePhotoIndex((prev) => (prev !== null ? (prev + 1) % filteredItems.length : null));
+        } else if (e.key === 'ArrowLeft') {
+          setActivePhotoIndex((prev) => (prev !== null ? (prev - 1 + filteredItems.length) % filteredItems.length : null));
+        }
+      };
+      window.addEventListener('keydown', handleKeyDown);
+      return () => {
+        document.body.style.overflow = '';
+        window.removeEventListener('keydown', handleKeyDown);
+      };
+    } else {
+      document.body.style.overflow = '';
+    }
+  }, [activePhotoIndex, filteredItems.length]);
+
   const handleNextPhoto = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (activePhotoIndex !== null) {
@@ -174,33 +196,33 @@ export const GalleryPage: React.FC<GalleryPageProps> = ({ navigate }) => {
       {activePhoto && activePhotoIndex !== null && (
         <div
           onClick={() => setActivePhotoIndex(null)}
-          className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 md:p-6"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="relative max-w-5xl w-full bg-white rounded-3xl overflow-hidden shadow-2xl border border-[#E2DACB]"
+            className="relative max-w-5xl w-full max-h-[96vh] bg-white rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border border-[#E2DACB] flex flex-col"
           >
             {/* Top Bar */}
-            <div className="p-4 border-b border-[#E2DACB] flex items-center justify-between bg-[#FAF8F5]">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-lg font-bold text-[#252525] font-serif-heading">
+            <div className="p-3.5 sm:p-4 border-b border-[#E2DACB] flex items-center justify-between bg-[#FAF8F5] shrink-0">
+              <div className="min-w-0 pr-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-base sm:text-lg font-bold text-[#252525] font-serif-heading truncate">
                     {activePhoto.title}
                   </h3>
                   {activePhoto.isConcept && (
-                    <span className="bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 rounded text-[10px] font-bold uppercase">
+                    <span className="bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 rounded text-[10px] font-bold uppercase shrink-0">
                       Concept Render
                     </span>
                   )}
                 </div>
-                <span className="text-xs text-[#C9AA72] font-semibold">
+                <span className="text-xs text-[#C9AA72] font-semibold block mt-0.5">
                   {activePhoto.category} &bull; Photo {activePhotoIndex + 1} of {filteredItems.length}
                 </span>
               </div>
               <button
                 type="button"
                 onClick={() => setActivePhotoIndex(null)}
-                className="p-2 rounded-xl bg-white border border-[#E2DACB] text-[#4A4A4A] hover:text-[#252525] cursor-pointer"
+                className="p-2 rounded-xl bg-white border border-[#E2DACB] text-[#4A4A4A] hover:text-[#252525] cursor-pointer shrink-0"
                 aria-label="Close Lightbox"
               >
                 <X className="w-5 h-5" />
@@ -208,35 +230,35 @@ export const GalleryPage: React.FC<GalleryPageProps> = ({ navigate }) => {
             </div>
 
             {/* Photo View */}
-            <div className="relative max-h-[70vh] bg-black flex items-center justify-center overflow-hidden">
+            <div className="relative flex-1 min-h-[200px] max-h-[50vh] sm:max-h-[62vh] bg-black flex items-center justify-center overflow-hidden shrink">
               <img
                 src={getPhotoUrl(activePhoto.id, activePhoto.imageUrl) || activePhoto.imageUrl}
                 alt={activePhoto.title}
-                className="max-h-[70vh] w-auto max-w-full object-contain"
+                className="max-h-[50vh] sm:max-h-[62vh] w-auto max-w-full object-contain"
               />
 
               {/* Navigation Arrows */}
               <button
                 type="button"
                 onClick={handlePrevPhoto}
-                className="absolute left-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-black/60 hover:bg-black/80 text-white transition-colors cursor-pointer"
+                className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 p-2 sm:p-3 rounded-full bg-black/60 hover:bg-black/80 text-white transition-colors cursor-pointer"
                 aria-label="Previous image"
               >
-                <ChevronLeft className="w-6 h-6" />
+                <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
               </button>
               <button
                 type="button"
                 onClick={handleNextPhoto}
-                className="absolute right-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-black/60 hover:bg-black/80 text-white transition-colors cursor-pointer"
+                className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 p-2 sm:p-3 rounded-full bg-black/60 hover:bg-black/80 text-white transition-colors cursor-pointer"
                 aria-label="Next image"
               >
-                <ChevronRight className="w-6 h-6" />
+                <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
               </button>
             </div>
 
             {/* Photo Caption & CTA */}
-            <div className="p-5 bg-white border-t border-[#E2DACB] flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="space-y-1 max-w-2xl">
+            <div className="p-3.5 sm:p-5 bg-white border-t border-[#E2DACB] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shrink-0 overflow-y-auto max-h-[30vh]">
+              <div className="space-y-1 min-w-0 flex-1">
                 <p className="text-xs sm:text-sm text-[#4A4A4A] leading-relaxed">
                   {activePhoto.description}
                 </p>
@@ -258,7 +280,7 @@ export const GalleryPage: React.FC<GalleryPageProps> = ({ navigate }) => {
                 }}
                 variant="gold"
                 size="sm"
-                className="shrink-0"
+                className="w-full sm:w-auto shrink-0 justify-center"
               >
                 Reserve Venue
               </Button>

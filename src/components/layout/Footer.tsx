@@ -184,16 +184,12 @@ export const Footer: React.FC<FooterProps> = ({ navigate }) => {
         {/* Bottom Bar */}
         <div className="pt-8 border-t border-[#29221D] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#78716C]">
           <p>&copy; {new Date().getFullYear()} H H Events &amp; Conventions. All rights reserved.</p>
-          <div className="flex flex-wrap items-center gap-4 sm:gap-6">
-            <span>Opposite Juma Masjid, Panemangalore</span>
+          <div className="flex flex-wrap items-center justify-center sm:justify-end gap-3 sm:gap-6">
+            <span className="text-center sm:text-left">Opposite Juma Masjid, Panemangalore</span>
             <span className="text-[#3D312A] hidden sm:inline">&bull;</span>
-            <a href={`tel:${VENUE_INFO.primaryPhone}`} className="hover:text-[#DFAB4C]">
+            <a href={`tel:${VENUE_INFO.primaryPhone}`} className="hover:text-[#DFAB4C] transition-colors">
               Tel: {VENUE_INFO.primaryPhone}
             </a>
-            <span className="text-[#3D312A] hidden sm:inline">&bull;</span>
-            <button onClick={() => navigate('/admin/dashboard')} className="hover:text-white cursor-pointer">
-              Admin Portal
-            </button>
           </div>
         </div>
       </div>

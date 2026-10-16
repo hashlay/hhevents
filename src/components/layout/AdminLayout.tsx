@@ -66,6 +66,24 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
     };
   }, []);
 
+  React.useEffect(() => {
+    if (isMobileSidebarOpen) {
+      document.body.style.overflow = 'hidden';
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') {
+          setIsMobileSidebarOpen(false);
+        }
+      };
+      window.addEventListener('keydown', handleKeyDown);
+      return () => {
+        document.body.style.overflow = '';
+        window.removeEventListener('keydown', handleKeyDown);
+      };
+    } else {
+      document.body.style.overflow = '';
+    }
+  }, [isMobileSidebarOpen]);
+
   // Grouped Navigation for Clean Executive Architecture
   const navigationGroups = [
     {
@@ -143,6 +161,15 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Mobile Drawer Backdrop Overlay */}
+      {isMobileSidebarOpen && (
+        <div
+          onClick={() => setIsMobileSidebarOpen(false)}
+          className="fixed inset-0 bg-black/60 backdrop-blur-xs z-35 lg:hidden animate-in fade-in"
+          aria-hidden="true"
+        />
+      )}
 
       {/* Desktop & Mobile Drawer Sidebar */}
       <aside

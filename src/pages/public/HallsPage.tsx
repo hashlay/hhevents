@@ -183,15 +183,16 @@ export const HallsPage: React.FC<HallsPageProps> = ({ navigate }) => {
                     </div>
                   </div>
 
-                  <div className="pt-6 border-t border-[#E2DACB] flex flex-wrap items-center justify-between gap-4">
-                    <div className="text-xs text-emerald-700 font-semibold bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+                  <div className="pt-6 border-t border-[#E2DACB] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="text-xs text-emerald-700 font-semibold bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 w-fit">
                       Kitchen Included in All Packages
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                       <Button
                         onClick={() => navigate(`/availability?hall=${hall.id}`)}
                         variant="outline"
                         size="sm"
+                        className="w-full sm:w-auto justify-center"
                       >
                         Check Dates
                       </Button>
@@ -199,6 +200,7 @@ export const HallsPage: React.FC<HallsPageProps> = ({ navigate }) => {
                         onClick={() => navigate(`/book?hall=${hall.id}`)}
                         variant="gold"
                         size="sm"
+                        className="w-full sm:w-auto justify-center"
                       >
                         Book {hall.name}
                       </Button>
@@ -247,11 +249,12 @@ export const HallsPage: React.FC<HallsPageProps> = ({ navigate }) => {
                 </div>
               </div>
 
-              <div className="pt-2 flex flex-wrap items-center gap-4">
+              <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                 <Button
                   onClick={() => navigate('/book?hall=both')}
                   variant="gold"
                   size="md"
+                  className="w-full sm:w-auto justify-center"
                   rightIcon={<ArrowRight className="w-4 h-4" />}
                 >
                   Book Full Combined Venue
@@ -260,6 +263,7 @@ export const HallsPage: React.FC<HallsPageProps> = ({ navigate }) => {
                   onClick={() => navigate('/availability?hall=both')}
                   variant="outline"
                   size="md"
+                  className="w-full sm:w-auto justify-center"
                 >
                   Check Combined Dates
                 </Button>

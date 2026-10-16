@@ -365,7 +365,7 @@ export const ManagerAvailabilityCalendar: React.FC<ManagerAvailabilityCalendarPr
 
                   {/* Micro label for state */}
                   <span
-                    className={`text-[9px] font-semibold leading-tight ${
+                    className={`text-[9px] font-semibold leading-tight hidden sm:block ${
                       summary === 'unavailable'
                         ? 'text-rose-700'
                         : summary === 'partial'
@@ -374,6 +374,17 @@ export const ManagerAvailabilityCalendar: React.FC<ManagerAvailabilityCalendarPr
                     }`}
                   >
                     {summary === 'unavailable' ? 'Closed' : summary === 'partial' ? '1 Open' : 'Open'}
+                  </span>
+                  <span
+                    className={`sm:hidden text-[8px] font-bold leading-none ${
+                      summary === 'unavailable'
+                        ? 'text-rose-700'
+                        : summary === 'partial'
+                        ? 'text-amber-700'
+                        : 'text-emerald-700'
+                    }`}
+                  >
+                    {summary === 'unavailable' ? '✕' : summary === 'partial' ? '½' : '✓'}
                   </span>
                 </button>
               );

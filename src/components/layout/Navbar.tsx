@@ -92,6 +92,22 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, navigate }) => {
     { label: 'Contact Us', path: '/contact', icon: PhoneCall, desc: 'Direct desk & phone inquiries' },
   ];
 
+  // Tailored tablet navigation links (iPad Pro & medium width tablets)
+  const tabletPrimaryLinks = [
+    { label: 'Home', path: '/' },
+    { label: 'Halls & Spaces', path: '/halls' },
+    { label: 'Tariff & Packages', path: '/pricing' },
+  ];
+
+  const tabletSecondaryLinks = [
+    { label: 'Availability', path: '/availability', icon: CalendarDays, desc: 'Live dates & slots' },
+    { label: 'Gallery', path: '/gallery', icon: Sparkles, desc: 'Real venue pictures' },
+    { label: 'Facilities', path: '/facilities', icon: Sparkles, desc: 'AC, dining & kitchen specs' },
+    { label: 'About Venue', path: '/about', icon: Info, desc: 'Campus capacity & history' },
+    { label: 'Location & Map', path: '/location', icon: MapPin, desc: 'Directions & coordinates' },
+    { label: 'Contact Us', path: '/contact', icon: PhoneCall, desc: 'Direct desk & phone inquiries' },
+  ];
+
   // All links list for XL displays and Mobile drawer
   const allLinks = [
     { label: 'Home', path: '/' },
@@ -206,8 +222,82 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, navigate }) => {
               })}
             </nav>
 
-            {/* Desktop Navigation Links — LG to 2XL Viewports (Primary Links + Luxury "More" Dropdown) */}
-            <nav className="hidden lg:flex 2xl:hidden items-center gap-1 shrink-0">
+            {/* Tablet Navigation Links — LG Viewport (1024px to 1279px, e.g. iPad Pro Portrait) */}
+            <nav className="hidden lg:flex xl:hidden items-center gap-1 shrink-0">
+              {tabletPrimaryLinks.map((link) => {
+                const isActive = currentPath === link.path;
+                return (
+                  <button
+                    key={link.path}
+                    type="button"
+                    onClick={() => handleLinkClick(link.path)}
+                    className={`whitespace-nowrap px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                      isActive
+                        ? 'bg-[#173D35] text-[#FAF8F5] shadow-xs'
+                        : 'text-[#252525] hover:text-[#173D35] hover:bg-[#F5F1E8]'
+                    }`}
+                  >
+                    <span>{link.label}</span>
+                  </button>
+                );
+              })}
+
+              {/* Tablet "More ▾" Dropdown */}
+              <div className="relative" ref={moreDropdownRef}>
+                <button
+                  type="button"
+                  onClick={() => setIsMoreDropdownOpen(!isMoreDropdownOpen)}
+                  className={`whitespace-nowrap inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                    isMoreActive || isMoreDropdownOpen
+                      ? 'bg-[#173D35] text-[#FAF8F5] shadow-xs'
+                      : 'text-[#252525] hover:text-[#173D35] hover:bg-[#F5F1E8]'
+                  }`}
+                  aria-expanded={isMoreDropdownOpen}
+                  aria-haspopup="true"
+                >
+                  <span>Explore ▾</span>
+                </button>
+
+                {isMoreDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-64 rounded-2xl bg-white border border-[#E2DACB] shadow-xl p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                    <div className="px-3 py-2 text-[10px] font-bold text-[#8C734B] uppercase tracking-wider border-b border-[#F0EBE1]">
+                      Venue Exploration
+                    </div>
+                    <div className="py-1 space-y-0.5">
+                      {tabletSecondaryLinks.map((item) => {
+                        const IconComponent = item.icon;
+                        const isCurrent = currentPath === item.path;
+                        return (
+                          <button
+                            key={item.path}
+                            type="button"
+                            onClick={() => handleLinkClick(item.path)}
+                            className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left transition-colors cursor-pointer ${
+                              isCurrent
+                                ? 'bg-[#F5F1E8] text-[#173D35] font-bold'
+                                : 'text-[#252525] hover:bg-[#F5F1E8]/70 hover:text-[#173D35]'
+                            }`}
+                          >
+                            <div className="w-7 h-7 rounded-lg bg-[#FAF8F5] border border-[#E2DACB] flex items-center justify-center shrink-0 text-[#173D35]">
+                              <IconComponent className="w-3.5 h-3.5 text-[#C9AA72]" />
+                            </div>
+                            <div className="flex flex-col min-w-0">
+                              <span className="text-xs font-semibold leading-tight">{item.label}</span>
+                              <span className="text-[10px] text-[#737373] truncate leading-tight mt-0.5">
+                                {item.desc}
+                              </span>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </nav>
+
+            {/* Laptop Navigation Links — XL Viewport (1280px to 1535px) */}
+            <nav className="hidden xl:flex 2xl:hidden items-center gap-1 shrink-0">
               {primaryLinks.map((link) => {
                 const isActive = currentPath === link.path;
                 return (
@@ -227,7 +317,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, navigate }) => {
               })}
 
               {/* Luxury "More ▾" Dropdown */}
-              <div className="relative" ref={moreDropdownRef}>
+              <div className="relative">
                 <button
                   type="button"
                   onClick={() => setIsMoreDropdownOpen(!isMoreDropdownOpen)}

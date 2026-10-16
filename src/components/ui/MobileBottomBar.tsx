@@ -24,8 +24,8 @@ export const MobileBottomBar: React.FC<MobileBottomBarProps> = ({ currentPath, n
     return () => window.removeEventListener('scroll', handleScroll);
   }, [currentPath]);
 
-  // Don't render on Admin pages
-  if (currentPath.startsWith('/admin')) return null;
+  // Don't render on Admin pages or Book page where it would obstruct form inputs & actions
+  if (currentPath.startsWith('/admin') || currentPath === '/book') return null;
 
   return (
     <div
