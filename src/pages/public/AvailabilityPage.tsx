@@ -107,9 +107,10 @@ export const AvailabilityPage: React.FC<AvailabilityPageProps> = ({ navigate }) 
                   onClick={() => navigate(`/book?date=${selectedDate}`)}
                   variant="gold"
                   size="md"
+                  disabled={selectedDate < new Date().toISOString().split('T')[0]}
                   className="w-full justify-center"
                 >
-                  Book Date ({selectedDate})
+                  Reserve Date ({selectedDate})
                 </Button>
               </div>
             </div>

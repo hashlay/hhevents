@@ -62,9 +62,12 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
   const [packages, setPackages] = useState<BookingPackage[]>([]);
   const [isLoadingPackages, setIsLoadingPackages] = useState(true);
 
-  // Selections
+  const todayStr = new Date().toISOString().split('T')[0];
+  const defaultFutureDate = new Date(Date.now() + 86400000 * 7).toISOString().split('T')[0];
+
+  // Selections (strictly disallow past dates)
   const [date, setDate] = useState<string>(
-    paramDate || new Date(Date.now() + 86400000 * 7).toISOString().split('T')[0]
+    paramDate && paramDate >= todayStr ? paramDate : defaultFutureDate
   );
   const [slot, setSlot] = useState<SlotType>(paramSlot);
   const [selectedPackageId, setSelectedPackageId] = useState<string>(paramPackage || 'full-ac-hall');
@@ -363,6 +366,17 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
               </div>
             </div>
 
+            {/* Past Date Warning */}
+            {date < todayStr && (
+              <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+                <div>
+                  <strong className="block font-bold">Past Date Selected:</strong>
+                  <p>Reservations cannot be made for past dates. Please pick today ({todayStr}) or an upcoming event date.</p>
+                </div>
+              </div>
+            )}
+
             {/* Live Conflict Warning */}
             {conflictReason && (
               <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-start gap-3">
@@ -382,7 +396,7 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
                 onClick={handleNextStep}
                 variant="gold"
                 size="md"
-                disabled={!!conflictReason}
+                disabled={!!conflictReason || date < todayStr}
                 rightIcon={<ArrowRight className="w-4 h-4" />}
                 className="w-full sm:w-auto justify-center"
               >
