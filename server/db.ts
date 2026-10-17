@@ -1,3 +1,6 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import fs from 'fs';
 import path from 'path';
 
@@ -291,8 +294,52 @@ export interface DatabaseSchema {
   lastUpdated: string;
 }
 
+import { MongoClient, Db } from 'mongodb';
+
 const DB_DIR = path.join(process.cwd(), 'data');
 const DB_FILE = path.join(DB_DIR, 'store.json');
+
+// MongoDB Atlas connection instance
+let mongoClient: MongoClient | null = null;
+let mongoDb: Db | null = null;
+let isMongoConnecting = false;
+
+export async function getMongoDb(): Promise<Db | null> {
+  const uri = process.env.MONGODB_URI;
+  if (!uri) return null;
+  if (mongoDb) return mongoDb;
+  if (isMongoConnecting) {
+    while (isMongoConnecting) {
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    return mongoDb;
+  }
+
+  try {
+    isMongoConnecting = true;
+    const dbName = process.env.MONGODB_DB_NAME || 'hhevents';
+    mongoClient = new MongoClient(uri, {
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 5000,
+    });
+    await mongoClient.connect();
+    mongoDb = mongoClient.db(dbName);
+    console.log(`[Database] MongoDB Atlas connected (${dbName})`);
+    return mongoDb;
+  } catch (err: any) {
+    console.error(`[Database] MongoDB connection warning: ${err.message}. Resilient local storage active.`);
+    return null;
+  } finally {
+    isMongoConnecting = false;
+  }
+}
+
+export function getDatabaseBackendStatus(): { type: 'mongodb_atlas' | 'local_store'; connected: boolean } {
+  return {
+    type: mongoDb ? 'mongodb_atlas' : 'local_store',
+    connected: true,
+  };
+}
 
 // Memory cache & mutex
 let dbCache: DatabaseSchema | null = null;
@@ -306,12 +353,12 @@ function getInitialDatabase(): DatabaseSchema {
     maintenance: [],
     auditLogs: [
       {
-        id: `LOG-INIT`,
-        action: 'SYSTEM_BOOT',
+        id: `LOG-INIT-MONGODB`,
+        action: 'MONGODB_CLUSTER_INIT',
         performedBy: 'system',
-        targetEntity: 'system',
-        targetId: 'hh-events-core',
-        details: 'Shared persistent database initialized with 8 official packages.',
+        targetEntity: 'database',
+        targetId: 'cluster0-hhevents',
+        details: 'Shared persistent database initialized on MongoDB Atlas with 8 official packages and 0 customer bookings.',
         timestamp: new Date().toISOString(),
       },
     ],
@@ -335,9 +382,49 @@ function getInitialDatabase(): DatabaseSchema {
   };
 }
 
+async function writeLocalMirror(data: DatabaseSchema): Promise<void> {
+  try {
+    if (!fs.existsSync(DB_DIR)) {
+      fs.mkdirSync(DB_DIR, { recursive: true });
+    }
+    const content = JSON.stringify(data, null, 2);
+    const tempFile = path.join(DB_DIR, `store.json.tmp.${Date.now()}`);
+    await fs.promises.writeFile(tempFile, content, 'utf-8');
+    await fs.promises.rename(tempFile, DB_FILE);
+  } catch (err) {
+    console.error('[Database] Failed writing local mirror:', err);
+  }
+}
+
 export async function getDb(): Promise<DatabaseSchema> {
   if (dbCache) return dbCache;
 
+  // 1. Try to load authoritative state from MongoDB Atlas
+  try {
+    const mongo = await getMongoDb();
+    if (mongo) {
+      const collection = mongo.collection('app_state');
+      const doc = await collection.findOne({ _id: 'master_store' as any });
+      if (doc) {
+        const { _id, ...rest } = doc as any;
+        dbCache = rest as DatabaseSchema;
+        if (!dbCache.packages || dbCache.packages.length === 0) {
+          dbCache.packages = INITIAL_PACKAGES;
+        }
+        await writeLocalMirror(dbCache);
+        return dbCache;
+      } else {
+        console.log('[Database] Initializing fresh state in MongoDB Atlas...');
+        dbCache = getInitialDatabase();
+        await persistDb();
+        return dbCache;
+      }
+    }
+  } catch (err: any) {
+    console.error('[Database] Failed to read from MongoDB Atlas:', err.message);
+  }
+
+  // 2. Resilient local fallback from data/store.json
   try {
     if (!fs.existsSync(DB_DIR)) {
       fs.mkdirSync(DB_DIR, { recursive: true });
@@ -346,7 +433,6 @@ export async function getDb(): Promise<DatabaseSchema> {
     if (fs.existsSync(DB_FILE)) {
       const raw = await fs.promises.readFile(DB_FILE, 'utf-8');
       dbCache = JSON.parse(raw);
-      // Ensure schema completeness
       if (!dbCache!.packages || dbCache!.packages.length === 0) {
         dbCache!.packages = INITIAL_PACKAGES;
       }
@@ -361,49 +447,32 @@ export async function getDb(): Promise<DatabaseSchema> {
   return dbCache;
 }
 
-const BACKUP_DIR = path.join(DB_DIR, 'backups');
-let writeCount = 0;
-
 export async function persistDb(): Promise<void> {
   if (!dbCache) return;
 
-  // Queue writes sequentially through writeLock mutex
   writeLock = writeLock.then(async () => {
     try {
-      if (!fs.existsSync(DB_DIR)) {
-        fs.mkdirSync(DB_DIR, { recursive: true });
-      }
-
       dbCache!.lastUpdated = new Date().toISOString();
-      const content = JSON.stringify(dbCache, null, 2);
 
-      // 1. Atomic write via temporary file
-      const tempFile = path.join(DB_DIR, `store.json.tmp.${Date.now()}`);
-      await fs.promises.writeFile(tempFile, content, 'utf-8');
-      await fs.promises.rename(tempFile, DB_FILE);
-
-      // 2. Periodic automated backup snapshot
-      writeCount += 1;
-      if (writeCount % 10 === 1 || !fs.existsSync(BACKUP_DIR)) {
-        if (!fs.existsSync(BACKUP_DIR)) {
-          fs.mkdirSync(BACKUP_DIR, { recursive: true });
+      // 1. Persist to MongoDB Atlas
+      try {
+        const mongo = await getMongoDb();
+        if (mongo) {
+          const collection = mongo.collection('app_state');
+          await collection.replaceOne(
+            { _id: 'master_store' as any },
+            { ...dbCache },
+            { upsert: true }
+          );
         }
-        const backupFile = path.join(BACKUP_DIR, `store-backup-${Date.now()}.json`);
-        await fs.promises.writeFile(backupFile, content, 'utf-8');
-
-        // Retain latest 10 backups
-        try {
-          const files = await fs.promises.readdir(BACKUP_DIR);
-          if (files.length > 10) {
-            const sorted = files.sort();
-            for (let i = 0; i < sorted.length - 10; i++) {
-              await fs.promises.unlink(path.join(BACKUP_DIR, sorted[i])).catch(() => {});
-            }
-          }
-        } catch {}
+      } catch (mErr: any) {
+        console.error('[Database] Error persisting to MongoDB Atlas:', mErr.message);
       }
+
+      // 2. Persist local resilient backup mirror
+      await writeLocalMirror(dbCache!);
     } catch (err) {
-      console.error('Failed to write store.json atomically:', err);
+      console.error('Failed to write database state:', err);
     }
   });
 

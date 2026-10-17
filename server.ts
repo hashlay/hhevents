@@ -1,7 +1,18 @@
+import dotenv from "dotenv";
+dotenv.config();
+
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
-import { getDb, persistDb, logAudit, BookingRecord, PaymentTransaction, HallPackage } from "./server/db";
+import {
+  getDb,
+  persistDb,
+  logAudit,
+  getDatabaseBackendStatus,
+  BookingRecord,
+  PaymentTransaction,
+  HallPackage,
+} from "./server/db";
 import { resolveRequiredResources, checkResourceConflict } from "./server/conflictEngine";
 import {
   verifyCredentials,
@@ -45,6 +56,7 @@ async function startServer() {
       location: db.settings.address,
       packagesCount: db.packages.length,
       bookingsCount: db.bookings.length,
+      database: getDatabaseBackendStatus(),
       timestamp: new Date().toISOString(),
     });
   });
