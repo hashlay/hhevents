@@ -1,6 +1,76 @@
 {
   "bookings": [
     {
+      "id": "HH-2026-430720",
+      "customerName": "Dr. Salman Khan",
+      "phone": "9876543211",
+      "email": "salman@example.com",
+      "packageId": "single-ac-hall",
+      "packageName": "Single AC Hall",
+      "packagePrice": 30000,
+      "occupiedResources": [
+        "gents_hall",
+        "dining_1",
+        "kitchen"
+      ],
+      "hallSelection": "hall_1",
+      "acOption": "ac",
+      "date": "2027-02-25",
+      "slot": "evening",
+      "expectedAttendees": 500,
+      "additionalInfo": "E2E Automated Functional QA Verification",
+      "eventType": "wedding",
+      "status": "CANCELLED",
+      "totalAmount": 30000,
+      "advanceRequired": 7500,
+      "amountPaid": 12500,
+      "balanceDue": 17500,
+      "paymentStatus": "advance_paid",
+      "payments": [
+        {
+          "id": "PAY-1792198584701",
+          "bookingId": "HH-2026-430720",
+          "amount": 7500,
+          "paymentType": "advance",
+          "paymentMethod": "upi",
+          "referenceNo": "UPI-TEST-QA-1001",
+          "receivedBy": "hheventsconvention@gmail.com",
+          "receiptNumber": "RCP-584701",
+          "notes": "Initial 25% token advance remittance",
+          "createdAt": "2026-10-17T00:56:24.701Z"
+        },
+        {
+          "id": "PAY-1792198584781",
+          "bookingId": "HH-2026-430720",
+          "amount": 10000,
+          "paymentType": "balance",
+          "paymentMethod": "cash",
+          "referenceNo": "CASH-REC-002",
+          "receivedBy": "hheventsconvention@gmail.com",
+          "receiptNumber": "RCP-584781",
+          "notes": "Partial payment on decor selection",
+          "createdAt": "2026-10-17T00:56:24.781Z"
+        },
+        {
+          "id": "REF-1792198584853",
+          "bookingId": "HH-2026-430720",
+          "amount": 5000,
+          "paymentType": "refund",
+          "paymentMethod": "other",
+          "referenceNo": "REFUND-1792198584853",
+          "receivedBy": "hheventsconvention@gmail.com",
+          "receiptNumber": "REF-584853",
+          "notes": "Refund processed on cancellation: Client requested cancellation due to family rescheduling",
+          "createdAt": "2026-10-17T00:56:24.853Z"
+        }
+      ],
+      "submittedAt": "2026-10-17T00:56:24.486Z",
+      "updatedAt": "2026-10-17T00:56:24.852Z",
+      "adminRemarks": "Clearance granted by general manager\nRescheduled from 2027-02-23 (day) to 2027-02-25 (evening) by hheventsconvention@gmail.com. Reason: Customer requested evening session",
+      "rejectionReason": "Client requested cancellation due to family rescheduling",
+      "verifiedBy": "hheventsconvention@gmail.com"
+    },
+    {
       "id": "HH-2026-866976",
       "customerName": "Dr. Salman Khan",
       "phone": "9876543211",
@@ -873,6 +943,78 @@
   "maintenance": [],
   "auditLogs": [
     {
+      "id": "LOG-1792198584874-486",
+      "action": "BOOKING_CANCELLED",
+      "performedBy": "hheventsconvention@gmail.com",
+      "targetEntity": "booking",
+      "targetId": "HH-2026-430720",
+      "details": "Booking cancelled. Reason: Client requested cancellation due to family rescheduling",
+      "timestamp": "2026-10-17T00:56:24.874Z"
+    },
+    {
+      "id": "LOG-1792198584812-793",
+      "action": "PAYMENT_RECORDED",
+      "performedBy": "hheventsconvention@gmail.com",
+      "targetEntity": "booking",
+      "targetId": "HH-2026-430720",
+      "details": "Payment of ₹10000 (CASH) recorded. Receipt: RCP-584781",
+      "timestamp": "2026-10-17T00:56:24.812Z"
+    },
+    {
+      "id": "LOG-1792198584736-885",
+      "action": "PAYMENT_RECORDED",
+      "performedBy": "hheventsconvention@gmail.com",
+      "targetEntity": "booking",
+      "targetId": "HH-2026-430720",
+      "details": "Payment of ₹7500 (UPI) recorded. Receipt: RCP-584701",
+      "timestamp": "2026-10-17T00:56:24.736Z"
+    },
+    {
+      "id": "LOG-1792198584651-836",
+      "action": "BOOKING_RESCHEDULED",
+      "performedBy": "hheventsconvention@gmail.com",
+      "targetEntity": "booking",
+      "targetId": "HH-2026-430720",
+      "details": "Rescheduled from 2027-02-23 (day) to 2027-02-25 (evening). Reason: Customer requested evening session",
+      "timestamp": "2026-10-17T00:56:24.651Z"
+    },
+    {
+      "id": "LOG-1792198584579-766",
+      "action": "BOOKING_STATUS_APPROVED",
+      "performedBy": "hheventsconvention@gmail.com",
+      "targetEntity": "booking",
+      "targetId": "HH-2026-430720",
+      "details": "Status changed to APPROVED. Remarks: Clearance granted by general manager",
+      "timestamp": "2026-10-17T00:56:24.580Z"
+    },
+    {
+      "id": "LOG-1792198584503-623",
+      "action": "BOOKING_SUBMITTED",
+      "performedBy": "Dr. Salman Khan",
+      "targetEntity": "booking",
+      "targetId": "HH-2026-430720",
+      "details": "Booking HH-2026-430720 submitted for Single AC Hall on 2027-02-23 (day)",
+      "timestamp": "2026-10-17T00:56:24.503Z"
+    },
+    {
+      "id": "LOG-1792198584425-189",
+      "action": "LOGIN_SUCCESS",
+      "performedBy": "hheventsconvention@gmail.com",
+      "targetEntity": "auth",
+      "targetId": "hheventsconvention@gmail.com",
+      "details": "Administrative console login succeeded.",
+      "timestamp": "2026-10-17T00:56:24.425Z"
+    },
+    {
+      "id": "LOG-1792198584235-878",
+      "action": "LOGIN_FAILED",
+      "performedBy": "fake@admin.com",
+      "targetEntity": "auth",
+      "targetId": "login",
+      "details": "Failed login attempt from IP 127.0.0.1",
+      "timestamp": "2026-10-17T00:56:24.235Z"
+    },
+    {
       "id": "LOG-1792171786056-791",
       "action": "BOOKING_CANCELLED",
       "performedBy": "hheventsconvention@gmail.com",
@@ -1563,5 +1705,5 @@
     "termsAndConditions": "Standard venue guidelines apply. Advance deposit is required to confirm the reservation.",
     "updatedAt": "2026-10-12T15:41:59.824Z"
   },
-  "lastUpdated": "2026-10-16T17:29:46.056Z"
+  "lastUpdated": "2026-10-17T00:56:24.877Z"
 }

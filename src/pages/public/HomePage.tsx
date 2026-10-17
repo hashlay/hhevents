@@ -142,120 +142,151 @@ export const HomePage: React.FC<HomePageProps> = ({ navigate }) => {
         </div>
       </section>
 
-      {/* 1b. DEDICATED MOBILE & TABLET HERO COMPOSITION */}
-      <section className="block lg:hidden bg-[#071512] text-white">
-        <div className="px-4 py-8 sm:px-6 sm:py-12 space-y-5 max-w-2xl mx-auto">
-          {/* Eyebrow */}
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#122E27] border border-[#C9AA72]/40 text-[#D9C194] text-[11px] sm:text-xs font-semibold tracking-wide">
-            <MapPin className="w-3.5 h-3.5 text-[#C9AA72] shrink-0" />
-            <span className="truncate">Opposite Juma Masjid, Panemangalore, Bantwal</span>
+      {/* 1b. DEDICATED CINEMATIC MOBILE & TABLET HERO (Matching Approved Design Reference) */}
+      <section className="block lg:hidden relative overflow-hidden bg-[#071512] text-white min-h-[580px] sm:min-h-[640px] flex flex-col justify-between">
+        {/* Full Photographic Background with Responsive Positioning (Preserves Illuminated HH Building & Signage) */}
+        <div className="absolute inset-0 z-0">
+          <img
+            src={heroPhoto}
+            alt="H H Events & Conventions Building Exterior with Illuminated Signage"
+            className="w-full h-full object-cover object-[75%_center] sm:object-center"
+            loading="eager"
+          />
+          {/* Controlled Cinematic Emerald Gradient: Concentrated on top/left for pristine text contrast while keeping illuminated building visible */}
+          <div className="absolute inset-0 bg-gradient-to-b from-[#091D17]/95 via-[#091D17]/85 to-[#071512]/60" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#091D17]/95 via-[#091D17]/75 sm:via-[#091D17]/60 to-transparent sm:w-4/5" />
+          {/* Dark Base Scrim across bottom pavement for Session Strip anchoring */}
+          <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#071512] via-[#071512]/80 to-transparent" />
+        </div>
+
+        {/* Hero Content Area */}
+        <div className="relative z-10 px-4 pt-7 pb-6 sm:px-6 sm:pt-11 max-w-xl">
+          {/* Location Eyebrow Pill */}
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#0D241F]/80 backdrop-blur-md border border-[#C9AA72]/50 text-[#D9C194] text-[11px] font-semibold tracking-wide shadow-xs mb-3.5">
+            <MapPin className="w-3 h-3 text-[#C9AA72] shrink-0" />
+            <span>Panemangalore, Bantwal</span>
           </div>
 
-          {/* Fluid Headline */}
-          <h1 className="text-2xl sm:text-4xl font-bold tracking-tight text-white leading-tight font-serif-heading">
-            A Beautiful Venue for Your Special Occasions
+          {/* Luxury Serif Headline */}
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-white leading-[1.18] font-serif-heading drop-shadow-sm">
+            A Beautiful Venue <br />
+            for Your <br />
+            <span className="text-[#C9AA72]">Special Occasions</span>
           </h1>
 
-          {/* Description */}
-          <p className="text-sm sm:text-base text-[#F5F1E8]/90 leading-relaxed font-normal">
+          {/* Concise Supporting Description */}
+          <p className="mt-3 text-xs sm:text-sm text-[#F5F1E8]/90 leading-relaxed font-normal max-w-sm sm:max-w-md">
             Explore our event spaces, dining facilities, and hall packages in Panemangalore, Bantwal.
           </p>
 
-          {/* Action Buttons: Stack vertically on narrow mobile, side-by-side on tablet */}
-          <div className="pt-1 flex flex-col sm:flex-row gap-3">
-            <Button
+          {/* Call to Actions (Matching Approved Reference Layout) */}
+          <div className="mt-5 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 max-w-xs sm:max-w-none">
+            <button
+              type="button"
               onClick={() => navigate('/availability')}
-              variant="gold"
-              size="md"
-              className="w-full sm:flex-1 justify-center min-h-[46px]"
-              rightIcon={<CalendarDays className="w-4 h-4" />}
+              className="inline-flex items-center justify-between sm:justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#C9AA72] hover:bg-[#BA995F] text-[#173D35] font-bold text-xs uppercase tracking-wider shadow-md hover:shadow-lg transition-all active:scale-[0.98] cursor-pointer"
             >
-              Check Availability
-            </Button>
+              <span className="inline-flex items-center gap-2">
+                <CalendarDays className="w-4 h-4 text-[#173D35]" />
+                <span>Check Availability</span>
+              </span>
+              <ArrowRight className="w-3.5 h-3.5 text-[#173D35]" />
+            </button>
 
-            <Button
+            <button
+              type="button"
               onClick={() => navigate('/pricing')}
-              variant="outline-light"
-              size="md"
-              className="w-full sm:flex-1 justify-center min-h-[46px]"
-              rightIcon={<ArrowRight className="w-4 h-4" />}
+              className="inline-flex items-center justify-between sm:justify-center gap-2 px-4 py-2.5 rounded-xl bg-black/40 hover:bg-black/60 backdrop-blur-xs border border-white/30 hover:border-white/50 text-[#FAF8F5] font-semibold text-xs transition-all active:scale-[0.98] cursor-pointer"
             >
-              Explore Packages
-            </Button>
+              <span>Explore Packages</span>
+              <ArrowRight className="w-3.5 h-3.5 text-white/80" />
+            </button>
           </div>
+        </div>
 
-          {/* Actual Building Exterior Photo (16:9 Frame with illuminated signage clearly visible) */}
-          <div className="relative aspect-16/9 w-full rounded-2xl overflow-hidden border border-[#C9AA72]/30 shadow-xl bg-[#0F2722]">
-            <img
-              src={heroPhoto}
-              alt="H H Events & Conventions Building Exterior with Illuminated Signage"
-              className="w-full h-full object-cover object-center"
-              loading="eager"
-            />
-            <div className="absolute bottom-2.5 left-2.5 right-2.5 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10 text-[11px] text-[#F5F1E8] flex items-center justify-between">
-              <span className="font-semibold text-[#D9C194]">H H Events Campus</span>
-              <span>Panemangalore</span>
+        {/* 3-Column Session Information Strip (Over bottom pavement of hero) */}
+        <div className="relative z-10 border-t border-white/15 bg-[#091D17]/85 backdrop-blur-md px-3 sm:px-6 py-2.5 sm:py-3.5">
+          <div className="grid grid-cols-3 gap-1.5 sm:gap-2 divide-x divide-white/15 max-w-2xl mx-auto">
+            {/* Item 1: Day Session */}
+            <div className="flex items-center gap-1.5 sm:gap-2 px-1 sm:px-2 min-w-0">
+              <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#C9AA72] shrink-0" />
+              <div className="min-w-0">
+                <p className="text-[10px] sm:text-xs font-bold text-white truncate leading-tight">Day Session</p>
+                <p className="text-[8.5px] sm:text-[10.5px] text-[#D9C194] truncate leading-tight mt-0.5">10 AM – 3 PM</p>
+              </div>
             </div>
-          </div>
 
-          {/* Session Information below hero photo */}
-          <div className="p-4 rounded-2xl bg-[#0F2722] border border-[#C9AA72]/20 text-xs text-[#D9C194] space-y-2">
-            <div className="flex items-center gap-2">
-              <Clock className="w-3.5 h-3.5 text-[#C9AA72] shrink-0" />
-              <span className="leading-tight">Day (10 AM–3 PM) &bull; Evening (6 PM–10 PM)</span>
+            {/* Item 2: Evening Session */}
+            <div className="flex items-center gap-1.5 sm:gap-2 px-1.5 sm:px-2 min-w-0">
+              <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#C9AA72] shrink-0" />
+              <div className="min-w-0">
+                <p className="text-[10px] sm:text-xs font-bold text-white truncate leading-tight">Evening Session</p>
+                <p className="text-[8.5px] sm:text-[10.5px] text-[#D9C194] truncate leading-tight mt-0.5">6 PM – 10 PM</p>
+              </div>
             </div>
-            <div className="flex items-center gap-2 pt-1 border-t border-white/10">
-              <Building2 className="w-3.5 h-3.5 text-[#C9AA72] shrink-0" />
-              <span className="leading-tight">Dual Independent Halls &bull; Commercial Kitchen</span>
+
+            {/* Item 3: Dual Independent */}
+            <div className="flex items-center gap-1.5 sm:gap-2 px-1.5 sm:px-2 min-w-0">
+              <Building2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#C9AA72] shrink-0" />
+              <div className="min-w-0">
+                <p className="text-[10px] sm:text-xs font-bold text-white truncate leading-tight">Dual Independent</p>
+                <p className="text-[8.5px] sm:text-[10.5px] text-[#D9C194] truncate leading-tight mt-0.5">Halls &bull; Kitchen</p>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 2. VENUE INTRODUCTION — Honest Campus Architecture */}
+      {/* 2. VENUE INTRODUCTION — Honest Campus Architecture (Matching Reference Style) */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-white rounded-2xl border border-[#E2DACB] p-8 sm:p-10 shadow-xs">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-            <div className="lg:col-span-4 space-y-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-[#C9AA72]">
+        <div className="bg-white rounded-3xl border border-[#E2DACB] p-6 sm:p-10 shadow-xs">
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-3">
+            <div className="space-y-1">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#C9AA72]">
                 About The Venue
               </span>
               <h2 className="text-2xl sm:text-3xl font-bold font-serif-heading text-[#173D35]">
                 Built for Memorable Gatherings
               </h2>
             </div>
+            <button
+              onClick={() => navigate('/about')}
+              className="self-start sm:self-auto inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white hover:bg-[#FAF8F5] border border-[#E2DACB] text-xs font-semibold text-[#252525] hover:text-[#173D35] transition-colors shadow-2xs shrink-0 cursor-pointer"
+            >
+              <span>Learn More</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
 
-            <div className="lg:col-span-8 text-sm text-[#4A4A4A] leading-relaxed space-y-3">
-              <p>
-                <strong>H H Events &amp; Conventions</strong> is designed to offer maximum flexibility for families and event organizers. Our architecture allows Hall 1 and Hall 2 to be booked independently for intimate gatherings or combined seamlessly into a grand venue for up to 3,000 floating guests.
-              </p>
-              <p>
-                Every package includes dedicated dining facilities and access to an equipped commercial catering kitchen, ensuring your event operations run smoothly from arrival to feast.
-              </p>
-            </div>
+          <div className="text-xs sm:text-sm text-[#4A4A4A] leading-relaxed space-y-3">
+            <p>
+              <strong>H H Events &amp; Conventions</strong> is designed to offer maximum flexibility for families and event organizers. Our architecture allows Hall 1 and Hall 2 to be booked independently for intimate gatherings or combined seamlessly into a grand venue for up to 3,000 floating guests.
+            </p>
+            <p>
+              Every package includes dedicated dining facilities and access to an equipped commercial catering kitchen, ensuring your event operations run smoothly from arrival to feast.
+            </p>
           </div>
         </div>
       </section>
 
-      {/* 3. EVENT SPACES — Balanced Two-Column Showcase (Images 02 & 03) */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-[#E2DACB] pb-4">
+      {/* 3. EVENT SPACES — Balanced Showcase (Matching Reference Style) */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+        <div className="flex items-center justify-between gap-4 border-b border-[#E2DACB] pb-4">
           <div>
-            <span className="text-xs font-semibold uppercase tracking-wider text-[#C9AA72]">
-              Configurable Spaces
+            <span className="text-xs font-bold uppercase tracking-wider text-[#C9AA72]">
+              Event Spaces
             </span>
-            <h2 className="text-2xl sm:text-3xl font-bold font-serif-heading text-[#252525] mt-1">
-              Event Hall Spaces
+            <h2 className="text-2xl sm:text-3xl font-bold font-serif-heading text-[#252525] mt-0.5">
+              Our Event Halls
             </h2>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
+          <button
             onClick={() => navigate('/halls')}
-            rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white hover:bg-[#FAF8F5] border border-[#E2DACB] text-xs font-semibold text-[#252525] hover:text-[#173D35] transition-colors shadow-2xs shrink-0 cursor-pointer"
           >
-            Detailed Hall Specs
-          </Button>
+            <span>View All Halls</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

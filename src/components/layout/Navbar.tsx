@@ -141,25 +141,26 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, navigate }) => {
         }`}
       >
         {/* Top Utility Bar: Static, clean executive header with verified venue details */}
-        <div className="bg-[#173D35] text-[#FAF8F5] text-xs h-9 flex items-center border-b border-[#245A4F]/70 select-none">
-          <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4">
+        <div className="bg-[#0B1E19] text-[#FAF8F5] text-xs h-9 flex items-center border-b border-[#1A3F35] select-none">
+          <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-3">
             {/* Left: Venue Location */}
-            <div className="flex items-center gap-2 text-[#F5F1E8] text-[11.5px] truncate">
-              <MapPin className="w-3.5 h-3.5 text-[#C9AA72] shrink-0" />
-              <span className="truncate">Opposite Juma Masjid, Akkarangadi, Panemangalore 574231</span>
+            <div className="flex items-center gap-1.5 text-[#F5F1E8] text-[10.5px] sm:text-[11.5px] truncate">
+              <MapPin className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#C9AA72] shrink-0" />
+              <span className="truncate">Opposite Juma Masjid, Panemangalore, Bantwal</span>
             </div>
 
-            {/* Center: Session Times */}
+            {/* Center: Session Times (Desktop only) */}
             <div className="hidden md:flex items-center gap-2 text-[#D9C194] text-[11.5px] whitespace-nowrap shrink-0">
               <Clock className="w-3.5 h-3.5 text-[#C9AA72] shrink-0" />
               <span>Day Session (10:00 AM – 3:00 PM) &bull; Evening Session (6:00 PM – 10:00 PM)</span>
             </div>
 
-            {/* Right: Direct Desk Phone */}
-            <div className="flex items-center shrink-0">
+            {/* Right: Direct Desk Phone with subtle pipe separator on mobile */}
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-[#8C734B] hidden xs:inline">|</span>
               <a
                 href={`tel:${VENUE_INFO.primaryPhone}`}
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#122E27] hover:bg-[#1C463C] border border-[#C9AA72]/40 hover:border-[#C9AA72] text-[#F5F1E8] hover:text-[#D9C194] text-[11px] font-semibold transition-all whitespace-nowrap"
+                className="inline-flex items-center gap-1 text-[#C9AA72] hover:text-white text-[10.5px] sm:text-[11.5px] font-semibold transition-colors whitespace-nowrap"
                 title="Call Venue Desk"
               >
                 <PhoneCall className="w-3 h-3 text-[#C9AA72] shrink-0" />
@@ -176,26 +177,26 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, navigate }) => {
             <button
               type="button"
               onClick={() => handleLinkClick('/')}
-              className="flex items-center gap-3 text-left group focus:outline-none cursor-pointer shrink-0 py-1"
+              className="flex items-center gap-2.5 sm:gap-3 text-left group focus:outline-none cursor-pointer shrink-0 py-1"
             >
               {/* Official HH Monogram Logo */}
               <img
                 src="/assets/branding/hh-logo.png"
                 alt="HH Events & Conventions Logo"
-                className="h-10 sm:h-11 w-auto object-contain shrink-0"
+                className="h-9 sm:h-11 w-auto object-contain shrink-0"
               />
 
               {/* Typography Wordmark */}
               <div className="flex flex-col shrink-0">
-                <div className="flex items-baseline gap-1.5 whitespace-nowrap">
-                  <span className="text-xl sm:text-2xl font-bold tracking-tight text-[#173D35] font-serif-heading leading-tight group-hover:text-[#A58448] transition-colors">
+                <div className="flex items-baseline gap-1 sm:gap-1.5 whitespace-nowrap">
+                  <span className="text-lg sm:text-2xl font-bold tracking-tight text-[#173D35] font-serif-heading leading-tight group-hover:text-[#A58448] transition-colors">
                     H H Events
                   </span>
-                  <span className="text-[10px] sm:text-[11px] font-bold text-[#C9AA72] uppercase tracking-widest hidden sm:inline">
+                  <span className="text-[9px] sm:text-[11px] font-bold text-[#C9AA72] uppercase tracking-wider inline">
                     &amp; Conventions
                   </span>
                 </div>
-                <p className="text-[10px] text-[#737373] font-medium tracking-wider uppercase whitespace-nowrap leading-none mt-1">
+                <p className="text-[9px] sm:text-[10px] text-[#737373] font-medium tracking-wider uppercase whitespace-nowrap leading-none mt-0.5 sm:mt-1">
                   Panemangalore &bull; Bantwal
                 </p>
               </div>
@@ -403,7 +404,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, navigate }) => {
               <button
                 type="button"
                 onClick={() => handleLinkClick('/book')}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#173D35] text-[#F5F1E8] font-semibold text-xs uppercase tracking-wider shadow-2xs active:scale-95 whitespace-nowrap"
+                className="inline-flex items-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-xl bg-[#0B1E19] hover:bg-[#12332B] text-white font-bold text-xs uppercase tracking-wider border border-[#C9AA72]/40 shadow-xs active:scale-95 whitespace-nowrap"
               >
                 <CalendarDays className="w-3.5 h-3.5 text-[#C9AA72]" />
                 <span>Book</span>
@@ -412,10 +413,10 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, navigate }) => {
               <button
                 type="button"
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="p-2.5 rounded-xl bg-[#F5F1E8] border border-[#E2DACB] text-[#173D35] hover:bg-[#EDE6D8] transition-colors cursor-pointer"
+                className="p-2 sm:p-2.5 rounded-xl bg-white border border-[#E2DACB] text-[#252525] hover:bg-[#F5F1E8] shadow-2xs transition-colors cursor-pointer"
                 aria-label="Toggle navigation menu"
               >
-                {isMobileMenuOpen ? <X className="w-5 h-5 text-[#C9AA72]" /> : <Menu className="w-5 h-5" />}
+                {isMobileMenuOpen ? <X className="w-5 h-5 text-[#C9AA72]" /> : <Menu className="w-5 h-5 text-[#252525]" />}
               </button>
             </div>
           </div>
