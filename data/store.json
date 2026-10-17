@@ -197,6 +197,15 @@
   "maintenance": [],
   "auditLogs": [
     {
+      "id": "LOG-1792254854818-961",
+      "action": "LOGIN_SUCCESS",
+      "performedBy": "hheventsconvention@gmail.com",
+      "targetEntity": "auth",
+      "targetId": "hheventsconvention@gmail.com",
+      "details": "Administrative console login succeeded.",
+      "timestamp": "2026-10-17T16:34:14.818Z"
+    },
+    {
       "id": "LOG-INIT-MONGODB",
       "action": "MONGODB_CLUSTER_INIT",
       "performedBy": "system",
@@ -221,5 +230,5 @@
     "termsAndConditions": "Standard venue guidelines apply. Advance deposit is required to confirm the reservation.",
     "updatedAt": "2026-10-17T16:27:58.317Z"
   },
-  "lastUpdated": "2026-10-17T16:27:58.317Z"
+  "lastUpdated": "2026-10-17T16:34:14.842Z"
 }
