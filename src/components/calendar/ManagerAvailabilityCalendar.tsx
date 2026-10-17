@@ -41,11 +41,17 @@ export const ManagerAvailabilityCalendar: React.FC<ManagerAvailabilityCalendarPr
   const { showToast } = useToast();
 
   const today = new Date();
+  const getLocalDateString = (d: Date = new Date()) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  const todayKey = getLocalDateString(today);
+
   const [currentYear, setCurrentYear] = useState<number>(today.getFullYear());
   const [currentMonth, setCurrentMonth] = useState<number>(today.getMonth());
-  const [selectedDate, setSelectedDate] = useState<string>(
-    today.toISOString().split('T')[0]
-  );
+  const [selectedDate, setSelectedDate] = useState<string>(todayKey);
   const [selectedHall, setSelectedHall] = useState<HallTarget>('hall_1');
   const [managerNote, setManagerNote] = useState<string>('');
 
@@ -171,6 +177,7 @@ export const ManagerAvailabilityCalendar: React.FC<ManagerAvailabilityCalendarPr
   // Status values for currently selected date and hall
   const dayAvailable = isSlotAvailable(selectedHall, selectedDate, 'day');
   const eveningAvailable = isSlotAvailable(selectedHall, selectedDate, 'evening');
+  const isSelectedDatePast = selectedDate < todayKey;
 
   const selectedDateObj = new Date(selectedDate + 'T00:00:00');
   const readableDate = isNaN(selectedDateObj.getTime())
@@ -236,8 +243,9 @@ export const ManagerAvailabilityCalendar: React.FC<ManagerAvailabilityCalendarPr
             {selectedHall === 'hall_2' && 'Controlling Hall 2 independent availability.'}
             {selectedHall === 'both' && 'Controlling Combined Hall (both halls reserved together).'}
           </span>
-          <span className="text-emerald-700 font-semibold">
-            ● Hall 1 and Hall 2 operate independently
+          <span className="text-emerald-700 font-semibold inline-flex items-center gap-1.5">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+            <span>Hall 1 and Hall 2 operate independently</span>
           </span>
         </div>
       </div>
@@ -309,6 +317,7 @@ export const ManagerAvailabilityCalendar: React.FC<ManagerAvailabilityCalendarPr
                 today.getFullYear() === currentYear &&
                 today.getMonth() === currentMonth &&
                 today.getDate() === day;
+              const isPastDate = dateKey < todayKey;
 
               const summary = getDayAvailabilitySummary(selectedHall, dateKey);
               const daySlotOpen = isSlotAvailable(selectedHall, dateKey, 'day');
@@ -321,20 +330,29 @@ export const ManagerAvailabilityCalendar: React.FC<ManagerAvailabilityCalendarPr
                   onClick={() => handleDateClick(dateKey)}
                   className={`aspect-square p-1 sm:p-1.5 rounded-xl flex flex-col justify-between items-center transition-all relative border cursor-pointer ${
                     isSelected
-                      ? 'bg-amber-50 border-2 border-amber-500 shadow-md ring-2 ring-amber-400/20'
+                      ? isPastDate
+                        ? 'bg-slate-200/90 border-2 border-slate-500 shadow-sm ring-2 ring-slate-400/20'
+                        : 'bg-amber-50 border-2 border-amber-500 shadow-md ring-2 ring-amber-400/20'
+                      : isPastDate
+                      ? 'bg-slate-100/60 border-slate-200/50 hover:bg-slate-100 opacity-60'
                       : summary === 'unavailable'
                       ? 'bg-rose-50/70 border-rose-200 hover:border-rose-300'
                       : summary === 'partial'
                       ? 'bg-amber-50/50 border-amber-200 hover:border-amber-300'
                       : 'bg-white border-slate-200/90 hover:border-slate-300 hover:bg-slate-50'
                   }`}
+                  title={isPastDate ? `${dateKey} (Past Date - Historical Record)` : dateKey}
                 >
                   {/* Day Number and Today Indicator */}
                   <div className="w-full flex items-center justify-between text-[11px] font-bold">
                     <span
                       className={`${
                         isSelected
-                          ? 'text-amber-950 font-black'
+                          ? isPastDate
+                            ? 'text-slate-800 font-black'
+                            : 'text-amber-950 font-black'
+                          : isPastDate
+                          ? 'text-slate-400 font-normal'
                           : summary === 'unavailable'
                           ? 'text-rose-900'
                           : 'text-slate-800'
@@ -348,44 +366,52 @@ export const ManagerAvailabilityCalendar: React.FC<ManagerAvailabilityCalendarPr
                   </div>
 
                   {/* Slot Indicators: Day and Evening dots */}
-                  <div className="w-full flex items-center justify-center gap-1 pt-0.5">
-                    <span
-                      title={`Day Session: ${daySlotOpen ? 'Available' : 'Unavailable'}`}
-                      className={`w-2 h-2 rounded-full ${
-                        daySlotOpen ? 'bg-emerald-500' : 'bg-rose-500 ring-1 ring-rose-300'
-                      }`}
-                    />
-                    <span
-                      title={`Evening Session: ${eveSlotOpen ? 'Available' : 'Unavailable'}`}
-                      className={`w-2 h-2 rounded-full ${
-                        eveSlotOpen ? 'bg-emerald-500' : 'bg-rose-500 ring-1 ring-rose-300'
-                      }`}
-                    />
-                  </div>
+                  {isPastDate ? (
+                    <div className="w-full flex items-center justify-center gap-1 pt-0.5 opacity-25">
+                      <span
+                        title="Past Date: Closed"
+                        className="w-1.5 h-1.5 rounded-full bg-slate-400"
+                      />
+                      <span
+                        title="Past Date: Closed"
+                        className="w-1.5 h-1.5 rounded-full bg-slate-400"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-full flex items-center justify-center gap-1 pt-0.5">
+                      <span
+                        title={`Day Session: ${daySlotOpen ? 'Available' : 'Unavailable'}`}
+                        className={`w-2 h-2 rounded-full ${
+                          daySlotOpen ? 'bg-emerald-500' : 'bg-rose-500 ring-1 ring-rose-300'
+                        }`}
+                      />
+                      <span
+                        title={`Evening Session: ${eveSlotOpen ? 'Available' : 'Unavailable'}`}
+                        className={`w-2 h-2 rounded-full ${
+                          eveSlotOpen ? 'bg-emerald-500' : 'bg-rose-500 ring-1 ring-rose-300'
+                        }`}
+                      />
+                    </div>
+                  )}
 
                   {/* Micro label for state */}
-                  <span
-                    className={`text-[9px] font-semibold leading-tight hidden sm:block ${
-                      summary === 'unavailable'
-                        ? 'text-rose-700'
-                        : summary === 'partial'
-                        ? 'text-amber-700'
-                        : 'text-emerald-700'
-                    }`}
-                  >
-                    {summary === 'unavailable' ? 'Closed' : summary === 'partial' ? '1 Open' : 'Open'}
-                  </span>
-                  <span
-                    className={`sm:hidden text-[8px] font-bold leading-none ${
-                      summary === 'unavailable'
-                        ? 'text-rose-700'
-                        : summary === 'partial'
-                        ? 'text-amber-700'
-                        : 'text-emerald-700'
-                    }`}
-                  >
-                    {summary === 'unavailable' ? '✕' : summary === 'partial' ? '½' : '✓'}
-                  </span>
+                  {isPastDate ? (
+                    <span className="text-[9px] font-medium text-slate-400 leading-tight">
+                      Past
+                    </span>
+                  ) : (
+                    <span
+                      className={`text-[9px] font-semibold leading-tight ${
+                        summary === 'unavailable'
+                          ? 'text-rose-700'
+                          : summary === 'partial'
+                          ? 'text-amber-700'
+                          : 'text-emerald-700'
+                      }`}
+                    >
+                      {summary === 'unavailable' ? 'Closed' : summary === 'partial' ? '1 Open' : 'Open'}
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -405,6 +431,10 @@ export const ManagerAvailabilityCalendar: React.FC<ManagerAvailabilityCalendarPr
               <span className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
                 <span>Unavailable</span>
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-slate-300" />
+                <span>Past Date</span>
               </span>
             </div>
             <span className="text-[11px] text-slate-400">
@@ -435,10 +465,25 @@ export const ManagerAvailabilityCalendar: React.FC<ManagerAvailabilityCalendarPr
               </div>
             </div>
 
+            {/* Past Date Notice */}
+            {isSelectedDatePast && (
+              <div className="p-3.5 rounded-2xl bg-slate-100 border border-slate-200 text-xs text-slate-600 flex items-start gap-2.5">
+                <Clock className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
+                <div>
+                  <strong className="block font-bold text-slate-800">Historical Date (Past)</strong>
+                  <p className="text-[11px] text-slate-500 leading-snug mt-0.5">
+                    This date has already elapsed. Past availability is preserved for audit records and cannot be scheduled or modified.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Session 1: Day Session Control */}
             <div
               className={`p-4 rounded-2xl border transition-all ${
-                dayAvailable
+                isSelectedDatePast
+                  ? 'bg-slate-50 border-slate-200 text-slate-700'
+                  : dayAvailable
                   ? 'bg-emerald-50/70 border-emerald-200 text-emerald-950'
                   : 'bg-rose-50/70 border-rose-200 text-rose-950'
               }`}
@@ -461,12 +506,14 @@ export const ManagerAvailabilityCalendar: React.FC<ManagerAvailabilityCalendarPr
 
                 <span
                   className={`text-xs px-2.5 py-1 rounded-full font-black uppercase tracking-wider shrink-0 ${
-                    dayAvailable
+                    isSelectedDatePast
+                      ? 'bg-slate-200 text-slate-600'
+                      : dayAvailable
                       ? 'bg-emerald-600 text-white shadow-xs'
                       : 'bg-rose-600 text-white shadow-xs'
                   }`}
                 >
-                  {dayAvailable ? 'AVAILABLE' : 'UNAVAILABLE'}
+                  {isSelectedDatePast ? 'CLOSED (PAST)' : dayAvailable ? 'AVAILABLE' : 'UNAVAILABLE'}
                 </span>
               </div>
 
@@ -474,14 +521,17 @@ export const ManagerAvailabilityCalendar: React.FC<ManagerAvailabilityCalendarPr
                 <span className="text-xs text-slate-600">Change Day Session:</span>
                 <button
                   type="button"
+                  disabled={isSelectedDatePast}
                   onClick={() => handleToggleSlot('day')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer ${
-                    dayAvailable
-                      ? 'bg-rose-600 hover:bg-rose-700 text-white'
-                      : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs ${
+                    isSelectedDatePast
+                      ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                      : dayAvailable
+                      ? 'bg-rose-600 hover:bg-rose-700 text-white cursor-pointer'
+                      : 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer'
                   }`}
                 >
-                  {dayAvailable ? 'Mark Unavailable' : 'Mark Available'}
+                  {isSelectedDatePast ? 'Date Elapsed' : dayAvailable ? 'Mark Unavailable' : 'Mark Available'}
                 </button>
               </div>
             </div>
@@ -489,7 +539,9 @@ export const ManagerAvailabilityCalendar: React.FC<ManagerAvailabilityCalendarPr
             {/* Session 2: Evening Session Control */}
             <div
               className={`p-4 rounded-2xl border transition-all ${
-                eveningAvailable
+                isSelectedDatePast
+                  ? 'bg-slate-50 border-slate-200 text-slate-700'
+                  : eveningAvailable
                   ? 'bg-emerald-50/70 border-emerald-200 text-emerald-950'
                   : 'bg-rose-50/70 border-rose-200 text-rose-950'
               }`}
@@ -512,12 +564,14 @@ export const ManagerAvailabilityCalendar: React.FC<ManagerAvailabilityCalendarPr
 
                 <span
                   className={`text-xs px-2.5 py-1 rounded-full font-black uppercase tracking-wider shrink-0 ${
-                    eveningAvailable
+                    isSelectedDatePast
+                      ? 'bg-slate-200 text-slate-600'
+                      : eveningAvailable
                       ? 'bg-emerald-600 text-white shadow-xs'
                       : 'bg-rose-600 text-white shadow-xs'
                   }`}
                 >
-                  {eveningAvailable ? 'AVAILABLE' : 'UNAVAILABLE'}
+                  {isSelectedDatePast ? 'CLOSED (PAST)' : eveningAvailable ? 'AVAILABLE' : 'UNAVAILABLE'}
                 </span>
               </div>
 
@@ -525,14 +579,17 @@ export const ManagerAvailabilityCalendar: React.FC<ManagerAvailabilityCalendarPr
                 <span className="text-xs text-slate-600">Change Evening Session:</span>
                 <button
                   type="button"
+                  disabled={isSelectedDatePast}
                   onClick={() => handleToggleSlot('evening')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer ${
-                    eveningAvailable
-                      ? 'bg-rose-600 hover:bg-rose-700 text-white'
-                      : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs ${
+                    isSelectedDatePast
+                      ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                      : eveningAvailable
+                      ? 'bg-rose-600 hover:bg-rose-700 text-white cursor-pointer'
+                      : 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer'
                   }`}
                 >
-                  {eveningAvailable ? 'Mark Unavailable' : 'Mark Available'}
+                  {isSelectedDatePast ? 'Date Elapsed' : eveningAvailable ? 'Mark Unavailable' : 'Mark Available'}
                 </button>
               </div>
             </div>
@@ -545,16 +602,26 @@ export const ManagerAvailabilityCalendar: React.FC<ManagerAvailabilityCalendarPr
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
+                  disabled={isSelectedDatePast}
                   onClick={() => handleSetWholeDay(true)}
-                  className="w-full py-2 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold transition-colors text-center"
+                  className={`w-full py-2 px-3 rounded-xl border text-xs font-bold transition-colors text-center ${
+                    isSelectedDatePast
+                      ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
+                      : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-200 cursor-pointer'
+                  }`}
                 >
                   Mark Whole Day Available
                 </button>
 
                 <button
                   type="button"
+                  disabled={isSelectedDatePast}
                   onClick={() => handleSetWholeDay(false)}
-                  className="w-full py-2 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 text-xs font-bold transition-colors text-center"
+                  className={`w-full py-2 px-3 rounded-xl border text-xs font-bold transition-colors text-center ${
+                    isSelectedDatePast
+                      ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
+                      : 'bg-rose-50 hover:bg-rose-100 text-rose-800 border-rose-200 cursor-pointer'
+                  }`}
                 >
                   Mark Whole Day Unavailable
                 </button>
@@ -562,8 +629,13 @@ export const ManagerAvailabilityCalendar: React.FC<ManagerAvailabilityCalendarPr
 
               <button
                 type="button"
+                disabled={isSelectedDatePast}
                 onClick={handleResetDate}
-                className="w-full py-2 px-3 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
+                className={`w-full py-2 px-3 rounded-xl border text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 ${
+                  isSelectedDatePast
+                    ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
+                    : 'bg-slate-50 hover:bg-slate-100 text-slate-600 border-slate-200 cursor-pointer'
+                }`}
               >
                 <RotateCcw className="w-3.5 h-3.5" />
                 <span>Reset This Date to Default Available</span>
@@ -578,16 +650,19 @@ export const ManagerAvailabilityCalendar: React.FC<ManagerAvailabilityCalendarPr
               <div className="flex gap-2">
                 <input
                   type="text"
+                  disabled={isSelectedDatePast}
                   value={managerNote}
                   onChange={(e) => setManagerNote(e.target.value)}
-                  placeholder="e.g. VIP reservation / hall maintenance"
-                  className="flex-1 px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  placeholder={isSelectedDatePast ? 'Historical record (locked)' : 'e.g. VIP reservation / hall maintenance'}
+                  className="flex-1 px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed"
                 />
                 <Button
                   onClick={handleSaveNote}
+                  disabled={isSelectedDatePast}
                   variant="outline"
                   size="sm"
                   leftIcon={<Save className="w-3.5 h-3.5" />}
+                  className={isSelectedDatePast ? 'opacity-50 cursor-not-allowed' : ''}
                 >
                   Save
                 </Button>
