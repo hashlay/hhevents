@@ -6,7 +6,6 @@ import { NavigationProvider, useNavigation } from './context/NavigationContext';
 import { ToastContainer } from './components/ui/ToastContainer';
 import { Navbar } from './components/layout/Navbar';
 import { Footer } from './components/layout/Footer';
-import { ScrollProgress } from './components/ui/ScrollProgress';
 import { MobileBottomBar } from './components/ui/MobileBottomBar';
 
 // Public Pages
@@ -21,6 +20,10 @@ import { BookPage } from './pages/public/BookPage';
 import { TrackBookingPage } from './pages/public/TrackBookingPage';
 import { LocationPage } from './pages/public/LocationPage';
 import { ContactPage } from './pages/public/ContactPage';
+import { PrivacyPolicyPage } from './pages/public/PrivacyPolicyPage';
+import { TermsPage } from './pages/public/TermsPage';
+import { RefundPolicyPage } from './pages/public/RefundPolicyPage';
+import { CookiePolicyPage } from './pages/public/CookiePolicyPage';
 
 // Admin Pages
 import { AdminLoginPage } from './pages/admin/AdminLoginPage';
@@ -100,6 +103,18 @@ const AppContent: React.FC = () => {
         return <LocationPage navigate={navigate} />;
       case '/contact':
         return <ContactPage navigate={navigate} />;
+      case '/privacy-policy':
+      case '/privacy':
+        return <PrivacyPolicyPage navigate={navigate} />;
+      case '/terms-and-conditions':
+      case '/terms':
+        return <TermsPage navigate={navigate} />;
+      case '/refund-policy':
+      case '/refund':
+        return <RefundPolicyPage navigate={navigate} />;
+      case '/cookie-policy':
+      case '/cookies':
+        return <CookiePolicyPage navigate={navigate} />;
       default:
         return <HomePage navigate={navigate} />;
     }
@@ -107,7 +122,6 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F5F1E8] text-[#252525] selection:bg-[#F3E8D8] selection:text-[#173D35]">
-      <ScrollProgress />
       <ToastContainer />
 
       {isAdminRoute && !isAdminLogin ? (

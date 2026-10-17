@@ -1,10 +1,8 @@
 import React from 'react';
 import {
-  Building2,
   MapPin,
   Phone,
   Clock,
-  ShieldCheck,
   CalendarCheck,
   ExternalLink,
 } from 'lucide-react';
@@ -16,180 +14,209 @@ interface FooterProps {
 
 export const Footer: React.FC<FooterProps> = ({ navigate }) => {
   return (
-    <footer className="bg-[#173D35] text-slate-200 pt-16 pb-12 border-t border-[#C9AA72]/30">
+    <footer className="bg-[#173D35] text-slate-200 pt-14 pb-10 border-t border-[#C9AA72]/30">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 mb-12">
-          {/* Brand & Overview */}
-          <div className="lg:col-span-2 space-y-4">
-            <div className="space-y-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-10 pb-10 border-b border-[#C9AA72]/20">
+          
+          {/* Brand & Identity (Cols 1-4) */}
+          <div className="lg:col-span-4 space-y-4">
+            <div className="flex items-center gap-3">
               <img
                 src="/assets/branding/hh-logo.png"
-                alt="H H Events & Conventions Logo"
-                className="h-10 w-auto object-contain"
+                alt="Events & Conventions Logo"
+                className="h-11 w-auto object-contain"
               />
               <div>
-                <span className="text-2xl font-bold text-white tracking-tight font-serif-heading block">
-                  H H Events &amp; Conventions
+                <span className="text-xl sm:text-2xl font-bold text-white tracking-tight font-serif-heading block leading-tight">
+                  Events &amp; Conventions
                 </span>
-                <p className="text-xs text-[#C9AA72] font-semibold mt-1 tracking-wider uppercase">
-                  Panemangalore, Bantwal &bull; Hall 1 &amp; Hall 2
+                <p className="text-xs text-[#C9AA72] font-semibold tracking-wider uppercase mt-0.5">
+                  Panemangalore &bull; Bantwal
                 </p>
               </div>
             </div>
 
-            <p className="text-sm text-slate-300 leading-relaxed max-w-sm">
-              Premier destination for weddings, Nikah, celebrations, cultural gatherings, and corporate conventions. Featuring dual independent halls, dedicated dining wings, and complete commercial kitchen facilities.
+            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed max-w-sm">
+              Premier destination for weddings, Nikah, receptions, cultural celebrations, and corporate conventions with dual independent halls and dedicated dining wings.
             </p>
 
-            {/* Official Address */}
-            <div className="p-3.5 rounded-xl bg-[#0F2722] border border-[#C9AA72]/20 text-xs text-slate-200 space-y-1.5">
-              <span className="font-bold text-[#C9AA72] block text-[11px] uppercase tracking-wider">
-                Venue Address
-              </span>
-              <p className="leading-relaxed">
-                {VENUE_INFO.address}
-              </p>
-              <a
-                href={VENUE_INFO.googleMapsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-[#C9AA72] hover:text-white font-semibold pt-1"
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={() => navigate('/book')}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0F2722] hover:bg-[#0B1E19] text-[#C9AA72] hover:text-white border border-[#C9AA72]/30 transition-all text-xs font-bold uppercase tracking-wider shadow-xs cursor-pointer"
               >
-                <span>View on Google Maps</span>
-                <ExternalLink className="w-3 h-3" />
-              </a>
+                <CalendarCheck className="w-3.5 h-3.5 text-[#C9AA72]" />
+                <span>Reserve Your Date</span>
+              </button>
             </div>
           </div>
 
-          {/* Public Navigation */}
-          <div>
-            <h4 className="text-xs uppercase tracking-wider font-bold text-white mb-4">
-              Explore Venue
+          {/* Quick Links (Cols 5-6) */}
+          <div className="lg:col-span-2 space-y-3">
+            <h4 className="text-xs uppercase tracking-wider font-bold text-[#C9AA72]">
+              Explore
             </h4>
-            <ul className="space-y-2.5 text-sm">
+            <ul className="space-y-2 text-xs sm:text-sm">
               <li>
-                <button onClick={() => navigate('/')} className="hover:text-white transition-colors cursor-pointer">
-                  Home Overview
+                <button onClick={() => navigate('/')} className="hover:text-white text-slate-300 transition-colors cursor-pointer">
+                  Home
                 </button>
               </li>
               <li>
-                <button onClick={() => navigate('/about')} className="hover:text-white transition-colors cursor-pointer">
-                  About H H Events
+                <button onClick={() => navigate('/halls')} className="hover:text-white text-slate-300 transition-colors cursor-pointer">
+                  Halls &amp; Spaces
                 </button>
               </li>
               <li>
-                <button onClick={() => navigate('/halls')} className="hover:text-white transition-colors cursor-pointer">
-                  Halls (Hall 1 &amp; Hall 2)
-                </button>
-              </li>
-              <li>
-                <button onClick={() => navigate('/facilities')} className="hover:text-white transition-colors cursor-pointer">
-                  Facilities &amp; Amenities
-                </button>
-              </li>
-              <li>
-                <button onClick={() => navigate('/gallery')} className="hover:text-white transition-colors cursor-pointer">
-                  Photo Gallery
-                </button>
-              </li>
-              <li>
-                <button onClick={() => navigate('/pricing')} className="hover:text-white transition-colors cursor-pointer">
+                <button onClick={() => navigate('/pricing')} className="hover:text-white text-slate-300 transition-colors cursor-pointer">
                   Tariff &amp; Packages
                 </button>
               </li>
-            </ul>
-          </div>
-
-          {/* Reservations & Schedule */}
-          <div>
-            <h4 className="text-xs uppercase tracking-wider font-bold text-white mb-4">
-              Reservations
-            </h4>
-            <ul className="space-y-2.5 text-sm">
               <li>
-                <button
-                  onClick={() => navigate('/book')}
-                  className="text-[#DFAB4C] font-semibold hover:underline flex items-center gap-1.5 cursor-pointer"
-                >
-                  <CalendarCheck className="w-4 h-4" /> Book Hall Online
-                </button>
-              </li>
-              <li>
-                <button onClick={() => navigate('/availability')} className="hover:text-white transition-colors cursor-pointer">
+                <button onClick={() => navigate('/availability')} className="hover:text-white text-slate-300 transition-colors cursor-pointer">
                   Hall Availability
                 </button>
               </li>
               <li>
-                <button onClick={() => navigate('/track-booking')} className="hover:text-white transition-colors cursor-pointer">
-                  Track Reservation
+                <button onClick={() => navigate('/gallery')} className="hover:text-white text-slate-300 transition-colors cursor-pointer">
+                  Photo Gallery
                 </button>
               </li>
               <li>
-                <button onClick={() => navigate('/location')} className="hover:text-white transition-colors cursor-pointer">
-                  Location &amp; Route
+                <button onClick={() => navigate('/facilities')} className="hover:text-white text-slate-300 transition-colors cursor-pointer">
+                  Facilities
                 </button>
               </li>
               <li>
-                <button onClick={() => navigate('/contact')} className="hover:text-white transition-colors cursor-pointer">
-                  Contact Management
+                <button onClick={() => navigate('/about')} className="hover:text-white text-slate-300 transition-colors cursor-pointer">
+                  About Venue
                 </button>
               </li>
             </ul>
           </div>
 
-          {/* Direct Contact & Hours */}
-          <div>
-            <h4 className="text-xs uppercase tracking-wider font-bold text-white mb-4">
-              Direct Contact
+          {/* Guest Services (Cols 7-8) */}
+          <div className="lg:col-span-2 space-y-3">
+            <h4 className="text-xs uppercase tracking-wider font-bold text-[#C9AA72]">
+              Services
             </h4>
-            <div className="space-y-3 text-xs text-[#A8A29E]">
-              <p className="flex items-start gap-2.5">
-                <MapPin className="w-4 h-4 text-[#C88D23] shrink-0 mt-0.5" />
-                <span>Opposite Juma Masjid, Panemangalore, Akkarangadi, Bantwal 574231</span>
-              </p>
-              <div className="space-y-1">
-                <p className="flex items-center gap-2.5">
-                  <Phone className="w-4 h-4 text-[#C88D23] shrink-0" />
-                  <a href={`tel:${VENUE_INFO.primaryPhone}`} className="hover:text-white font-medium">
-                    {VENUE_INFO.primaryPhone}
-                  </a>
-                </p>
-                <p className="flex items-center gap-2.5 pl-6">
-                  <a href={`tel:${VENUE_INFO.secondaryPhone}`} className="hover:text-white font-medium">
-                    {VENUE_INFO.secondaryPhone}
-                  </a>
-                </p>
-              </div>
-              <div className="pt-2 border-t border-[#29221D] space-y-1">
-                <div className="flex items-start gap-2.5">
-                  <Clock className="w-4 h-4 text-[#C88D23] shrink-0 mt-0.5" />
-                  <div>
-                    <span className="font-semibold text-white block">Session Timings:</span>
-                    <span>Day: {VENUE_INFO.daySlotHours}</span>
-                    <br />
-                    <span>Evening: {VENUE_INFO.eveningSlotHours}</span>
-                  </div>
+            <ul className="space-y-2 text-xs sm:text-sm">
+              <li>
+                <button
+                  onClick={() => navigate('/book')}
+                  className="text-[#DFAB4C] hover:text-white font-semibold transition-colors cursor-pointer flex items-center gap-1.5"
+                >
+                  <CalendarCheck className="w-3.5 h-3.5" /> Book Online
+                </button>
+              </li>
+              <li>
+                <button onClick={() => navigate('/track-booking')} className="hover:text-white text-slate-300 transition-colors cursor-pointer">
+                  Track Reservation
+                </button>
+              </li>
+              <li>
+                <button onClick={() => navigate('/location')} className="hover:text-white text-slate-300 transition-colors cursor-pointer">
+                  Directions &amp; Map
+                </button>
+              </li>
+              <li>
+                <button onClick={() => navigate('/contact')} className="hover:text-white text-slate-300 transition-colors cursor-pointer">
+                  Contact Desk
+                </button>
+              </li>
+            </ul>
+          </div>
+
+          {/* Location & Direct Inquiries (Cols 9-12) */}
+          <div className="lg:col-span-4 space-y-3">
+            <h4 className="text-xs uppercase tracking-wider font-bold text-[#C9AA72]">
+              Location &amp; Inquiries
+            </h4>
+
+            {/* Integrated Location & Google Maps Link */}
+            <a
+              href={VENUE_INFO.googleMapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group block p-3 rounded-xl bg-[#0F2722]/80 hover:bg-[#0F2722] border border-[#C9AA72]/20 hover:border-[#C9AA72]/60 transition-all text-xs text-slate-200"
+              title="Click to open venue location on Google Maps"
+            >
+              <div className="flex items-start gap-2.5">
+                <MapPin className="w-4 h-4 text-[#C9AA72] shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
+                <div className="space-y-1">
+                  <p className="leading-snug text-slate-200 group-hover:text-white transition-colors">
+                    Opposite Juma Masjid, Panemangalore, Akkarangadi, Bantwal 574231
+                  </p>
+                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#C9AA72] group-hover:text-[#F3E8D8] transition-colors">
+                    <span>Open in Google Maps</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </span>
                 </div>
               </div>
+            </a>
+
+            {/* Direct Phone Numbers */}
+            <div className="space-y-1 text-xs pt-1">
+              <a
+                href={`tel:${VENUE_INFO.primaryPhone}`}
+                className="flex items-center gap-2 text-slate-200 hover:text-[#C9AA72] transition-colors font-medium"
+              >
+                <Phone className="w-3.5 h-3.5 text-[#C9AA72] shrink-0" />
+                <span>{VENUE_INFO.primaryPhone}</span>
+              </a>
+              <a
+                href={`tel:${VENUE_INFO.secondaryPhone}`}
+                className="flex items-center gap-2 pl-5.5 text-slate-300 hover:text-[#C9AA72] transition-colors"
+              >
+                <span>{VENUE_INFO.secondaryPhone}</span>
+              </a>
+            </div>
+
+            {/* Timings */}
+            <div className="flex items-start gap-2 text-[11px] text-slate-300 pt-1 border-t border-[#C9AA72]/15">
+              <Clock className="w-3.5 h-3.5 text-[#C9AA72] shrink-0 mt-0.5" />
+              <span>Session: Day 10 AM&ndash;3 PM &bull; Evening 6 PM&ndash;10 PM</span>
             </div>
           </div>
         </div>
 
-        {/* Management Payment Notice Banner */}
-        <div className="p-4 rounded-xl bg-[#241E1A] border border-[#3D312A] mb-8 text-xs text-[#E7E5E4] leading-relaxed">
-          <span className="font-bold text-[#DFAB4C] block mb-1">BOOKING &amp; PAYMENT NOTICE:</span>
-          {VENUE_INFO.paymentNotice}
-        </div>
-
-        {/* Bottom Bar */}
-        <div className="pt-8 border-t border-[#29221D] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#78716C]">
+        {/* Bottom Bar: Copyright & Legal Policies */}
+        <div className="pt-6 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-400">
           <p>&copy; {new Date().getFullYear()} H H Events &amp; Conventions. All rights reserved.</p>
-          <div className="flex flex-wrap items-center justify-center sm:justify-end gap-3 sm:gap-6">
-            <span className="text-center sm:text-left">Opposite Juma Masjid, Panemangalore</span>
-            <span className="text-[#3D312A] hidden sm:inline">&bull;</span>
-            <a href={`tel:${VENUE_INFO.primaryPhone}`} className="hover:text-[#DFAB4C] transition-colors">
-              Tel: {VENUE_INFO.primaryPhone}
-            </a>
+
+          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs">
+            <button
+              type="button"
+              onClick={() => navigate('/privacy-policy')}
+              className="text-slate-300 hover:text-[#C9AA72] transition-colors cursor-pointer"
+            >
+              Privacy Policy
+            </button>
+            <span className="text-[#C9AA72]/40">&bull;</span>
+            <button
+              type="button"
+              onClick={() => navigate('/terms-and-conditions')}
+              className="text-slate-300 hover:text-[#C9AA72] transition-colors cursor-pointer"
+            >
+              Terms &amp; Conditions
+            </button>
+            <span className="text-[#C9AA72]/40">&bull;</span>
+            <button
+              type="button"
+              onClick={() => navigate('/refund-policy')}
+              className="text-slate-300 hover:text-[#C9AA72] transition-colors cursor-pointer"
+            >
+              Refund Policy
+            </button>
+            <span className="text-[#C9AA72]/40">&bull;</span>
+            <button
+              type="button"
+              onClick={() => navigate('/cookie-policy')}
+              className="text-slate-300 hover:text-[#C9AA72] transition-colors cursor-pointer"
+            >
+              Cookie Policy
+            </button>
           </div>
         </div>
       </div>

@@ -24,7 +24,8 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, navigate }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMoreDropdownOpen, setIsMoreDropdownOpen] = useState(false);
-  const moreDropdownRef = useRef<HTMLDivElement>(null);
+  const tabletDropdownRef = useRef<HTMLDivElement>(null);
+  const desktopDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -39,10 +40,10 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, navigate }) => {
   // Close dropdown on click outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        moreDropdownRef.current &&
-        !moreDropdownRef.current.contains(event.target as Node)
-      ) {
+      const target = event.target as Node;
+      const isInsideTablet = tabletDropdownRef.current?.contains(target);
+      const isInsideDesktop = desktopDropdownRef.current?.contains(target);
+      if (!isInsideTablet && !isInsideDesktop) {
         setIsMoreDropdownOpen(false);
       }
     };
@@ -190,9 +191,9 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, navigate }) => {
               <div className="flex flex-col shrink-0">
                 <div className="flex items-baseline gap-1 sm:gap-1.5 whitespace-nowrap">
                   <span className="text-lg sm:text-2xl font-bold tracking-tight text-[#173D35] font-serif-heading leading-tight group-hover:text-[#A58448] transition-colors">
-                    H H Events
+                    Events
                   </span>
-                  <span className="text-[9px] sm:text-[11px] font-bold text-[#C9AA72] uppercase tracking-wider inline">
+                  <span className="text-[10px] sm:text-[12px] font-bold text-[#C9AA72] uppercase tracking-wider inline">
                     &amp; Conventions
                   </span>
                 </div>
@@ -244,7 +245,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, navigate }) => {
               })}
 
               {/* Tablet "More ▾" Dropdown */}
-              <div className="relative" ref={moreDropdownRef}>
+              <div className="relative" ref={tabletDropdownRef}>
                 <button
                   type="button"
                   onClick={() => setIsMoreDropdownOpen(!isMoreDropdownOpen)}
@@ -260,7 +261,10 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, navigate }) => {
                 </button>
 
                 {isMoreDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-64 rounded-2xl bg-white border border-[#E2DACB] shadow-xl p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                  <div 
+                    onMouseDown={(e) => e.stopPropagation()}
+                    className="absolute right-0 mt-2 w-64 rounded-2xl bg-white border border-[#E2DACB] shadow-xl p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150"
+                  >
                     <div className="px-3 py-2 text-[10px] font-bold text-[#8C734B] uppercase tracking-wider border-b border-[#F0EBE1]">
                       Venue Exploration
                     </div>
@@ -318,7 +322,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, navigate }) => {
               })}
 
               {/* Luxury "More ▾" Dropdown */}
-              <div className="relative">
+              <div className="relative" ref={desktopDropdownRef}>
                 <button
                   type="button"
                   onClick={() => setIsMoreDropdownOpen(!isMoreDropdownOpen)}
@@ -339,7 +343,10 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, navigate }) => {
                 </button>
 
                 {isMoreDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-64 rounded-2xl bg-white border border-[#E2DACB] shadow-xl p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                  <div 
+                    onMouseDown={(e) => e.stopPropagation()}
+                    className="absolute right-0 mt-2 w-64 rounded-2xl bg-white border border-[#E2DACB] shadow-xl p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150"
+                  >
                     <div className="px-3 py-2 text-[10px] font-bold text-[#8C734B] uppercase tracking-wider border-b border-[#F0EBE1]">
                       Venue Exploration
                     </div>
@@ -441,7 +448,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, navigate }) => {
                 />
                 <div>
                   <span className="font-bold text-white text-base font-serif-heading block leading-tight">
-                    H H Events &amp; Conventions
+                    Events &amp; Conventions
                   </span>
                   <span className="text-[10px] text-[#D9C194] font-medium tracking-wide">
                     Panemangalore &bull; Bantwal
