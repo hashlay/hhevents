@@ -1153,9 +1153,6 @@ apiRouter.delete("/photos/:slotId", requireAdminAuth, async (req, res) => {
 app.use("/api", apiRouter);
 app.use(apiRouter);
 var app_default = app;
-
-// api/index.ts
-var index_default = app_default;
 export {
-  index_default as default
+  app_default as default
 };
