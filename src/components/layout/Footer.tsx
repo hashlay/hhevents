@@ -14,9 +14,9 @@ interface FooterProps {
 
 export const Footer: React.FC<FooterProps> = ({ navigate }) => {
   return (
-    <footer className="bg-[#173D35] text-slate-200 pt-10 sm:pt-14 pb-24 lg:pb-12 border-t border-[#C9AA72]/30">
+    <footer className="bg-[#173D35] text-slate-200 pt-8 sm:pt-12 pb-20 lg:pb-10 border-t border-[#C9AA72]/30">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-10 pb-8 sm:pb-10 border-b border-[#C9AA72]/20">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6 lg:gap-10 pb-5 sm:pb-7 border-b border-[#C9AA72]/20">
           
           {/* Brand & Identity (Cols 1-4) */}
           <div className="lg:col-span-4 space-y-4">
@@ -160,33 +160,34 @@ export const Footer: React.FC<FooterProps> = ({ navigate }) => {
               </div>
             </a>
 
-            {/* Direct Phone Numbers */}
-            <div className="space-y-1 text-xs pt-1">
+            {/* Direct Phone Numbers (Single Line on Desktop & Mobile) */}
+            <div className="flex items-center gap-2 text-xs text-slate-200 flex-wrap pt-0.5">
+              <Phone className="w-3.5 h-3.5 text-[#C9AA72] shrink-0" />
               <a
                 href={`tel:${VENUE_INFO.primaryPhone}`}
-                className="flex items-center gap-2 text-slate-200 hover:text-[#C9AA72] transition-colors font-medium"
+                className="hover:text-[#C9AA72] transition-colors font-medium"
               >
-                <Phone className="w-3.5 h-3.5 text-[#C9AA72] shrink-0" />
-                <span>{VENUE_INFO.primaryPhone}</span>
+                {VENUE_INFO.primaryPhone}
               </a>
+              <span className="text-[#C9AA72]/60 font-bold">&bull;</span>
               <a
                 href={`tel:${VENUE_INFO.secondaryPhone}`}
-                className="flex items-center gap-2 pl-5.5 text-slate-300 hover:text-[#C9AA72] transition-colors"
+                className="hover:text-[#C9AA72] transition-colors text-slate-300"
               >
-                <span>{VENUE_INFO.secondaryPhone}</span>
+                {VENUE_INFO.secondaryPhone}
               </a>
             </div>
 
             {/* Timings */}
-            <div className="flex items-start gap-2 text-[11px] text-slate-300 pt-1 border-t border-[#C9AA72]/15">
-              <Clock className="w-3.5 h-3.5 text-[#C9AA72] shrink-0 mt-0.5" />
+            <div className="flex items-center gap-2 text-[11px] text-slate-300 pt-1.5 border-t border-[#C9AA72]/15">
+              <Clock className="w-3.5 h-3.5 text-[#C9AA72] shrink-0" />
               <span>Session: Day 10 AM&ndash;3 PM &bull; Evening 6 PM&ndash;10 PM</span>
             </div>
           </div>
         </div>
 
         {/* Bottom Bar: Copyright & Legal Policies */}
-        <div className="pt-6 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-400">
+        <div className="pt-4 sm:pt-5 flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-slate-400">
           <p>&copy; {new Date().getFullYear()} H H Events &amp; Conventions. All rights reserved.</p>
 
           <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs">
