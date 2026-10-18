@@ -34,7 +34,7 @@ interface AvailabilityCalendarProps {
 export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
   onSelectDate,
   selectedDate: initialSelectedDate,
-  initialHall = 'hall_1',
+  initialHall = 'both',
   selectedHall,
   onSelectHall,
   className = '',

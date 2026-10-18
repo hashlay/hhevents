@@ -63,7 +63,6 @@ const AppContent: React.FC = () => {
       case '/admin/packages':
         return <AdminPackagesPage navigate={navigate} />;
       case '/admin/availability':
-        return <AdminAvailabilityPage navigate={navigate} />;
       case '/admin/calendar':
         return <AdminCalendarPage navigate={navigate} />;
       case '/admin/photos':

@@ -94,7 +94,6 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
   ];
 
   const secondaryTools = [
-    { label: 'Hall Availability', path: '/admin/availability', icon: Sliders },
     { label: 'Venue Photos', path: '/admin/photos', icon: Camera },
     { label: 'Maintenance Log', path: '/admin/maintenance', icon: Wrench },
     { label: 'Activity History', path: '/admin/history', icon: History },

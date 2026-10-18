@@ -210,19 +210,11 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ navigate
             <div className="flex items-center gap-2">
               <Button
                 onClick={() => navigate('/admin/calendar')}
-                variant="outline"
+                variant="primary"
                 size="sm"
                 leftIcon={<Calendar className="w-3.5 h-3.5" />}
               >
-                View Full Calendar
-              </Button>
-              <Button
-                onClick={() => navigate('/admin/availability')}
-                variant="outline"
-                size="sm"
-                leftIcon={<Sliders className="w-3.5 h-3.5" />}
-              >
-                Block / Free Date
+                Master Calendar & Availability
               </Button>
             </div>
           </div>
