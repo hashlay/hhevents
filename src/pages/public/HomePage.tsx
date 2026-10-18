@@ -24,6 +24,7 @@ interface HomePageProps {
 export const HomePage: React.FC<HomePageProps> = ({ navigate }) => {
   const { getPhotoUrl } = useVenuePhotos();
   const heroPhoto = getPhotoUrl('hero') || VENUE_DEFAULT_ASSETS.exterior;
+  const mobileHeroPhoto = '/assets/venue/photos/HH_Events_Venue_Images/01_venue_exterior_mobile.webp';
   const hallBlackGoldPhoto = getPhotoUrl('hall1') || VENUE_DEFAULT_ASSETS.hallBlackGold;
   const hallYellowPhoto = getPhotoUrl('hall2') || VENUE_DEFAULT_ASSETS.hallYellow;
   const diningSeatingPhoto = getPhotoUrl('dining') || VENUE_DEFAULT_ASSETS.diningSeating;
@@ -144,19 +145,19 @@ export const HomePage: React.FC<HomePageProps> = ({ navigate }) => {
 
       {/* 1b. DEDICATED CINEMATIC MOBILE & TABLET HERO (Matching Approved Design Reference) */}
       <section className="block lg:hidden relative overflow-hidden bg-[#071512] text-white min-h-[580px] sm:min-h-[640px] flex flex-col justify-between">
-        {/* Full Photographic Background with Responsive Positioning (Preserves Illuminated HH Building & Signage) */}
+        {/* Full Photographic Background with Reference-Matched Mobile Framing */}
         <div className="absolute inset-0 z-0">
           <img
-            src={heroPhoto}
+            src={mobileHeroPhoto}
             alt="H H Events & Conventions Building Exterior with Illuminated Signage"
-            className="w-full h-full object-cover object-[75%_center] sm:object-center"
+            className="w-full h-full object-cover object-[center_30%] sm:object-center"
             loading="eager"
           />
-          {/* Controlled Cinematic Emerald Gradient: Concentrated on top/left for pristine text contrast while keeping illuminated building visible */}
-          <div className="absolute inset-0 bg-gradient-to-b from-[#091D17]/95 via-[#091D17]/85 to-[#071512]/60" />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#091D17]/95 via-[#091D17]/75 sm:via-[#091D17]/60 to-transparent sm:w-4/5" />
-          {/* Dark Base Scrim across bottom pavement for Session Strip anchoring */}
-          <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#071512] via-[#071512]/80 to-transparent" />
+          {/* Subtle Scrim for Pristine Text Readability: Focused on top-left text area without darkening the illuminated building & forecourt */}
+          <div className="absolute inset-0 bg-gradient-to-b from-[#071512]/80 via-[#071512]/30 to-transparent via-55%" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#071512]/85 via-[#071512]/30 to-transparent w-full sm:w-4/5" />
+          {/* Subtle Base Scrim for Floating Session Strip */}
+          <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-[#071512]/70 via-transparent to-transparent" />
         </div>
 
         {/* Hero Content Area */}
@@ -168,14 +169,14 @@ export const HomePage: React.FC<HomePageProps> = ({ navigate }) => {
           </div>
 
           {/* Luxury Serif Headline */}
-          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-white leading-[1.18] font-serif-heading drop-shadow-sm">
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-white leading-[1.18] font-serif-heading drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]">
             A Beautiful Venue <br />
             for Your <br />
             <span className="text-[#C9AA72]">Special Occasions</span>
           </h1>
 
           {/* Concise Supporting Description */}
-          <p className="mt-3 text-xs sm:text-sm text-[#F5F1E8]/90 leading-relaxed font-normal max-w-sm sm:max-w-md">
+          <p className="mt-3 text-xs sm:text-sm text-[#F5F1E8] leading-relaxed font-normal max-w-sm sm:max-w-md drop-shadow-[0_1px_4px_rgba(0,0,0,0.8)]">
             Explore our event spaces, dining facilities, and hall packages in Panemangalore, Bantwal.
           </p>
 
@@ -204,8 +205,8 @@ export const HomePage: React.FC<HomePageProps> = ({ navigate }) => {
           </div>
         </div>
 
-        {/* 3-Column Session Information Strip (Over bottom pavement of hero) */}
-        <div className="relative z-10 border-t border-white/15 bg-[#091D17]/85 backdrop-blur-md px-3 sm:px-6 py-2.5 sm:py-3.5">
+        {/* 3-Column Session Information Strip (Floating Card matching Reference Layout) */}
+        <div className="relative z-10 mx-3 mb-3.5 sm:mx-6 sm:mb-5 rounded-2xl border border-white/20 bg-[#091D17]/75 backdrop-blur-md px-3 sm:px-6 py-2.5 sm:py-3.5 shadow-xl">
           <div className="grid grid-cols-3 gap-1.5 sm:gap-2 divide-x divide-white/15 max-w-2xl mx-auto">
             {/* Item 1: Day Session */}
             <div className="flex items-center gap-1.5 sm:gap-2 px-1 sm:px-2 min-w-0">
