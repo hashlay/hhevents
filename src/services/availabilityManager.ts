@@ -51,7 +51,7 @@ export async function syncAvailabilityFromServer(): Promise<void> {
     const res = await fetch('/api/availability');
     if (res.ok) {
       const data = await res.json();
-      const updated: Record<string, DateAvailabilityEntry> = { ...availabilityCache };
+      const updated: Record<string, DateAvailabilityEntry> = {};
 
       // Process blackouts
       if (Array.isArray(data.blackouts)) {
@@ -91,8 +91,21 @@ export async function syncAvailabilityFromServer(): Promise<void> {
               updatedAt: new Date().toISOString(),
             };
           }
-          const isHall1 = b.occupiedResources?.includes('gents_hall') || b.hallSelection === 'both' || b.hallSelection === 'hall_1';
-          const isHall2 = b.occupiedResources?.includes('ladies_hall') || b.hallSelection === 'both' || b.hallSelection === 'hall_2';
+          const isHall1 =
+            b.occupiedResources?.includes('all') ||
+            b.occupiedResources?.includes('gents_hall') ||
+            b.hallSelection === 'both' ||
+            b.hallSelection === 'hall_1' ||
+            b.hall === 'both' ||
+            b.hall === 'hall_1';
+
+          const isHall2 =
+            b.occupiedResources?.includes('all') ||
+            b.occupiedResources?.includes('ladies_hall') ||
+            b.hallSelection === 'both' ||
+            b.hallSelection === 'hall_2' ||
+            b.hall === 'both' ||
+            b.hall === 'hall_2';
 
           if (b.slot === 'day') {
             if (isHall1) updated[b.date].hall_1.day = false;

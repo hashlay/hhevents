@@ -21,10 +21,13 @@ interface AdminCalendarPageProps {
   navigate: (path: string) => void;
 }
 
+import { HallTarget } from '../../services/availabilityManager';
+
 export const AdminCalendarPage: React.FC<AdminCalendarPageProps> = ({ navigate }) => {
   const [selectedDate, setSelectedDate] = useState<string>(
     new Date().toISOString().split('T')[0]
   );
+  const [selectedHall, setSelectedHall] = useState<HallTarget>('hall_1');
   const [bookings, setBookings] = useState<BookingRequest[]>(getStoredBookings());
   const [maintenance, setMaintenance] = useState(getStoredMaintenance());
   const [isLoading, setIsLoading] = useState(false);
@@ -52,8 +55,42 @@ export const AdminCalendarPage: React.FC<AdminCalendarPageProps> = ({ navigate }
     };
   }, []);
 
-  const selectedBookings = bookings.filter((b) => (b.date === selectedDate || b.eventDate === selectedDate));
+  // Filter bookings strictly for the selected hall
+  const hallBookingsOnDate = bookings.filter((b) => {
+    const isDateMatch = b.date === selectedDate || b.eventDate === selectedDate;
+    if (!isDateMatch) return false;
+
+    if (selectedHall === 'hall_1') {
+      return b.hall === 'hall_1' || b.hall === 'both';
+    }
+    if (selectedHall === 'hall_2') {
+      return b.hall === 'hall_2' || b.hall === 'both';
+    }
+    // Combined hall shows any bookings taking either or both
+    return true;
+  });
+
+  // Other hall bookings (if any) to explain independent status
+  const otherHallBookings = bookings.filter((b) => {
+    const isDateMatch = b.date === selectedDate || b.eventDate === selectedDate;
+    if (!isDateMatch) return false;
+    if (selectedHall === 'hall_1') return b.hall === 'hall_2';
+    if (selectedHall === 'hall_2') return b.hall === 'hall_1';
+    return false;
+  });
+
   const selectedMaintenance = maintenance.filter((m) => m.scheduledDate === selectedDate);
+
+  const getHallTitle = (h: HallTarget) => {
+    switch (h) {
+      case 'hall_1':
+        return 'Hall 1 (Gents Wing)';
+      case 'hall_2':
+        return 'Hall 2 (Ladies Wing)';
+      case 'both':
+        return 'Combined Hall (Full Campus)';
+    }
+  };
 
   return (
     <AdminLayout
@@ -78,6 +115,8 @@ export const AdminCalendarPage: React.FC<AdminCalendarPageProps> = ({ navigate }
           <AvailabilityCalendar
             selectedDate={selectedDate}
             onSelectDate={(d) => setSelectedDate(d)}
+            selectedHall={selectedHall}
+            onSelectHall={(h) => setSelectedHall(h)}
           />
         </div>
 
@@ -86,21 +125,26 @@ export const AdminCalendarPage: React.FC<AdminCalendarPageProps> = ({ navigate }
           <Card className="p-6 space-y-4">
             <div className="pb-3 border-b border-slate-100 flex items-center justify-between">
               <div>
-                <span className="text-[11px] font-bold uppercase tracking-wider text-amber-700">
-                  Date Inspector
+                <span className="text-[11px] font-bold uppercase tracking-wider text-amber-700 block">
+                  {getHallTitle(selectedHall)}
                 </span>
                 <h3 className="text-base font-bold text-slate-900 mt-0.5">{selectedDate}</h3>
               </div>
               <CalendarDays className="w-5 h-5 text-slate-400" />
             </div>
 
-            {/* Scheduled events on this day */}
+            {/* Scheduled events on this day for the selected hall */}
             <div className="space-y-3">
-              <h4 className="text-xs font-bold uppercase text-slate-500 tracking-wider">
-                Bookings Scheduled ({selectedBookings.length})
-              </h4>
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-bold uppercase text-slate-500 tracking-wider">
+                  Bookings Scheduled ({hallBookingsOnDate.length})
+                </h4>
+                <span className="text-[10px] font-semibold text-[#173D35] bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                  {selectedHall === 'hall_1' ? 'Hall 1 View' : selectedHall === 'hall_2' ? 'Hall 2 View' : 'Combined View'}
+                </span>
+              </div>
 
-              {selectedBookings.map((b) => (
+              {hallBookingsOnDate.map((b) => (
                 <div
                   key={b.id}
                   className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1.5"
@@ -113,7 +157,7 @@ export const AdminCalendarPage: React.FC<AdminCalendarPageProps> = ({ navigate }
                     {b.customerName || b.applicantName}
                   </h5>
                   <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1">
-                    <span className="font-semibold text-amber-800">
+                    <span className="font-semibold text-[#173D35]">
                       {b.hall === 'hall_1' ? 'Hall 1' : b.hall === 'hall_2' ? 'Hall 2' : 'Both Halls'}
                     </span>
                     <span className="font-mono uppercase font-bold text-slate-700">
@@ -126,10 +170,21 @@ export const AdminCalendarPage: React.FC<AdminCalendarPageProps> = ({ navigate }
                 </div>
               ))}
 
-              {selectedBookings.length === 0 && (
-                <p className="text-xs text-slate-400 italic py-2">
-                  No reservations scheduled on this date.
-                </p>
+              {hallBookingsOnDate.length === 0 && (
+                <div className="p-3.5 rounded-xl bg-emerald-50/70 border border-emerald-200 text-xs text-emerald-900 space-y-1">
+                  <div className="font-bold flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    <span>No Bookings in {getHallTitle(selectedHall)}</span>
+                  </div>
+                  <p className="text-[11px] text-emerald-800 leading-relaxed">
+                    This space is open and available for reservations on this date.
+                  </p>
+                  {otherHallBookings.length > 0 && (
+                    <p className="text-[10px] text-slate-500 pt-1 border-t border-emerald-200/80">
+                      (Note: {otherHallBookings[0].hall === 'hall_1' ? 'Hall 1' : 'Hall 2'} has a separate reservation, but {selectedHall === 'hall_1' ? 'Hall 1' : 'Hall 2'} is independent).
+                    </p>
+                  )}
+                </div>
               )}
             </div>
 

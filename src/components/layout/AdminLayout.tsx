@@ -84,33 +84,23 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
     }
   }, [isMobileSidebarOpen]);
 
-  // Grouped Navigation for Clean Executive Architecture
-  const navigationGroups = [
-    {
-      group: 'Operations',
-      items: [
-        { label: 'Operations Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
-        { label: 'Booking Requests', path: '/admin/bookings', icon: Inbox },
-        { label: 'Master Calendar', path: '/admin/calendar', icon: Calendar },
-      ],
-    },
-    {
-      group: 'Venue & Tariff',
-      items: [
-        { label: 'Tariff & Packages', path: '/admin/packages', icon: Package },
-        { label: 'Availability Controls', path: '/admin/availability', icon: Sliders },
-        { label: 'Venue Photographs', path: '/admin/photos', icon: Camera },
-      ],
-    },
-    {
-      group: 'Administration',
-      items: [
-        { label: 'Maintenance Hub', path: '/admin/maintenance', icon: Wrench },
-        { label: 'Audit & History', path: '/admin/history', icon: History },
-        { label: 'Venue Settings', path: '/admin/settings', icon: Settings },
-      ],
-    },
+  // Streamlined Senior-Friendly Navigation
+  const primaryNavigation = [
+    { label: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
+    { label: 'Bookings', path: '/admin/bookings', icon: Inbox },
+    { label: 'Calendar', path: '/admin/calendar', icon: Calendar },
+    { label: 'Hall Rates', path: '/admin/packages', icon: Package },
+    { label: 'Settings', path: '/admin/settings', icon: Settings },
   ];
+
+  const secondaryTools = [
+    { label: 'Hall Availability', path: '/admin/availability', icon: Sliders },
+    { label: 'Venue Photos', path: '/admin/photos', icon: Camera },
+    { label: 'Maintenance Log', path: '/admin/maintenance', icon: Wrench },
+    { label: 'Activity History', path: '/admin/history', icon: History },
+  ];
+
+  const [showMoreTools, setShowMoreTools] = React.useState(false);
 
   const handleLogout = () => {
     logout();
@@ -203,38 +193,68 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
             </button>
           </div>
 
-          {/* Grouped Navigation Links */}
-          <div className="p-3.5 space-y-5">
-            {navigationGroups.map((group) => (
-              <div key={group.group} className="space-y-1">
-                <div className="px-3 py-1 text-[10px] font-bold text-[#8C734B] uppercase tracking-[0.18em]">
-                  {group.group}
-                </div>
-                <nav className="space-y-1">
-                  {group.items.map((item) => {
-                    const Icon = item.icon;
-                    const isActive = currentPath === item.path;
+          {/* Streamlined Primary Navigation */}
+          <div className="p-3.5 space-y-2">
+            <nav className="space-y-1.5">
+              {primaryNavigation.map((item) => {
+                const Icon = item.icon;
+                const isActive = currentPath === item.path;
+                return (
+                  <button
+                    key={item.path}
+                    onClick={() => {
+                      navigate(item.path);
+                      setIsMobileSidebarOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-semibold transition-all text-left cursor-pointer ${
+                      isActive
+                        ? 'bg-[#173D35] text-white shadow-xs border-l-4 border-[#C9AA72]'
+                        : 'text-slate-300 hover:bg-[#123028] hover:text-white'
+                    }`}
+                  >
+                    <Icon className={`w-5 h-5 shrink-0 ${isActive ? 'text-[#C9AA72]' : 'text-slate-400'}`} />
+                    <span className="truncate">{item.label}</span>
+                  </button>
+                );
+              })}
+            </nav>
+
+            {/* Optional Collapsible Secondary Tools */}
+            <div className="pt-4 border-t border-[#183E34]/80">
+              <button
+                onClick={() => setShowMoreTools(!showMoreTools)}
+                className="w-full flex items-center justify-between px-3 py-1.5 text-xs font-semibold text-slate-400 hover:text-slate-200 cursor-pointer"
+              >
+                <span className="uppercase tracking-wider text-[10px]">More Tools</span>
+                <span className="text-xs">{showMoreTools ? '−' : '+'}</span>
+              </button>
+
+              {showMoreTools && (
+                <div className="mt-1 space-y-1 pl-2 animate-in fade-in duration-150">
+                  {secondaryTools.map((tool) => {
+                    const Icon = tool.icon;
+                    const isActive = currentPath === tool.path;
                     return (
                       <button
-                        key={item.path}
+                        key={tool.path}
                         onClick={() => {
-                          navigate(item.path);
+                          navigate(tool.path);
                           setIsMobileSidebarOpen(false);
                         }}
-                        className={`w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all text-left cursor-pointer ${
+                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all text-left cursor-pointer ${
                           isActive
-                            ? 'bg-[#173D35] text-white shadow-xs border-l-3 border-[#C9AA72]'
-                            : 'text-slate-300 hover:bg-[#123028] hover:text-white'
+                            ? 'bg-[#173D35] text-white'
+                            : 'text-slate-400 hover:bg-[#123028] hover:text-white'
                         }`}
                       >
-                        <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#C9AA72]' : 'text-slate-400'}`} />
-                        <span className="truncate">{item.label}</span>
+                        <Icon className="w-4 h-4 shrink-0 text-[#C9AA72]" />
+                        <span className="truncate">{tool.label}</span>
                       </button>
                     );
                   })}
-                </nav>
-              </div>
-            ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

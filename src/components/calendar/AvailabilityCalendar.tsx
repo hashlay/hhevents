@@ -25,6 +25,8 @@ interface AvailabilityCalendarProps {
   onSelectDate?: (dateStr: string) => void;
   selectedDate?: string;
   initialHall?: HallTarget;
+  selectedHall?: HallTarget;
+  onSelectHall?: (hall: HallTarget) => void;
   className?: string;
   onBookSlot?: (hall: HallTarget, date: string, slot: SlotTarget) => void;
 }
@@ -33,6 +35,8 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
   onSelectDate,
   selectedDate: initialSelectedDate,
   initialHall = 'hall_1',
+  selectedHall,
+  onSelectHall,
   className = '',
   onBookSlot,
 }) => {
@@ -53,7 +57,15 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
   const [selectedDate, setSelectedDate] = useState<string>(
     initialSelectedDate && initialSelectedDate >= todayStr ? initialSelectedDate : todayStr
   );
-  const [activeHall, setActiveHall] = useState<HallTarget>(initialHall);
+  const [internalActiveHall, setInternalActiveHall] = useState<HallTarget>(initialHall);
+  const activeHall = selectedHall !== undefined ? selectedHall : internalActiveHall;
+
+  const handleHallChange = (newHall: HallTarget) => {
+    setInternalActiveHall(newHall);
+    if (onSelectHall) {
+      onSelectHall(newHall);
+    }
+  };
 
   // Re-render listener for instant reactive sync when manager toggles availability
   const [, setTick] = useState(0);
@@ -175,7 +187,7 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
           {/* Hall 1 Tab */}
           <button
             type="button"
-            onClick={() => setActiveHall('hall_1')}
+            onClick={() => handleHallChange('hall_1')}
             className={`p-4 rounded-2xl text-left transition-all border cursor-pointer flex flex-col justify-between ${
               activeHall === 'hall_1'
                 ? 'bg-[#173D35] text-white border-[#173D35] shadow-md ring-2 ring-[#C9AA72]'
@@ -208,7 +220,7 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
           {/* Hall 2 Tab */}
           <button
             type="button"
-            onClick={() => setActiveHall('hall_2')}
+            onClick={() => handleHallChange('hall_2')}
             className={`p-4 rounded-2xl text-left transition-all border cursor-pointer flex flex-col justify-between ${
               activeHall === 'hall_2'
                 ? 'bg-[#173D35] text-white border-[#173D35] shadow-md ring-2 ring-[#C9AA72]'
@@ -241,7 +253,7 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
           {/* Combined Hall Tab */}
           <button
             type="button"
-            onClick={() => setActiveHall('both')}
+            onClick={() => handleHallChange('both')}
             className={`p-4 rounded-2xl text-left transition-all border cursor-pointer flex flex-col justify-between ${
               activeHall === 'both'
                 ? 'bg-[#173D35] text-white border-[#173D35] shadow-md ring-2 ring-[#C9AA72]'

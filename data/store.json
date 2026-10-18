@@ -1,5 +1,68 @@
 {
-  "bookings": [],
+  "bookings": [
+    {
+      "id": "HH-2026-881878",
+      "customerName": "Mdmd",
+      "phone": "9686348061",
+      "email": "heehdbdnbddb",
+      "packageId": "double-dining",
+      "packageName": "Double Dining",
+      "packagePrice": 20000,
+      "occupiedResources": [
+        "dining_1",
+        "dining_2",
+        "kitchen"
+      ],
+      "hallSelection": "hall_1",
+      "acOption": "ac",
+      "date": "2026-10-18",
+      "slot": "day",
+      "expectedAttendees": 659,
+      "additionalInfo": "Vsbshs",
+      "eventType": "other",
+      "status": "PENDING",
+      "totalAmount": 20000,
+      "advanceRequired": 5000,
+      "amountPaid": 0,
+      "balanceDue": 20000,
+      "paymentStatus": "unpaid",
+      "payments": [],
+      "submittedAt": "2026-10-18T04:26:37.032Z",
+      "updatedAt": "2026-10-18T04:26:37.032Z"
+    },
+    {
+      "id": "HH-2026-871483",
+      "customerName": "Dhdj",
+      "phone": "89989868656",
+      "email": "hfdhdb",
+      "packageId": "full-ac-hall",
+      "packageName": "Full AC Hall",
+      "packagePrice": 65000,
+      "occupiedResources": [
+        "gents_hall",
+        "ladies_hall",
+        "dining_1",
+        "dining_2",
+        "kitchen"
+      ],
+      "hallSelection": "both",
+      "acOption": "ac",
+      "date": "2026-10-19",
+      "slot": "day",
+      "expectedAttendees": 655,
+      "additionalInfo": "Hdhdhd",
+      "eventType": "wedding",
+      "status": "PENDING",
+      "totalAmount": 65000,
+      "advanceRequired": 16250,
+      "amountPaid": 0,
+      "balanceDue": 65000,
+      "paymentStatus": "unpaid",
+      "payments": [],
+      "submittedAt": "2026-10-18T04:25:30.038Z",
+      "updatedAt": "2026-10-18T04:25:30.038Z"
+    }
+  ],
   "packages": [
     {
       "id": "full-ac-hall",
@@ -193,9 +256,155 @@
       "displayOrder": 8
     }
   ],
-  "availabilityBlackouts": [],
+  "availabilityBlackouts": [
+    {
+      "id": "BLK-1792297757474",
+      "date": "2026-10-18",
+      "slot": "evening",
+      "resources": [
+        "gents_hall"
+      ],
+      "reason": "Reserved",
+      "blockedBy": "hheventsconvention@gmail.com",
+      "createdAt": "2026-10-18T04:29:17.474Z"
+    },
+    {
+      "id": "BLK-1792297762293",
+      "date": "2026-10-18",
+      "slot": "evening",
+      "resources": [
+        "gents_hall"
+      ],
+      "reason": "Reserved",
+      "blockedBy": "hheventsconvention@gmail.com",
+      "createdAt": "2026-10-18T04:29:22.293Z"
+    },
+    {
+      "id": "BLK-1792297772877",
+      "date": "2026-10-18",
+      "slot": "full_day",
+      "resources": [
+        "gents_hall"
+      ],
+      "reason": "Reserved",
+      "blockedBy": "hheventsconvention@gmail.com",
+      "createdAt": "2026-10-18T04:29:32.877Z"
+    },
+    {
+      "id": "BLK-1792297819500",
+      "date": "2026-10-18",
+      "slot": "day",
+      "resources": [
+        "ladies_hall"
+      ],
+      "reason": "Manager-controlled blackout",
+      "blockedBy": "hheventsconvention@gmail.com",
+      "createdAt": "2026-10-18T04:30:19.500Z"
+    },
+    {
+      "id": "BLK-1792297820256",
+      "date": "2026-10-18",
+      "slot": "evening",
+      "resources": [
+        "ladies_hall"
+      ],
+      "reason": "Manager-controlled blackout",
+      "blockedBy": "hheventsconvention@gmail.com",
+      "createdAt": "2026-10-18T04:30:20.256Z"
+    }
+  ],
   "maintenance": [],
   "auditLogs": [
+    {
+      "id": "LOG-1792306088843-197",
+      "action": "LOGIN_SUCCESS",
+      "performedBy": "hheventsconvention@gmail.com",
+      "targetEntity": "auth",
+      "targetId": "hheventsconvention@gmail.com",
+      "details": "Administrative console login succeeded.",
+      "timestamp": "2026-10-18T06:48:08.843Z"
+    },
+    {
+      "id": "LOG-1792306059324-67",
+      "action": "LOGIN_SUCCESS",
+      "performedBy": "hheventsconvention@gmail.com",
+      "targetEntity": "auth",
+      "targetId": "hheventsconvention@gmail.com",
+      "details": "Administrative console login succeeded.",
+      "timestamp": "2026-10-18T06:47:39.324Z"
+    },
+    {
+      "id": "LOG-1792297820448-241",
+      "action": "BLACKOUT_ADDED",
+      "performedBy": "hheventsconvention@gmail.com",
+      "targetEntity": "availability",
+      "targetId": "2026-10-18",
+      "details": "Blocked 2026-10-18 (evening): Manager-controlled blackout",
+      "timestamp": "2026-10-18T04:30:20.448Z"
+    },
+    {
+      "id": "LOG-1792297819692-750",
+      "action": "BLACKOUT_ADDED",
+      "performedBy": "hheventsconvention@gmail.com",
+      "targetEntity": "availability",
+      "targetId": "2026-10-18",
+      "details": "Blocked 2026-10-18 (day): Manager-controlled blackout",
+      "timestamp": "2026-10-18T04:30:19.692Z"
+    },
+    {
+      "id": "LOG-1792297773067-982",
+      "action": "BLACKOUT_ADDED",
+      "performedBy": "hheventsconvention@gmail.com",
+      "targetEntity": "availability",
+      "targetId": "2026-10-18",
+      "details": "Blocked 2026-10-18 (full_day): Reserved",
+      "timestamp": "2026-10-18T04:29:33.067Z"
+    },
+    {
+      "id": "LOG-1792297762485-497",
+      "action": "BLACKOUT_ADDED",
+      "performedBy": "hheventsconvention@gmail.com",
+      "targetEntity": "availability",
+      "targetId": "2026-10-18",
+      "details": "Blocked 2026-10-18 (evening): Reserved",
+      "timestamp": "2026-10-18T04:29:22.485Z"
+    },
+    {
+      "id": "LOG-1792297757666-793",
+      "action": "BLACKOUT_ADDED",
+      "performedBy": "hheventsconvention@gmail.com",
+      "targetEntity": "availability",
+      "targetId": "2026-10-18",
+      "details": "Blocked 2026-10-18 (evening): Reserved",
+      "timestamp": "2026-10-18T04:29:17.666Z"
+    },
+    {
+      "id": "LOG-1792297725531-755",
+      "action": "LOGIN_SUCCESS",
+      "performedBy": "hheventsconvention@gmail.com",
+      "targetEntity": "auth",
+      "targetId": "hheventsconvention@gmail.com",
+      "details": "Administrative console login succeeded.",
+      "timestamp": "2026-10-18T04:28:45.531Z"
+    },
+    {
+      "id": "LOG-1792297597223-936",
+      "action": "BOOKING_SUBMITTED",
+      "performedBy": "Mdmd",
+      "targetEntity": "booking",
+      "targetId": "HH-2026-881878",
+      "details": "Booking HH-2026-881878 submitted for Double Dining on 2026-10-18 (day)",
+      "timestamp": "2026-10-18T04:26:37.223Z"
+    },
+    {
+      "id": "LOG-1792297530239-177",
+      "action": "BOOKING_SUBMITTED",
+      "performedBy": "Dhdj",
+      "targetEntity": "booking",
+      "targetId": "HH-2026-871483",
+      "details": "Booking HH-2026-871483 submitted for Full AC Hall on 2026-10-19 (day)",
+      "timestamp": "2026-10-18T04:25:30.239Z"
+    },
     {
       "id": "LOG-1792254854818-961",
       "action": "LOGIN_SUCCESS",
@@ -230,5 +439,5 @@
     "termsAndConditions": "Standard venue guidelines apply. Advance deposit is required to confirm the reservation.",
     "updatedAt": "2026-10-17T16:27:58.317Z"
   },
-  "lastUpdated": "2026-10-17T16:34:14.842Z"
+  "lastUpdated": "2026-10-18T06:48:08.843Z"
 }

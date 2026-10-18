@@ -351,69 +351,54 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
                         </td>
 
                         <td className="p-3.5 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
-                            {/* View Dossier */}
-                            <button
-                              onClick={() => setSelectedBooking(b)}
-                              className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100"
-                              title="View Dossier"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </button>
+                          <div className="flex items-center justify-end gap-2 flex-wrap">
+                            {/* Direct WhatsApp Contact */}
+                            {b.phone && (
+                              <a
+                                href={`https://wa.me/91${b.phone.replace(/\D/g, '').slice(-10)}?text=${encodeURIComponent(
+                                  `Hello ${b.customerName || 'Sir/Madam'}, this is regarding your event booking request (${b.id}) at H H Events & Conventions.`
+                                )}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200 transition-colors"
+                                title="Chat on WhatsApp"
+                              >
+                                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                                <span>WhatsApp</span>
+                              </a>
+                            )}
 
-                            {/* Record Payment */}
-                            <button
-                              onClick={() => openPaymentModal(b)}
-                              className="p-1.5 rounded-lg text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50"
-                              title="Record Payment in Ledger"
-                            >
-                              <CreditCard className="w-4 h-4" />
-                            </button>
+                            {/* Direct Phone Call */}
+                            {b.phone && (
+                              <a
+                                href={`tel:${b.phone}`}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200 transition-colors"
+                                title="Call Customer"
+                              >
+                                <Phone className="w-3 h-3 text-slate-500" />
+                                <span>Call</span>
+                              </a>
+                            )}
 
-                            {/* Print Receipt / Invoice */}
+                            {/* Official Printable Receipt Button */}
                             <button
                               onClick={() => setInvoiceBooking(b)}
-                              className="p-1.5 rounded-lg text-[#C9AA72] hover:text-[#A58448] hover:bg-amber-50"
-                              title="Official Printable Receipt"
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-50 text-amber-900 hover:bg-amber-100 border border-amber-200 transition-colors cursor-pointer"
+                              title="Print Official Receipt & Invoice"
                             >
-                              <Receipt className="w-4 h-4" />
+                              <Receipt className="w-3.5 h-3.5 text-amber-700" />
+                              <span>Receipt</span>
                             </button>
 
-                            {/* Approve Action */}
-                            {(b.status === 'PENDING' || (b.status as any) === 'pending') && (
-                              <button
-                                onClick={() => handleStatusChange(b.id, 'APPROVED', 'Approved by administrative desk')}
-                                disabled={isProcessing}
-                                className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50"
-                                title="Approve Reservation"
-                              >
-                                <Check className="w-4 h-4" />
-                              </button>
-                            )}
-
-                            {/* Reject Action */}
-                            {(b.status === 'PENDING' || (b.status as any) === 'pending') && (
-                              <button
-                                onClick={() => setRejectingBooking(b)}
-                                disabled={isProcessing}
-                                className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50"
-                                title="Decline Reservation"
-                              >
-                                <X className="w-4 h-4" />
-                              </button>
-                            )}
-
-                            {/* Confirm Action */}
-                            {(b.status === 'APPROVED' || (b.status as any) === 'approved') && (
-                              <Button
-                                onClick={() => handleStatusChange(b.id, 'CONFIRMED', 'Advance token verified. Event confirmed.')}
-                                variant="gold"
-                                size="sm"
-                                className="py-1 px-2.5 text-[11px]"
-                              >
-                                Confirm
-                              </Button>
-                            )}
+                            {/* Primary Review / Manage Button */}
+                            <Button
+                              onClick={() => setSelectedBooking(b)}
+                              variant={b.status === 'PENDING' ? 'gold' : 'outline'}
+                              size="sm"
+                              className="cursor-pointer font-bold px-3 py-1 text-xs"
+                            >
+                              {b.status === 'PENDING' ? 'Review Request' : 'Manage'}
+                            </Button>
                           </div>
                         </td>
                       </tr>
@@ -484,33 +469,75 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
                 </div>
               </div>
 
-              <div className="flex justify-between items-center pt-2 border-t border-slate-200">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setInvoiceBooking(selectedBooking);
-                    setSelectedBooking(null);
-                  }}
-                  leftIcon={<Receipt className="w-4 h-4" />}
-                >
-                  Print Official Receipt
-                </Button>
-
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-3 border-t border-slate-200">
                 <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setInvoiceBooking(selectedBooking);
+                      setSelectedBooking(null);
+                    }}
+                    leftIcon={<Receipt className="w-4 h-4" />}
+                  >
+                    Print Receipt
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const b = selectedBooking;
+                      setSelectedBooking(null);
+                      openPaymentModal(b);
+                    }}
+                    leftIcon={<CreditCard className="w-4 h-4 text-emerald-600" />}
+                  >
+                    Record Payment
+                  </Button>
+                </div>
+
+                <div className="flex items-center gap-2 justify-end">
                   <Button variant="outline" size="sm" onClick={() => setSelectedBooking(null)}>
                     Close
                   </Button>
+
                   {(selectedBooking.status === 'PENDING' || (selectedBooking.status as any) === 'pending') && (
+                    <>
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={() => {
+                          const b = selectedBooking;
+                          setSelectedBooking(null);
+                          setRejectingBooking(b);
+                        }}
+                      >
+                        Decline
+                      </Button>
+                      <Button
+                        variant="gold"
+                        size="sm"
+                        onClick={() => {
+                          handleStatusChange(selectedBooking.id, 'APPROVED', 'Approved by administrative review');
+                          setSelectedBooking(null);
+                        }}
+                      >
+                        Approve Request
+                      </Button>
+                    </>
+                  )}
+
+                  {(selectedBooking.status === 'APPROVED' || (selectedBooking.status as any) === 'approved') && (
                     <Button
                       variant="gold"
                       size="sm"
                       onClick={() => {
-                        handleStatusChange(selectedBooking.id, 'APPROVED', 'Approved by administrative review');
+                        handleStatusChange(selectedBooking.id, 'CONFIRMED', 'Advance token verified. Event confirmed.');
                         setSelectedBooking(null);
                       }}
                     >
-                      Approve Request
+                      Confirm Booking
                     </Button>
                   )}
                 </div>
