@@ -277,7 +277,7 @@ export const AdminCalendarPage: React.FC<AdminCalendarPageProps> = ({ navigate }
       title="Master Hall Schedule & Availability"
       subtitle="Complete venue schedule, live booking inspector, and 1-tap manager slot availability control"
       actionButton={
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Button
             onClick={() => openQuickBook('day')}
             variant="primary"
@@ -638,8 +638,8 @@ export const AdminCalendarPage: React.FC<AdminCalendarPageProps> = ({ navigate }
 
       {/* Quick Manual Reservation Modal */}
       {isQuickBookModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/50 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl max-w-md w-full p-5 sm:p-6 shadow-2xl border border-slate-200 space-y-4 max-h-[92vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
                 <h4 className="font-bold text-slate-900 text-base">Direct Manual Reservation</h4>

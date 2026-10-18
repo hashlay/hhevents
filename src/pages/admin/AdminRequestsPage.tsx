@@ -269,7 +269,7 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
           </div>
         </div>
 
-        {/* Bookings Table / Cards */}
+        {/* Bookings Table / Mobile Cards */}
         {filteredBookings.length === 0 ? (
           <EmptyState
             title="No Bookings Found"
@@ -281,133 +281,225 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
             }}
           />
         ) : (
-          <Card className="overflow-hidden border-slate-200 bg-white shadow-xs">
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs text-left">
-                <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase text-[10px]">
-                  <tr>
-                    <th className="p-3.5">Reference</th>
-                    <th className="p-3.5">Applicant / Host</th>
-                    <th className="p-3.5">Package &amp; Spaces</th>
-                    <th className="p-3.5">Event Date &amp; Slot</th>
-                    <th className="p-3.5">Financials</th>
-                    <th className="p-3.5">Status</th>
-                    <th className="p-3.5 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {filteredBookings.map((b) => {
-                    const totalRent = b.totalEstimate || b.estimatedAmount || 30000;
-                    const paid = (b as any).amountPaid || 0;
-                    const balance = (b as any).balanceDue !== undefined ? (b as any).balanceDue : Math.max(0, totalRent - paid);
+          <div className="space-y-4">
+            {/* Mobile Cards (Visible on mobile < md) */}
+            <div className="md:hidden space-y-3">
+              {filteredBookings.map((b) => {
+                const totalRent = b.totalEstimate || b.estimatedAmount || 30000;
+                const paid = (b as any).amountPaid || 0;
+                const balance = (b as any).balanceDue !== undefined ? (b as any).balanceDue : Math.max(0, totalRent - paid);
 
-                    return (
-                      <tr key={b.id} className="hover:bg-slate-50/70 transition-colors">
-                        <td className="p-3.5 font-mono font-bold text-[#173D35]">
-                          {b.id}
-                        </td>
+                return (
+                  <div key={b.id} className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono font-bold text-sm text-[#173D35]">{b.id}</span>
+                      <BookingStatusBadge status={b.status} />
+                    </div>
 
-                        <td className="p-3.5">
-                          <strong className="block text-slate-900 font-medium">
-                            {b.customerName || b.applicantName}
-                          </strong>
-                          <span className="text-[11px] text-slate-500 font-mono block">
-                            {b.phone || b.applicantPhone}
-                          </span>
-                        </td>
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-900">{b.customerName || b.applicantName}</h4>
+                      <div className="text-xs text-slate-500 font-mono mt-0.5">{b.phone || b.applicantPhone}</div>
+                    </div>
 
-                        <td className="p-3.5 text-slate-700">
-                          <strong className="block font-medium">
-                            {b.packageName || (b.hall === 'both' ? 'Full Combined Hall' : 'Single Hall')}
-                          </strong>
-                          <span className="text-[11px] text-slate-500 block">
-                            {b.hall === 'both' ? 'Gents + Ladies Hall' : b.hall === 'hall_2' ? 'Hall 2 (Ladies)' : 'Hall 1 (Gents)'} &bull; {b.acOption?.toUpperCase()}
-                          </span>
-                        </td>
+                    <div className="flex flex-wrap items-center gap-1.5 text-xs pt-1 border-t border-slate-100">
+                      <span className="px-2 py-0.5 rounded bg-slate-100 font-medium text-slate-700">
+                        {b.packageName || (b.hall === 'both' ? 'Full Combined Hall' : b.hall === 'hall_2' ? 'Hall 2 (Ladies)' : 'Hall 1 (Gents)')}
+                      </span>
+                      <span className="px-2 py-0.5 rounded bg-amber-50 text-amber-800 font-medium">
+                        {b.date || b.eventDate} ({b.slot || b.timeSlot})
+                      </span>
+                    </div>
 
-                        <td className="p-3.5 text-slate-700 font-mono">
-                          <div>{b.date || b.eventDate}</div>
-                          <span className="text-[10px] text-slate-400 uppercase">
-                            {b.slot || b.timeSlot} Session
-                          </span>
-                        </td>
+                    <div className="grid grid-cols-3 gap-2 text-xs pt-2 border-t border-slate-100 bg-slate-50/60 p-2.5 rounded-xl">
+                      <div>
+                        <span className="text-[10px] text-slate-400 uppercase font-semibold block">Total</span>
+                        <span className="font-mono font-bold text-slate-900">₹{totalRent.toLocaleString('en-IN')}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-400 uppercase font-semibold block">Paid</span>
+                        <span className="font-mono font-semibold text-emerald-700">₹{paid.toLocaleString('en-IN')}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-400 uppercase font-semibold block">Balance</span>
+                        <span className={`font-mono font-bold ${balance > 0 ? 'text-amber-700' : 'text-slate-700'}`}>
+                          ₹{balance.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                    </div>
 
-                        <td className="p-3.5 text-slate-900">
-                          <div className="font-mono font-bold">
-                            ₹{totalRent.toLocaleString('en-IN')}
-                          </div>
-                          <div className="text-[11px] text-emerald-700 font-medium">
-                            Paid: ₹{paid.toLocaleString('en-IN')}
-                          </div>
-                          {balance > 0 && (
-                            <div className="text-[10px] text-amber-700 font-mono">
-                              Due: ₹{balance.toLocaleString('en-IN')}
-                            </div>
-                          )}
-                        </td>
-
-                        <td className="p-3.5">
-                          <BookingStatusBadge status={b.status} />
-                        </td>
-
-                        <td className="p-3.5 text-right">
-                          <div className="flex items-center justify-end gap-2 flex-wrap">
-                            {/* Direct WhatsApp Contact */}
-                            {b.phone && (
-                              <a
-                                href={`https://wa.me/91${b.phone.replace(/\D/g, '').slice(-10)}?text=${encodeURIComponent(
-                                  `Hello ${b.customerName || 'Sir/Madam'}, this is regarding your event booking request (${b.id}) at H H Events & Conventions.`
-                                )}`}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200 transition-colors"
-                                title="Chat on WhatsApp"
-                              >
-                                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                                <span>WhatsApp</span>
-                              </a>
-                            )}
-
-                            {/* Direct Phone Call */}
-                            {b.phone && (
-                              <a
-                                href={`tel:${b.phone}`}
-                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200 transition-colors"
-                                title="Call Customer"
-                              >
-                                <Phone className="w-3 h-3 text-slate-500" />
-                                <span>Call</span>
-                              </a>
-                            )}
-
-                            {/* Official Printable Receipt Button */}
-                            <button
-                              onClick={() => setInvoiceBooking(b)}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-50 text-amber-900 hover:bg-amber-100 border border-amber-200 transition-colors cursor-pointer"
-                              title="Print Official Receipt & Invoice"
-                            >
-                              <Receipt className="w-3.5 h-3.5 text-amber-700" />
-                              <span>Receipt</span>
-                            </button>
-
-                            {/* Primary Review / Manage Button */}
-                            <Button
-                              onClick={() => setSelectedBooking(b)}
-                              variant={b.status === 'PENDING' ? 'gold' : 'outline'}
-                              size="sm"
-                              className="cursor-pointer font-bold px-3 py-1 text-xs"
-                            >
-                              {b.status === 'PENDING' ? 'Review Request' : 'Manage'}
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                    <div className="flex items-center justify-end gap-1.5 pt-2 border-t border-slate-100 flex-wrap">
+                      {b.phone && (
+                        <a
+                          href={`https://wa.me/91${b.phone.replace(/\D/g, '').slice(-10)}?text=${encodeURIComponent(
+                            `Hello ${b.customerName || 'Sir/Madam'}, this is regarding your event booking request (${b.id}) at H H Events & Conventions.`
+                          )}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="p-1.5 sm:p-2 rounded-lg bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200 text-xs font-semibold flex items-center gap-1"
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                          <span>WhatsApp</span>
+                        </a>
+                      )}
+                      {b.phone && (
+                        <a
+                          href={`tel:${b.phone}`}
+                          className="p-1.5 sm:p-2 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200 text-xs font-semibold flex items-center gap-1"
+                        >
+                          <Phone className="w-3.5 h-3.5 text-slate-500" />
+                          <span>Call</span>
+                        </a>
+                      )}
+                      <button
+                        onClick={() => setInvoiceBooking(b)}
+                        className="p-1.5 sm:p-2 rounded-lg bg-amber-50 text-amber-900 hover:bg-amber-100 border border-amber-200 text-xs font-semibold flex items-center gap-1"
+                      >
+                        <Receipt className="w-3.5 h-3.5 text-amber-700" />
+                        <span>Receipt</span>
+                      </button>
+                      <Button
+                        onClick={() => setSelectedBooking(b)}
+                        variant={b.status === 'PENDING' ? 'gold' : 'outline'}
+                        size="sm"
+                        className="text-xs font-bold px-2.5 py-1.5"
+                      >
+                        {b.status === 'PENDING' ? 'Review' : 'Manage'}
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          </Card>
+
+            {/* Desktop Table (Hidden on mobile < md) */}
+            <Card className="hidden md:block overflow-hidden border-slate-200 bg-white shadow-xs">
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs text-left">
+                  <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase text-[10px]">
+                    <tr>
+                      <th className="p-3.5">Reference</th>
+                      <th className="p-3.5">Applicant / Host</th>
+                      <th className="p-3.5">Package &amp; Spaces</th>
+                      <th className="p-3.5">Event Date &amp; Slot</th>
+                      <th className="p-3.5">Financials</th>
+                      <th className="p-3.5">Status</th>
+                      <th className="p-3.5 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredBookings.map((b) => {
+                      const totalRent = b.totalEstimate || b.estimatedAmount || 30000;
+                      const paid = (b as any).amountPaid || 0;
+                      const balance = (b as any).balanceDue !== undefined ? (b as any).balanceDue : Math.max(0, totalRent - paid);
+
+                      return (
+                        <tr key={b.id} className="hover:bg-slate-50/70 transition-colors">
+                          <td className="p-3.5 font-mono font-bold text-[#173D35]">
+                            {b.id}
+                          </td>
+
+                          <td className="p-3.5">
+                            <strong className="block text-slate-900 font-medium">
+                              {b.customerName || b.applicantName}
+                            </strong>
+                            <span className="text-[11px] text-slate-500 font-mono block">
+                              {b.phone || b.applicantPhone}
+                            </span>
+                          </td>
+
+                          <td className="p-3.5 text-slate-700">
+                            <strong className="block font-medium">
+                              {b.packageName || (b.hall === 'both' ? 'Full Combined Hall' : 'Single Hall')}
+                            </strong>
+                            <span className="text-[11px] text-slate-500 block">
+                              {b.hall === 'both' ? 'Gents + Ladies Hall' : b.hall === 'hall_2' ? 'Hall 2 (Ladies)' : 'Hall 1 (Gents)'} &bull; {b.acOption?.toUpperCase()}
+                            </span>
+                          </td>
+
+                          <td className="p-3.5 text-slate-700 font-mono">
+                            <div>{b.date || b.eventDate}</div>
+                            <span className="text-[10px] text-slate-400 uppercase">
+                              {b.slot || b.timeSlot} Session
+                            </span>
+                          </td>
+
+                          <td className="p-3.5 text-slate-900">
+                            <div className="font-mono font-bold">
+                              ₹{totalRent.toLocaleString('en-IN')}
+                            </div>
+                            <div className="text-[11px] text-emerald-700 font-medium">
+                              Paid: ₹{paid.toLocaleString('en-IN')}
+                            </div>
+                            {balance > 0 && (
+                              <div className="text-[10px] text-amber-700 font-mono">
+                                Due: ₹{balance.toLocaleString('en-IN')}
+                              </div>
+                            )}
+                          </td>
+
+                          <td className="p-3.5">
+                            <BookingStatusBadge status={b.status} />
+                          </td>
+
+                          <td className="p-3.5 text-right">
+                            <div className="flex items-center justify-end gap-2 flex-wrap">
+                              {/* Direct WhatsApp Contact */}
+                              {b.phone && (
+                                <a
+                                  href={`https://wa.me/91${b.phone.replace(/\D/g, '').slice(-10)}?text=${encodeURIComponent(
+                                    `Hello ${b.customerName || 'Sir/Madam'}, this is regarding your event booking request (${b.id}) at H H Events & Conventions.`
+                                  )}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200 transition-colors"
+                                  title="Chat on WhatsApp"
+                                >
+                                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                                  <span>WhatsApp</span>
+                                </a>
+                              )}
+
+                              {/* Direct Phone Call */}
+                              {b.phone && (
+                                <a
+                                  href={`tel:${b.phone}`}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200 transition-colors"
+                                  title="Call Customer"
+                                >
+                                  <Phone className="w-3 h-3 text-slate-500" />
+                                  <span>Call</span>
+                                </a>
+                              )}
+
+                              {/* Official Printable Receipt Button */}
+                              <button
+                                onClick={() => setInvoiceBooking(b)}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-50 text-amber-900 hover:bg-amber-100 border border-amber-200 transition-colors cursor-pointer"
+                                title="Print Official Receipt & Invoice"
+                              >
+                                <Receipt className="w-3.5 h-3.5 text-amber-700" />
+                                <span>Receipt</span>
+                              </button>
+
+                              {/* Primary Review / Manage Button */}
+                              <Button
+                                onClick={() => setSelectedBooking(b)}
+                                variant={b.status === 'PENDING' ? 'gold' : 'outline'}
+                                size="sm"
+                                className="cursor-pointer font-bold px-3 py-1 text-xs"
+                              >
+                                {b.status === 'PENDING' ? 'Review Request' : 'Manage'}
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          </div>
         )}
 
         {/* Selected Booking Detail Dialog */}

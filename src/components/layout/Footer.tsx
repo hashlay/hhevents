@@ -14,9 +14,9 @@ interface FooterProps {
 
 export const Footer: React.FC<FooterProps> = ({ navigate }) => {
   return (
-    <footer className="bg-[#173D35] text-slate-200 pt-14 pb-10 border-t border-[#C9AA72]/30">
+    <footer className="bg-[#173D35] text-slate-200 pt-10 sm:pt-14 pb-24 lg:pb-12 border-t border-[#C9AA72]/30">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-10 pb-10 border-b border-[#C9AA72]/20">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-10 pb-8 sm:pb-10 border-b border-[#C9AA72]/20">
           
           {/* Brand & Identity (Cols 1-4) */}
           <div className="lg:col-span-4 space-y-4">
@@ -24,7 +24,7 @@ export const Footer: React.FC<FooterProps> = ({ navigate }) => {
               <img
                 src="/assets/branding/hh-logo.png"
                 alt="Events & Conventions Logo"
-                className="h-11 w-auto object-contain"
+                className="h-10 sm:h-11 w-auto object-contain"
               />
               <div>
                 <span className="text-xl sm:text-2xl font-bold text-white tracking-tight font-serif-heading block leading-tight">
@@ -52,80 +52,84 @@ export const Footer: React.FC<FooterProps> = ({ navigate }) => {
             </div>
           </div>
 
-          {/* Quick Links (Cols 5-6) */}
-          <div className="lg:col-span-2 space-y-3">
-            <h4 className="text-xs uppercase tracking-wider font-bold text-[#C9AA72]">
-              Explore
-            </h4>
-            <ul className="space-y-2 text-xs sm:text-sm">
-              <li>
-                <button onClick={() => navigate('/')} className="hover:text-white text-slate-300 transition-colors cursor-pointer">
-                  Home
-                </button>
-              </li>
-              <li>
-                <button onClick={() => navigate('/halls')} className="hover:text-white text-slate-300 transition-colors cursor-pointer">
-                  Halls &amp; Spaces
-                </button>
-              </li>
-              <li>
-                <button onClick={() => navigate('/pricing')} className="hover:text-white text-slate-300 transition-colors cursor-pointer">
-                  Tariff &amp; Packages
-                </button>
-              </li>
-              <li>
-                <button onClick={() => navigate('/availability')} className="hover:text-white text-slate-300 transition-colors cursor-pointer">
-                  Hall Availability
-                </button>
-              </li>
-              <li>
-                <button onClick={() => navigate('/gallery')} className="hover:text-white text-slate-300 transition-colors cursor-pointer">
-                  Photo Gallery
-                </button>
-              </li>
-              <li>
-                <button onClick={() => navigate('/facilities')} className="hover:text-white text-slate-300 transition-colors cursor-pointer">
-                  Facilities
-                </button>
-              </li>
-              <li>
-                <button onClick={() => navigate('/about')} className="hover:text-white text-slate-300 transition-colors cursor-pointer">
-                  About Venue
-                </button>
-              </li>
-            </ul>
-          </div>
+          {/* Quick Links & Services (Side-by-side on mobile to eliminate blank space, separate on desktop) */}
+          <div className="grid grid-cols-2 gap-6 sm:gap-8 lg:contents">
+            {/* Quick Links (Cols 5-6) */}
+            <div className="lg:col-span-2 space-y-3">
+              <h4 className="text-xs uppercase tracking-wider font-bold text-[#C9AA72]">
+                Explore
+              </h4>
+              <ul className="space-y-2 text-xs sm:text-sm">
+                <li>
+                  <button onClick={() => navigate('/')} className="hover:text-white text-slate-300 transition-colors cursor-pointer text-left">
+                    Home
+                  </button>
+                </li>
+                <li>
+                  <button onClick={() => navigate('/halls')} className="hover:text-white text-slate-300 transition-colors cursor-pointer text-left">
+                    Halls &amp; Spaces
+                  </button>
+                </li>
+                <li>
+                  <button onClick={() => navigate('/pricing')} className="hover:text-white text-slate-300 transition-colors cursor-pointer text-left">
+                    Tariff &amp; Packages
+                  </button>
+                </li>
+                <li>
+                  <button onClick={() => navigate('/availability')} className="hover:text-white text-slate-300 transition-colors cursor-pointer text-left">
+                    Hall Availability
+                  </button>
+                </li>
+                <li>
+                  <button onClick={() => navigate('/gallery')} className="hover:text-white text-slate-300 transition-colors cursor-pointer text-left">
+                    Photo Gallery
+                  </button>
+                </li>
+                <li>
+                  <button onClick={() => navigate('/facilities')} className="hover:text-white text-slate-300 transition-colors cursor-pointer text-left">
+                    Facilities
+                  </button>
+                </li>
+                <li>
+                  <button onClick={() => navigate('/about')} className="hover:text-white text-slate-300 transition-colors cursor-pointer text-left">
+                    About Venue
+                  </button>
+                </li>
+              </ul>
+            </div>
 
-          {/* Guest Services (Cols 7-8) */}
-          <div className="lg:col-span-2 space-y-3">
-            <h4 className="text-xs uppercase tracking-wider font-bold text-[#C9AA72]">
-              Services
-            </h4>
-            <ul className="space-y-2 text-xs sm:text-sm">
-              <li>
-                <button
-                  onClick={() => navigate('/book')}
-                  className="text-[#DFAB4C] hover:text-white font-semibold transition-colors cursor-pointer flex items-center gap-1.5"
-                >
-                  <CalendarCheck className="w-3.5 h-3.5" /> Book Online
-                </button>
-              </li>
-              <li>
-                <button onClick={() => navigate('/track-booking')} className="hover:text-white text-slate-300 transition-colors cursor-pointer">
-                  Track Reservation
-                </button>
-              </li>
-              <li>
-                <button onClick={() => navigate('/location')} className="hover:text-white text-slate-300 transition-colors cursor-pointer">
-                  Directions &amp; Map
-                </button>
-              </li>
-              <li>
-                <button onClick={() => navigate('/contact')} className="hover:text-white text-slate-300 transition-colors cursor-pointer">
-                  Contact Desk
-                </button>
-              </li>
-            </ul>
+            {/* Guest Services (Cols 7-8) */}
+            <div className="lg:col-span-2 space-y-3">
+              <h4 className="text-xs uppercase tracking-wider font-bold text-[#C9AA72]">
+                Services
+              </h4>
+              <ul className="space-y-2 text-xs sm:text-sm">
+                <li>
+                  <button
+                    onClick={() => navigate('/book')}
+                    className="text-[#DFAB4C] hover:text-white font-semibold transition-colors cursor-pointer flex items-center gap-1.5 text-left"
+                  >
+                    <CalendarCheck className="w-3.5 h-3.5 shrink-0" />
+                    <span>Book Online</span>
+                  </button>
+                </li>
+                <li>
+                  <button onClick={() => navigate('/track-booking')} className="hover:text-white text-slate-300 transition-colors cursor-pointer text-left">
+                    Track Reservation
+                  </button>
+                </li>
+                <li>
+                  <button onClick={() => navigate('/location')} className="hover:text-white text-slate-300 transition-colors cursor-pointer text-left">
+                    Directions &amp; Map
+                  </button>
+                </li>
+                <li>
+                  <button onClick={() => navigate('/contact')} className="hover:text-white text-slate-300 transition-colors cursor-pointer text-left">
+                    Contact Desk
+                  </button>
+                </li>
+              </ul>
+            </div>
           </div>
 
           {/* Location & Direct Inquiries (Cols 9-12) */}
