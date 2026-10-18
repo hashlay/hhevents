@@ -203,73 +203,170 @@ export interface OfficialTariffPackage {
 
 export const OFFICIAL_TARIFF_SCHEDULE = 'All Sunday,Monday & Thursday';
 
-// Official Packages exactly as presented in the uploaded source of truth image
-export const OFFICIAL_TARIFF_PACKAGES: OfficialTariffPackage[] = [
+export interface BookingPackage {
+  id: string;
+  name: string;
+  displayName: string;
+  details: string;
+  rent: number;
+  rentFormatted?: string;
+  acType: 'AC' | 'Non AC' | 'Dining Only';
+  requiredResources: string[];
+  inclusions: string[];
+  capacityText: string;
+  active?: boolean;
+}
+
+export const DEFAULT_BOOKING_PACKAGES: BookingPackage[] = [
   {
     id: 'full-ac-hall',
-    package: 'Full AC Hall',
-    details: 'Gents & Ladies Hall + Gents & Ladies Dining + Kitchen',
+    name: 'Full AC Hall',
+    displayName: 'Full AC Hall (Gents & Ladies Hall)',
+    details: 'Gents & Ladies Hall + Gents & Ladies Dining + Kitchen with Centralized Air Conditioning',
     rent: 65000,
     rentFormatted: '65,000.00',
     acType: 'AC',
+    requiredResources: ['gents_hall', 'ladies_hall', 'dining_1', 'dining_2', 'kitchen'],
+    inclusions: [
+      'Gents & Ladies Convention Hall Wings',
+      'Dual Gents & Ladies Dining Wings',
+      'Full Central Air Conditioning (AC)',
+      'Equipped Catering Kitchen Facility',
+      'Main Stage & Processional Aisle',
+      'Backup Generator Power Supply',
+    ],
+    capacityText: 'Up to 3,000 Persons (Floating) / 1,200 Seated',
+    active: true,
   },
   {
     id: 'full-non-ac-hall',
-    package: 'Full Non AC Hall',
-    details: 'Gents & Ladies Hall + Gents & Ladies Dining + Kitchen',
+    name: 'Full Non AC Hall',
+    displayName: 'Full Non AC Hall (Gents & Ladies Hall)',
+    details: 'Gents & Ladies Hall + Gents & Ladies Dining + Kitchen (Natural High Ventilation)',
     rent: 45000,
     rentFormatted: '45,000.00',
     acType: 'Non AC',
+    requiredResources: ['gents_hall', 'ladies_hall', 'dining_1', 'dining_2', 'kitchen'],
+    inclusions: [
+      'Gents & Ladies Convention Hall Wings',
+      'Dual Gents & Ladies Dining Wings',
+      'High-Ceiling Ventilation & Air Circulators',
+      'Equipped Catering Kitchen Facility',
+      'Main Stage & Processional Aisle',
+      'Backup Generator Power Supply',
+    ],
+    capacityText: 'Up to 3,000 Persons (Floating) / 1,200 Seated',
+    active: true,
   },
   {
     id: 'single-ac-hall',
-    package: 'Single AC Hall',
-    details: 'Single Hall + Single Dining+ Kitchen',
+    name: 'Single AC Hall',
+    displayName: 'Single AC Hall (Hall 1 / Hall 2)',
+    details: 'Single Hall + Single Dining + Kitchen with Air Conditioning',
     rent: 30000,
     rentFormatted: '30,000.00',
     acType: 'AC',
+    requiredResources: ['gents_hall', 'dining_1', 'kitchen'],
+    inclusions: [
+      'Single Independent Hall Wing (AC)',
+      'Dedicated Single Dining Wing',
+      'Equipped Catering Kitchen Facility',
+      'Stage Platform with Acoustic Lighting',
+      'Independent Entrance & Restroom Amenities',
+    ],
+    capacityText: 'Up to 600 Persons (Floating) / 400 Seated',
+    active: true,
   },
   {
     id: 'single-ac-hall-ii',
-    package: 'Single AC Hall-II',
-    details: 'Single Hall + Double Dining+ Kitchen',
+    name: 'Single AC Hall-II',
+    displayName: 'Single AC Hall-II (Double Dining)',
+    details: 'Single Hall + Double Dining + Kitchen with Air Conditioning',
     rent: 45000,
     rentFormatted: '45,000.00',
     acType: 'AC',
+    requiredResources: ['gents_hall', 'dining_1', 'dining_2', 'kitchen'],
+    inclusions: [
+      'Single Independent Hall Wing (AC)',
+      'Dual Dining Wings (Double Dining Turnout)',
+      'Equipped Catering Kitchen Facility',
+      'Ideal for heavy dining turnouts with single stage program',
+    ],
+    capacityText: 'Up to 1,000 Persons (Floating) / 500 Seated',
+    active: true,
   },
   {
     id: 'single-non-ac-hall',
-    package: 'Single Non AC Hall',
-    details: 'Single Hall + Single Dining+ Kitchen',
+    name: 'Single Non AC Hall',
+    displayName: 'Single Non AC Hall (Hall 1 / Hall 2)',
+    details: 'Single Hall + Single Dining + Kitchen (Natural Ventilation)',
     rent: 25000,
     rentFormatted: '25,000.00',
     acType: 'Non AC',
+    requiredResources: ['gents_hall', 'dining_1', 'kitchen'],
+    inclusions: [
+      'Single Independent Hall Wing (Non-AC)',
+      'Dedicated Single Dining Wing',
+      'Equipped Catering Kitchen Facility',
+      'Ceiling Circulators & Ambient Lighting',
+    ],
+    capacityText: 'Up to 600 Persons (Floating) / 400 Seated',
+    active: true,
   },
   {
     id: 'single-non-ac-hall-ii',
-    package: 'Single Non AC Hall -II',
-    details: 'Single Hall + Double Dining+ Kitchen',
+    name: 'Single Non AC Hall -II',
+    displayName: 'Single Non AC Hall-II (Double Dining)',
+    details: 'Single Hall + Double Dining + Kitchen (Natural Ventilation)',
     rent: 30000,
     rentFormatted: '30,000.00',
     acType: 'Non AC',
+    requiredResources: ['gents_hall', 'dining_1', 'dining_2', 'kitchen'],
+    inclusions: [
+      'Single Independent Hall Wing (Non-AC)',
+      'Dual Dining Wings (Double Dining)',
+      'Equipped Catering Kitchen Facility',
+    ],
+    capacityText: 'Up to 1,000 Persons (Floating) / 500 Seated',
+    active: true,
   },
   {
     id: 'single-dining',
-    package: 'Single Dining',
-    details: 'Single Dining + Kitchen',
+    name: 'Single Dining',
+    displayName: 'Single Dining + Kitchen',
+    details: 'Single Dining + Kitchen for intimate lunch/dinner feasts or catering preparation',
     rent: 15000,
     rentFormatted: '15,000.00',
     acType: 'Dining Only',
+    requiredResources: ['dining_1', 'kitchen'],
+    inclusions: [
+      'Single Dining Wing Access',
+      'Equipped Catering Kitchen Facility',
+      'Sanitation & Dining Table Setup',
+    ],
+    capacityText: 'Up to 350 Persons Dining Turnover',
+    active: true,
   },
   {
     id: 'double-dining',
-    package: 'Double Dining',
-    details: 'Double Dining + Kitchen',
+    name: 'Double Dining',
+    displayName: 'Double Dining + Kitchen',
+    details: 'Double Dining + Kitchen for expansive banquets, community feasts, or iftar gatherings',
     rent: 20000,
     rentFormatted: '20,000.00',
     acType: 'Dining Only',
+    requiredResources: ['dining_1', 'dining_2', 'kitchen'],
+    inclusions: [
+      'Dual Dining Wings Access',
+      'Equipped Catering Kitchen Facility',
+      'Spacious Seating for Large Gatherings',
+    ],
+    capacityText: 'Up to 700 Persons Dining Turnover',
+    active: true,
   },
 ];
+
+export const OFFICIAL_TARIFF_PACKAGES = DEFAULT_BOOKING_PACKAGES;
 
 // Official Venue Photographs and Visualizations from HH Events & Conventions
 export interface GalleryItem {

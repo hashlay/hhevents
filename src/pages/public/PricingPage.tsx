@@ -19,21 +19,11 @@ import {
   OFFICIAL_TARIFF_SCHEDULE,
   VENUE_INFO,
   TIMING_SLOTS,
+  DEFAULT_BOOKING_PACKAGES,
+  BookingPackage,
 } from '../../services/hallData';
 
-interface PricingPackage {
-  id: string;
-  name: string;
-  displayName?: string;
-  details: string;
-  rent: number;
-  rentFormatted?: string;
-  acType: 'AC' | 'Non AC' | 'Dining Only';
-  requiredResources?: string[];
-  inclusions?: string[];
-  capacityText?: string;
-  active?: boolean;
-}
+type PricingPackage = BookingPackage;
 
 interface PricingPageProps {
   navigate: (path: string) => void;
@@ -41,8 +31,8 @@ interface PricingPageProps {
 
 export const PricingPage: React.FC<PricingPageProps> = ({ navigate }) => {
   const [filterType, setFilterType] = useState<'all' | 'AC' | 'Non AC' | 'Dining Only'>('all');
-  const [packages, setPackages] = useState<PricingPackage[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [packages, setPackages] = useState<PricingPackage[]>(DEFAULT_BOOKING_PACKAGES);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     async function loadPackages() {
@@ -51,13 +41,17 @@ export const PricingPage: React.FC<PricingPageProps> = ({ navigate }) => {
         if (res.ok) {
           const data = await res.json();
           if (Array.isArray(data) && data.length > 0) {
-            setPackages(data.filter((p: any) => p.active !== false));
-            setIsLoading(false);
-            return;
+            const activeOnly = data.filter((p: any) => p.active !== false);
+            if (activeOnly.length > 0) {
+              setPackages(activeOnly);
+            }
           }
         }
-      } catch {}
-      setIsLoading(false);
+      } catch (err) {
+        console.warn('Could not load packages from server, retaining defaults:', err);
+      } finally {
+        setIsLoading(false);
+      }
     }
     loadPackages();
   }, []);

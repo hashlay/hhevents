@@ -12,6 +12,7 @@ import {
   BookingRecord,
   PaymentTransaction,
   HallPackage,
+  INITIAL_PACKAGES,
 } from "./db";
 import { resolveRequiredResources, checkResourceConflict } from "./conflictEngine";
 import {
@@ -54,6 +55,14 @@ try {
 }
 
 const apiRouter = Router();
+
+apiRouter.get("/", (req: Request, res: Response) => {
+  res.json({
+    status: "ok",
+    service: "H H Events & Conventions API",
+    time: new Date().toISOString(),
+  });
+});
 
 // ==========================================
 // 1. HEALTH & SYSTEM ENDPOINTS
@@ -156,9 +165,15 @@ apiRouter.post("/auth/logout", async (req: Request, res: Response) => {
 // 3. PACKAGES & PRICING
 // ==========================================
 apiRouter.get("/packages", async (req: Request, res: Response) => {
-  const db = await getDb();
-  const sorted = [...db.packages].sort((a, b) => a.displayOrder - b.displayOrder);
-  res.json(sorted);
+  try {
+    const db = await getDb();
+    const packagesList = db && Array.isArray(db.packages) && db.packages.length > 0 ? db.packages : INITIAL_PACKAGES;
+    const sorted = [...packagesList].sort((a, b) => a.displayOrder - b.displayOrder);
+    res.json(sorted);
+  } catch (err: any) {
+    console.warn("[API] Failed to fetch packages from DB, serving INITIAL_PACKAGES fallback:", err?.message);
+    res.json(INITIAL_PACKAGES);
+  }
 });
 
 apiRouter.put("/packages", requireAdminAuth, async (req: Request, res: Response) => {
