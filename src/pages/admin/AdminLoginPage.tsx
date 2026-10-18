@@ -31,6 +31,7 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({ navigate }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [rememberMe, setRememberMe] = useState(true);
 
   // If already authenticated, redirect to admin dashboard
   useEffect(() => {
@@ -191,6 +192,22 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({ navigate }) => {
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+            </div>
+
+            {/* Remember Me for 7 Days */}
+            <div className="flex items-center justify-between text-xs text-slate-300 pt-1 pb-1">
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="rounded border-[#1B453C] text-[#C9AA72] focus:ring-[#C9AA72] bg-[#071512] w-4 h-4 cursor-pointer accent-[#C9AA72]"
+                />
+                <span className="font-medium text-slate-200">Remember me for 7 days</span>
+              </label>
+              <span className="text-[10.5px] text-[#C9AA72] font-semibold bg-[#C9AA72]/10 px-2 py-0.5 rounded border border-[#C9AA72]/20">
+                Persistent Session
+              </span>
             </div>
 
             {/* Submit Button */}

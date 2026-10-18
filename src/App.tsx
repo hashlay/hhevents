@@ -39,13 +39,24 @@ import { AdminPackagesPage } from './pages/admin/AdminPackagesPage';
 
 const AppContent: React.FC = () => {
   const { currentPath, navigate } = useNavigation();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
 
   const isAdminRoute = currentPath.startsWith('/admin');
   const isAdminLogin = currentPath === '/admin/login';
 
   // Admin Route Protection Guard
   const renderAdminRoute = () => {
+    if (isLoading && !user && !isAdminLogin) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-[#0B1E19]">
+          <div className="text-center space-y-3">
+            <div className="w-10 h-10 border-4 border-[#C9AA72] border-t-transparent rounded-full animate-spin mx-auto" />
+            <p className="text-sm font-semibold text-[#FAF8F5]">Verifying Executive Session...</p>
+          </div>
+        </div>
+      );
+    }
+
     if (!isAuthenticated && !isAdminLogin) {
       return <AdminLoginPage navigate={navigate} />;
     }

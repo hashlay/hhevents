@@ -528,33 +528,84 @@ function verifyCredentials(email, phone, pass) {
   const passwordMatch = verifyPassword(cleanPassword, SERVER_AUTH_CONFIG.passwordHash);
   return emailMatch && phoneMatch && passwordMatch;
 }
+var SESSION_SECRET = process.env.SESSION_SECRET || "hh_events_manager_secret_hmac_2026_salt_9448133378";
+var SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1e3;
+var revokedTokens = /* @__PURE__ */ new Set();
+function signToken(data) {
+  const payload = Buffer.from(JSON.stringify(data)).toString("base64url");
+  const signature = crypto.createHmac("sha256", SESSION_SECRET).update(payload).digest("base64url");
+  return `mng_sec_${payload}.${signature}`;
+}
+function verifyToken(token) {
+  if (!token || !token.startsWith("mng_sec_")) return null;
+  if (revokedTokens.has(token)) return null;
+  const raw = token.slice("mng_sec_".length);
+  const dotIndex = raw.lastIndexOf(".");
+  if (dotIndex === -1) return null;
+  const payload = raw.slice(0, dotIndex);
+  const signature = raw.slice(dotIndex + 1);
+  const expectedSig = crypto.createHmac("sha256", SESSION_SECRET).update(payload).digest("base64url");
+  const bufSig = Buffer.from(signature);
+  const bufExpected = Buffer.from(expectedSig);
+  if (bufSig.length !== bufExpected.length || !crypto.timingSafeEqual(bufSig, bufExpected)) {
+    return null;
+  }
+  try {
+    const data = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
+    if (!data.expiresAt || Date.now() > data.expiresAt) {
+      return null;
+    }
+    return {
+      token,
+      email: data.email,
+      name: data.name,
+      role: data.role,
+      createdAt: data.createdAt,
+      expiresAt: data.expiresAt
+    };
+  } catch {
+    return null;
+  }
+}
 function createSession() {
-  const token = `mng_sec_${crypto.randomBytes(32).toString("hex")}`;
   const now = Date.now();
-  const session = {
-    token,
+  const sessionData = {
     email: SERVER_AUTH_CONFIG.email,
     name: SERVER_AUTH_CONFIG.name,
     role: SERVER_AUTH_CONFIG.role,
     createdAt: now,
-    expiresAt: now + 24 * 60 * 60 * 1e3
-    // 24 hours strict expiration
+    expiresAt: now + SEVEN_DAYS_MS
+    // 7 days session
+  };
+  const token = signToken(sessionData);
+  const session = {
+    token,
+    ...sessionData
   };
   activeSessions.set(token, session);
   return session;
 }
 function getSession(token) {
   if (!token) return null;
+  if (revokedTokens.has(token)) return null;
   const session = activeSessions.get(token);
-  if (!session) return null;
-  if (Date.now() > session.expiresAt) {
-    activeSessions.delete(token);
-    return null;
+  if (session) {
+    if (Date.now() > session.expiresAt) {
+      activeSessions.delete(token);
+      return null;
+    }
+    return session;
   }
-  return session;
+  const verified = verifyToken(token);
+  if (verified) {
+    activeSessions.set(token, verified);
+    return verified;
+  }
+  return null;
 }
 function revokeSession(token) {
   activeSessions.delete(token);
+  revokedTokens.add(token);
 }
 function requireAdminAuth(req, res, next) {
   const authHeader = req.headers.authorization;

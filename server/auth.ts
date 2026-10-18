@@ -158,16 +158,76 @@ export function verifyCredentials(email: string, phone: string, pass: string): b
   return emailMatch && phoneMatch && passwordMatch;
 }
 
+const SESSION_SECRET = process.env.SESSION_SECRET || 'hh_events_manager_secret_hmac_2026_salt_9448133378';
+const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000; // 7 Days Remembered Session
+const revokedTokens = new Set<string>();
+
+/**
+ * Signs a stateless HMAC-SHA256 session token for resilient authentication
+ * across server restarts and Vercel serverless cold boots.
+ */
+export function signToken(data: {
+  email: string;
+  name: string;
+  role: string;
+  createdAt: number;
+  expiresAt: number;
+}): string {
+  const payload = Buffer.from(JSON.stringify(data)).toString('base64url');
+  const signature = crypto.createHmac('sha256', SESSION_SECRET).update(payload).digest('base64url');
+  return `mng_sec_${payload}.${signature}`;
+}
+
+export function verifyToken(token: string): AuthSession | null {
+  if (!token || !token.startsWith('mng_sec_')) return null;
+  if (revokedTokens.has(token)) return null;
+
+  const raw = token.slice('mng_sec_'.length);
+  const dotIndex = raw.lastIndexOf('.');
+  if (dotIndex === -1) return null;
+
+  const payload = raw.slice(0, dotIndex);
+  const signature = raw.slice(dotIndex + 1);
+  const expectedSig = crypto.createHmac('sha256', SESSION_SECRET).update(payload).digest('base64url');
+
+  const bufSig = Buffer.from(signature);
+  const bufExpected = Buffer.from(expectedSig);
+  if (bufSig.length !== bufExpected.length || !crypto.timingSafeEqual(bufSig, bufExpected)) {
+    return null;
+  }
+
+  try {
+    const data = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+    if (!data.expiresAt || Date.now() > data.expiresAt) {
+      return null;
+    }
+    return {
+      token,
+      email: data.email,
+      name: data.name,
+      role: data.role,
+      createdAt: data.createdAt,
+      expiresAt: data.expiresAt,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export function createSession(): AuthSession {
-  const token = `mng_sec_${crypto.randomBytes(32).toString('hex')}`;
   const now = Date.now();
-  const session: AuthSession = {
-    token,
+  const sessionData = {
     email: SERVER_AUTH_CONFIG.email,
     name: SERVER_AUTH_CONFIG.name,
     role: SERVER_AUTH_CONFIG.role,
     createdAt: now,
-    expiresAt: now + 24 * 60 * 60 * 1000, // 24 hours strict expiration
+    expiresAt: now + SEVEN_DAYS_MS, // 7 days session
+  };
+
+  const token = signToken(sessionData);
+  const session: AuthSession = {
+    token,
+    ...sessionData,
   };
 
   activeSessions.set(token, session);
@@ -176,18 +236,30 @@ export function createSession(): AuthSession {
 
 export function getSession(token?: string): AuthSession | null {
   if (!token) return null;
-  const session = activeSessions.get(token);
-  if (!session) return null;
+  if (revokedTokens.has(token)) return null;
 
-  if (Date.now() > session.expiresAt) {
-    activeSessions.delete(token);
-    return null;
+  const session = activeSessions.get(token);
+  if (session) {
+    if (Date.now() > session.expiresAt) {
+      activeSessions.delete(token);
+      return null;
+    }
+    return session;
   }
-  return session;
+
+  // Stateless verification fallback (resilient to serverless cold starts & server reboots)
+  const verified = verifyToken(token);
+  if (verified) {
+    activeSessions.set(token, verified);
+    return verified;
+  }
+
+  return null;
 }
 
 export function revokeSession(token: string): void {
   activeSessions.delete(token);
+  revokedTokens.add(token);
 }
 
 /**
