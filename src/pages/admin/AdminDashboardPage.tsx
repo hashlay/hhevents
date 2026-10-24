@@ -74,15 +74,20 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ navigate
 
   // Financial Metrics
   const totalAgreedRevenue = approvedBookings.reduce(
-    (sum, b) => sum + (b.totalEstimate || b.estimatedAmount || 0),
+    (sum, b) => sum + ((b as any).totalAmount || b.totalEstimate || b.estimatedAmount || (b as any).packagePrice || 0),
     0
   );
 
   const totalAdvancePaid = bookings.reduce((sum, b) => {
-    if ((b as any).payments && Array.isArray((b as any).payments)) {
-      return sum + (b as any).payments.reduce((pSum: number, p: any) => pSum + (p.paymentType === 'refund' ? -p.amount : p.amount), 0);
+    const bObj = b as any;
+    if (bObj.payments && Array.isArray(bObj.payments) && bObj.payments.length > 0) {
+      return sum + bObj.payments.reduce((pSum: number, p: any) => pSum + (p.paymentType === 'refund' ? -p.amount : p.amount), 0);
     }
-    return sum + ((b as any).amountPaid || (b.advancePaymentStatus === 'fully_paid' ? (b.totalEstimate || b.estimatedAmount || 0) : b.advancePaymentStatus === 'advance_paid' ? Math.round((b.totalEstimate || b.estimatedAmount || 0) * 0.25) : 0));
+    if (bObj.amountPaid !== undefined && bObj.amountPaid > 0) {
+      return sum + Number(bObj.amountPaid);
+    }
+    const rent = bObj.totalAmount || b.totalEstimate || b.estimatedAmount || 0;
+    return sum + (b.advancePaymentStatus === 'fully_paid' ? rent : b.advancePaymentStatus === 'advance_paid' ? Math.round(rent * 0.25) : 0);
   }, 0);
 
   const outstandingBalance = Math.max(0, totalAgreedRevenue - totalAdvancePaid);

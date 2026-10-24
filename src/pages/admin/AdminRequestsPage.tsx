@@ -145,9 +145,10 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
 
   const openPaymentModal = (b: BookingRequest) => {
     setPayingBooking(b);
-    const total = b.totalEstimate || b.estimatedAmount || 30000;
-    const paid = (b as any).amountPaid || 0;
-    const remaining = Math.max(0, total - paid);
+    const bObj = b as any;
+    const total = bObj.totalAmount || b.totalEstimate || b.estimatedAmount || bObj.packagePrice || 65000;
+    const paid = bObj.amountPaid !== undefined ? Number(bObj.amountPaid) : 0;
+    const remaining = bObj.balanceDue !== undefined ? Number(bObj.balanceDue) : Math.max(0, total - paid);
     setPaymentAmount(remaining > 0 ? (paid === 0 ? Math.round(total * 0.25) : remaining) : 10000);
     setPaymentType(paid === 0 ? 'advance' : 'balance');
     setPaymentRefNo('');
@@ -665,10 +666,32 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
             maxWidth="md"
           >
             <form onSubmit={handleRecordPayment} className="space-y-4 text-xs">
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
-                <span className="text-slate-500 block">Customer: <strong className="text-slate-900">{payingBooking.customerName}</strong></span>
-                <span className="text-slate-500 block">Total Rent: <strong className="text-slate-900 font-mono">₹{(payingBooking.totalEstimate || payingBooking.estimatedAmount || 0).toLocaleString('en-IN')}</strong></span>
-              </div>
+              {(() => {
+                const bObj = payingBooking as any;
+                const total = bObj.totalAmount || payingBooking.totalEstimate || payingBooking.estimatedAmount || bObj.packagePrice || 0;
+                const paid = bObj.amountPaid !== undefined ? Number(bObj.amountPaid) : (payingBooking.advancePaymentStatus === 'fully_paid' ? total : payingBooking.advancePaymentStatus === 'advance_paid' ? Math.round(total * 0.25) : 0);
+                const balance = bObj.balanceDue !== undefined ? Number(bObj.balanceDue) : Math.max(0, total - paid);
+                return (
+                  <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="col-span-2 sm:col-span-1">
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Customer</span>
+                      <strong className="text-slate-900 text-xs truncate block">{payingBooking.customerName}</strong>
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Total Rent</span>
+                      <strong className="text-slate-900 text-xs font-mono block">₹{total.toLocaleString('en-IN')}</strong>
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-emerald-600 block tracking-wider">Already Paid</span>
+                      <strong className="text-emerald-700 text-xs font-mono block">₹{paid.toLocaleString('en-IN')}</strong>
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-amber-600 block tracking-wider">Balance Due</span>
+                      <strong className="text-amber-800 text-xs font-mono block">₹{balance.toLocaleString('en-IN')}</strong>
+                    </div>
+                  </div>
+                );
+              })()}
 
               <div className="space-y-1">
                 <label className="text-xs font-bold text-slate-700 uppercase">Payment Amount (₹) *</label>
