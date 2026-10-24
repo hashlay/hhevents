@@ -89,6 +89,7 @@ export async function saveBookingAsync(booking: BookingRequest): Promise<Booking
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...getAuthHeader(),
       },
       body: JSON.stringify({
         customerName: booking.customerName || booking.applicantName,
@@ -101,6 +102,9 @@ export async function saveBookingAsync(booking: BookingRequest): Promise<Booking
         expectedAttendees: booking.expectedAttendees || booking.estimatedAttendees,
         additionalInfo: booking.additionalInfo || booking.adminRemarks,
         eventType: booking.eventType || 'wedding',
+        status: booking.status || 'PENDING',
+        paymentStatus: booking.advancePaymentStatus || 'unpaid',
+        amountPaid: (booking as any).amountPaid || 0,
       }),
     });
 
@@ -327,12 +331,20 @@ export function checkSlotAvailability(
   slot: SlotType,
   ignoreBookingId?: string
 ): { available: boolean; conflictReason?: string; booking?: BookingRequest; reason?: string } {
-  // 1. Manager-Controlled Availability check
-  const managerOpen = isSlotAvailable(hall, date, slot);
-  if (!managerOpen) {
+  // 1. Manager Blackout Override Check
+  // Check if management explicitly created a blackout for this date/slot
+  const overrides = getAvailabilityOverrides();
+  const isManuallyBlackedOut = overrides.some((o) => {
+    if (o.date !== date) return false;
+    if ((o.slot as any) !== 'full_day' && o.slot !== slot) return false;
+    if (o.hall === 'both' || hall === 'both' || o.hall === hall) return true;
+    return false;
+  });
+
+  if (isManuallyBlackedOut) {
     const hallName = hall === 'hall_1' ? 'Hall 1' : hall === 'hall_2' ? 'Hall 2' : 'Combined Hall';
     const slotName = slot === 'day' ? 'Day Session (10:00 AM – 3:00 PM)' : 'Evening Session (6:00 PM – 10:00 PM)';
-    const msg = `${hallName} is marked Unavailable for ${slotName} on ${date}.`;
+    const msg = `${hallName} is marked Unavailable by management blackout for ${slotName} on ${date}.`;
     return {
       available: false,
       conflictReason: msg,
@@ -340,12 +352,29 @@ export function checkSlotAvailability(
     };
   }
 
+  // If this is a new public inquiry without an ignoreBookingId, also respect public slot availability
+  if (!ignoreBookingId) {
+    const managerOpen = isSlotAvailable(hall, date, slot);
+    if (!managerOpen) {
+      const hallName = hall === 'hall_1' ? 'Hall 1' : hall === 'hall_2' ? 'Hall 2' : 'Combined Hall';
+      const slotName = slot === 'day' ? 'Day Session (10:00 AM – 3:00 PM)' : 'Evening Session (6:00 PM – 10:00 PM)';
+      const msg = `${hallName} is marked Unavailable for ${slotName} on ${date}.`;
+      return {
+        available: false,
+        conflictReason: msg,
+        reason: msg,
+      };
+    }
+  }
+
   // 2. Check for existing approved & confirmed customer reservations
+  // NOTE: When an admin reviews or approves a booking, unapproved PENDING requests do NOT block approval!
+  // Only APPROVED and CONFIRMED bookings represent real booked reservations.
   const bookings = getBookings();
   const activeBookings = bookings.filter((b) => {
     if (ignoreBookingId && b.id === ignoreBookingId) return false;
     const statusUpper = (b.status || '').toUpperCase();
-    return statusUpper === 'APPROVED' || statusUpper === 'CONFIRMED' || statusUpper === 'PENDING';
+    return statusUpper === 'APPROVED' || statusUpper === 'CONFIRMED';
   });
 
   for (const b of activeBookings) {
@@ -355,7 +384,7 @@ export function checkSlotAvailability(
     if (hall === 'both') {
       const msg = `Full Campus conflict: ${
         b.hall === 'hall_1' ? 'Hall 1' : b.hall === 'hall_2' ? 'Hall 2' : 'Full Campus'
-      } is already reserved for this session on ${date}.`;
+      } is already confirmed/approved (${b.id}) for this session on ${date}.`;
       return {
         available: false,
         conflictReason: msg,
@@ -367,7 +396,7 @@ export function checkSlotAvailability(
     if (b.hall === hall || b.hall === 'both') {
       const msg = `${
         hall === 'hall_1' ? 'Hall 1' : 'Hall 2'
-      } is already reserved for this session on ${date}.`;
+      } is already confirmed/approved (${b.id}) for this session on ${date}.`;
       return {
         available: false,
         conflictReason: msg,

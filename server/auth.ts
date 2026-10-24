@@ -65,7 +65,7 @@ const INITIAL_PASSWORD_HASH = hashPassword(process.env.MANAGER_PASSWORD || 'HHEv
 
 const SERVER_AUTH_CONFIG = {
   email: (process.env.MANAGER_EMAIL || 'hheventsconvention@gmail.com').trim().toLowerCase(),
-  phone: process.env.MANAGER_PHONE || '9448133378',
+  phone: process.env.MANAGER_PHONE || '9448151878',
   passwordHash: process.env.MANAGER_PASSWORD_HASH || INITIAL_PASSWORD_HASH,
   name: 'Venue General Manager',
   role: 'owner' as const,
@@ -149,10 +149,18 @@ export function verifyCredentials(email: string, phone: string, pass: string): b
   const cleanPassword = pass.trim();
 
   const emailMatch = timingSafeStringEqual(cleanEmail, targetEmail);
-  const phoneMatch =
-    timingSafeStringEqual(cleanPhone, targetPhone) ||
-    (cleanPhone.length >= 10 && cleanPhone.endsWith(targetPhone)) ||
-    (targetPhone.length >= 10 && targetPhone.endsWith(cleanPhone));
+  const allowedPhones = [
+    targetPhone,
+    '9448151878',
+    '9448133378',
+    '9741575078',
+  ];
+  const phoneMatch = allowedPhones.some(
+    (tp) =>
+      timingSafeStringEqual(cleanPhone, tp) ||
+      (cleanPhone.length >= 10 && cleanPhone.endsWith(tp)) ||
+      (tp.length >= 10 && tp.endsWith(cleanPhone))
+  );
   const passwordMatch = verifyPassword(cleanPassword, SERVER_AUTH_CONFIG.passwordHash);
 
   return emailMatch && phoneMatch && passwordMatch;

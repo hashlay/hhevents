@@ -13,6 +13,7 @@ import {
   PaymentTransaction,
   HallPackage,
   INITIAL_PACKAGES,
+  DiscountCoupon,
 } from "./db";
 import { resolveRequiredResources, checkResourceConflict } from "./conflictEngine";
 import {
@@ -284,8 +285,12 @@ apiRouter.post("/bookings", async (req: Request, res: Response) => {
     // Resolve resources
     const requiredResources = resolveRequiredResources(packageId, hallSelection, db.packages);
 
-    // Concurrency conflict check
-    const conflict = checkResourceConflict(db, date, slot, requiredResources);
+    const authHeader = req.headers.authorization;
+    const adminSessionToken = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : (req.headers["x-admin-token"] as string);
+    const isAdmin = !!(adminSessionToken && getSession(adminSessionToken));
+
+    // Concurrency conflict check (admins creating direct reservations only check against confirmed bookings)
+    const conflict = checkResourceConflict(db, date, slot, requiredResources, undefined, isAdmin);
     if (!conflict.available) {
       return res.status(409).json({
         error: conflict.conflictReason || "Conflict detected: Requested hall space is already reserved for this session.",
@@ -302,6 +307,57 @@ apiRouter.post("/bookings", async (req: Request, res: Response) => {
     const bookingId = `HH-2026-${randomNum}`;
     const now = new Date().toISOString();
 
+    // Coupon discount processing
+    let discountAmount = 0;
+    let appliedCoupon: DiscountCoupon | null = null;
+
+    if (req.body.couponCode && typeof req.body.couponCode === "string") {
+      const codeUpper = req.body.couponCode.trim().toUpperCase();
+      const today = new Date().toISOString().slice(0, 10);
+      const coupon = (db.coupons || []).find((c) => c.code === codeUpper);
+      if (coupon && coupon.isActive) {
+        const notExpired = !coupon.expiryDate || coupon.expiryDate >= today;
+        const underLimit = !coupon.usageLimit || coupon.usageLimit === 0 || coupon.usedCount < coupon.usageLimit;
+        
+        let clientEligible = true;
+        if (coupon.category === "client_exclusive" && coupon.specificCustomerPhone) {
+          const rawClient = coupon.specificCustomerPhone.replace(/\D/g, "");
+          const rawPhone = phone.trim().replace(/\D/g, "");
+          clientEligible =
+            rawPhone.length >= 10 &&
+            rawClient.length >= 10 &&
+            (rawPhone.endsWith(rawClient) || rawClient.endsWith(rawPhone));
+        }
+
+        const minAmountMet = !coupon.minBookingAmount || pkgRent >= coupon.minBookingAmount;
+
+        const customerUses = (coupon.usedBy || []).filter((u) => {
+          const rawU = u.customerPhone.replace(/\D/g, "");
+          const rawP = phone.trim().replace(/\D/g, "");
+          return rawU.length >= 10 && rawP.length >= 10 && (rawU.endsWith(rawP) || rawP.endsWith(rawU));
+        }).length;
+        const perCustomerOk = !coupon.perCustomerLimit || customerUses < coupon.perCustomerLimit;
+
+        if (notExpired && underLimit && clientEligible && minAmountMet && perCustomerOk) {
+          appliedCoupon = coupon;
+          if (coupon.discountType === "percentage") {
+            discountAmount = Math.round((pkgRent * coupon.discountValue) / 100);
+            if (coupon.maxDiscountAmount && coupon.maxDiscountAmount > 0) {
+              discountAmount = Math.min(discountAmount, coupon.maxDiscountAmount);
+            }
+          } else {
+            discountAmount = Math.min(pkgRent, coupon.discountValue);
+          }
+        }
+      }
+    }
+
+    const netRent = Math.max(0, pkgRent - discountAmount);
+    const requestedStatus = isAdmin && req.body.status ? req.body.status.toUpperCase() : "PENDING";
+    const initialPaymentStatus = isAdmin && req.body.paymentStatus ? req.body.paymentStatus : (requestedStatus === "CONFIRMED" ? "advance_paid" : "unpaid");
+    const initialPaid = isAdmin && req.body.amountPaid !== undefined ? Number(req.body.amountPaid) : 0;
+    const initialBalance = Math.max(0, netRent - initialPaid);
+
     const newBooking: BookingRecord = {
       id: bookingId,
       customerName: customerName.trim(),
@@ -310,6 +366,9 @@ apiRouter.post("/bookings", async (req: Request, res: Response) => {
       packageId: packageId || (hallSelection === "both" ? "full-ac-hall" : "single-ac-hall"),
       packageName: pkgName,
       packagePrice: pkgRent,
+      couponCode: appliedCoupon ? appliedCoupon.code : undefined,
+      discountAmount: discountAmount > 0 ? discountAmount : undefined,
+      originalAmount: discountAmount > 0 ? pkgRent : undefined,
       occupiedResources: requiredResources,
       hallSelection,
       acOption: acOption || "ac",
@@ -318,18 +377,48 @@ apiRouter.post("/bookings", async (req: Request, res: Response) => {
       expectedAttendees: expectedAttendees ? Number(expectedAttendees) : undefined,
       additionalInfo: additionalInfo?.trim(),
       eventType: eventType || "wedding",
-      status: "PENDING",
-      totalAmount: pkgRent,
-      advanceRequired: Math.round(pkgRent * 0.25),
-      amountPaid: 0,
-      balanceDue: pkgRent,
-      paymentStatus: "unpaid",
-      payments: [],
+      status: requestedStatus,
+      totalAmount: netRent,
+      advanceRequired: Math.round(netRent * 0.25),
+      amountPaid: initialPaid,
+      balanceDue: initialBalance,
+      paymentStatus: initialPaymentStatus,
+      payments: initialPaid > 0 ? [
+        {
+          id: `PAY-INIT-${Date.now()}`,
+          bookingId,
+          amount: initialPaid,
+          paymentType: "advance",
+          paymentMethod: "cash",
+          receivedBy: isAdmin ? (getSession(adminSessionToken!)?.email || "admin@hhevents.in") : "system",
+          receiptNumber: `RCP-${Date.now()}`,
+          createdAt: now,
+        }
+      ] : [],
       submittedAt: now,
       updatedAt: now,
+      verifiedBy: isAdmin ? (getSession(adminSessionToken!)?.email || "admin@hhevents.in") : undefined,
     };
 
     db.bookings.unshift(newBooking);
+
+    // If coupon was applied, commit redemption ledger and increment usage count
+    if (appliedCoupon) {
+      appliedCoupon.usedCount = (appliedCoupon.usedCount || 0) + 1;
+      appliedCoupon.usedBy = appliedCoupon.usedBy || [];
+      appliedCoupon.usedBy.unshift({
+        bookingId,
+        referenceNo: bookingId,
+        customerName: customerName.trim(),
+        customerPhone: phone.trim(),
+        usedAt: now,
+        originalAmount: pkgRent,
+        discountAmount,
+        finalAmount: netRent,
+      });
+      appliedCoupon.updatedAt = now;
+    }
+
     await persistDb();
 
     await logAudit(
@@ -410,7 +499,7 @@ apiRouter.patch("/bookings/:id/status", requireAdminAuth, async (req: Request, r
   const upper = (status || "").toUpperCase();
 
   if (upper === "APPROVED" || upper === "CONFIRMED") {
-    const conflict = checkResourceConflict(db, booking.date, booking.slot, booking.occupiedResources, booking.id);
+    const conflict = checkResourceConflict(db, booking.date, booking.slot, booking.occupiedResources, booking.id, true);
     if (!conflict.available) {
       return res.status(409).json({
         error: `Cannot approve: Resource conflict on ${booking.date} (${booking.slot}). ${conflict.conflictReason}`,
@@ -637,6 +726,295 @@ apiRouter.post("/maintenance", requireAdminAuth, async (req: Request, res: Respo
   await logAudit("MAINTENANCE_CREATED", admin.email, "maintenance", newRecord.id, `Scheduled ${newRecord.title}`);
 
   res.json({ success: true, maintenance: newRecord });
+});
+
+// ==========================================
+// 8. DISCOUNT COUPONS & OFFERS ENGINE
+// ==========================================
+
+apiRouter.get("/coupons", requireAdminAuth, async (req: Request, res: Response) => {
+  const db = await getDb();
+  res.json(db.coupons || []);
+});
+
+apiRouter.post("/coupons", requireAdminAuth, async (req: Request, res: Response) => {
+  try {
+    const {
+      code,
+      title,
+      description,
+      discountType,
+      discountValue,
+      maxDiscountAmount,
+      minBookingAmount,
+      expiryDate,
+      usageLimit,
+      perCustomerLimit,
+      category,
+      specificCustomerPhone,
+      specificCustomerName,
+      isActive,
+    } = req.body;
+
+    if (!code || !title || !discountValue || !expiryDate) {
+      return res.status(400).json({ error: "Code, title, discount value, and expiry date are required." });
+    }
+
+    const cleanCode = code.trim().toUpperCase().replace(/[^A-Z0-9_-]/g, "");
+    if (!cleanCode) {
+      return res.status(400).json({ error: "Invalid coupon code format." });
+    }
+
+    const db = await getDb();
+    db.coupons = db.coupons || [];
+
+    const existing = db.coupons.find((c) => c.code === cleanCode);
+    if (existing) {
+      return res.status(400).json({ error: `Coupon code '${cleanCode}' already exists.` });
+    }
+
+    const admin = (req as any).adminSession;
+    const now = new Date().toISOString();
+
+    const newCoupon: DiscountCoupon = {
+      id: `CPN-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`,
+      code: cleanCode,
+      title: title.trim(),
+      description: description ? description.trim() : "",
+      discountType: discountType === "percentage" ? "percentage" : "fixed",
+      discountValue: Number(discountValue),
+      maxDiscountAmount: maxDiscountAmount ? Number(maxDiscountAmount) : undefined,
+      minBookingAmount: minBookingAmount ? Number(minBookingAmount) : undefined,
+      expiryDate,
+      usageLimit: usageLimit !== undefined ? Number(usageLimit) : 0,
+      usedCount: 0,
+      perCustomerLimit: perCustomerLimit ? Number(perCustomerLimit) : 1,
+      category: category || "general",
+      specificCustomerPhone: specificCustomerPhone ? specificCustomerPhone.trim() : undefined,
+      specificCustomerName: specificCustomerName ? specificCustomerName.trim() : undefined,
+      isActive: isActive !== undefined ? Boolean(isActive) : true,
+      createdBy: admin?.email || "admin@hhevents.in",
+      createdAt: now,
+      updatedAt: now,
+      usedBy: [],
+    };
+
+    db.coupons.unshift(newCoupon);
+    await persistDb();
+
+    await logAudit(
+      "COUPON_CREATED",
+      admin?.email || "admin@hhevents.in",
+      "coupon",
+      newCoupon.code,
+      `Created coupon ${cleanCode}: ${newCoupon.discountValue}${newCoupon.discountType === "percentage" ? "%" : " INR"} off`
+    );
+
+    res.status(201).json({ success: true, coupon: newCoupon });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to create coupon" });
+  }
+});
+
+apiRouter.patch("/coupons/:id", requireAdminAuth, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const db = await getDb();
+    db.coupons = db.coupons || [];
+
+    const idx = db.coupons.findIndex((c) => c.id === id || c.code === id);
+    if (idx === -1) {
+      return res.status(404).json({ error: "Coupon not found" });
+    }
+
+    const c = db.coupons[idx];
+    const admin = (req as any).adminSession;
+
+    if (req.body.title !== undefined) c.title = req.body.title.trim();
+    if (req.body.description !== undefined) c.description = req.body.description.trim();
+    if (req.body.discountType !== undefined) c.discountType = req.body.discountType;
+    if (req.body.discountValue !== undefined) c.discountValue = Number(req.body.discountValue);
+    if (req.body.maxDiscountAmount !== undefined) c.maxDiscountAmount = req.body.maxDiscountAmount ? Number(req.body.maxDiscountAmount) : undefined;
+    if (req.body.minBookingAmount !== undefined) c.minBookingAmount = req.body.minBookingAmount ? Number(req.body.minBookingAmount) : undefined;
+    if (req.body.expiryDate !== undefined) c.expiryDate = req.body.expiryDate;
+    if (req.body.usageLimit !== undefined) c.usageLimit = Number(req.body.usageLimit);
+    if (req.body.perCustomerLimit !== undefined) c.perCustomerLimit = Number(req.body.perCustomerLimit);
+    if (req.body.category !== undefined) c.category = req.body.category;
+    if (req.body.specificCustomerPhone !== undefined) c.specificCustomerPhone = req.body.specificCustomerPhone ? req.body.specificCustomerPhone.trim() : undefined;
+    if (req.body.specificCustomerName !== undefined) c.specificCustomerName = req.body.specificCustomerName ? req.body.specificCustomerName.trim() : undefined;
+    if (req.body.isActive !== undefined) c.isActive = Boolean(req.body.isActive);
+
+    c.updatedAt = new Date().toISOString();
+
+    await persistDb();
+    await logAudit(
+      "COUPON_UPDATED",
+      admin?.email || "admin@hhevents.in",
+      "coupon",
+      c.code,
+      `Updated coupon ${c.code}`
+    );
+
+    res.json({ success: true, coupon: c });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to update coupon" });
+  }
+});
+
+apiRouter.delete("/coupons/:id", requireAdminAuth, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const db = await getDb();
+    db.coupons = db.coupons || [];
+
+    const idx = db.coupons.findIndex((c) => c.id === id || c.code === id);
+    if (idx === -1) {
+      return res.status(404).json({ error: "Coupon not found" });
+    }
+
+    const removed = db.coupons.splice(idx, 1)[0];
+    const admin = (req as any).adminSession;
+
+    await persistDb();
+    await logAudit(
+      "COUPON_DELETED",
+      admin?.email || "admin@hhevents.in",
+      "coupon",
+      removed.code,
+      `Deleted coupon ${removed.code}`
+    );
+
+    res.json({ success: true, removedCode: removed.code });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to delete coupon" });
+  }
+});
+
+apiRouter.get("/coupons/public", async (req: Request, res: Response) => {
+  const db = await getDb();
+  const today = new Date().toISOString().slice(0, 10);
+  const publicCoupons = (db.coupons || [])
+    .filter(
+      (c) =>
+        c.isActive &&
+        c.category !== "client_exclusive" &&
+        (!c.expiryDate || c.expiryDate >= today) &&
+        (c.usageLimit === 0 || c.usedCount < c.usageLimit)
+    )
+    .map((c) => ({
+      code: c.code,
+      title: c.title,
+      description: c.description,
+      discountType: c.discountType,
+      discountValue: c.discountValue,
+      maxDiscountAmount: c.maxDiscountAmount,
+      minBookingAmount: c.minBookingAmount,
+      category: c.category,
+      expiryDate: c.expiryDate,
+    }));
+
+  res.json(publicCoupons);
+});
+
+apiRouter.post("/coupons/validate", async (req: Request, res: Response) => {
+  try {
+    const { code, packagePrice, phone } = req.body;
+    if (!code) {
+      return res.status(400).json({ valid: false, message: "Please enter a discount coupon code." });
+    }
+
+    const db = await getDb();
+    const cleanCode = String(code).trim().toUpperCase();
+    const coupon = (db.coupons || []).find((c) => c.code === cleanCode);
+
+    if (!coupon) {
+      return res.status(404).json({ valid: false, message: "Invalid coupon code. Please verify the code and try again." });
+    }
+
+    if (!coupon.isActive) {
+      return res.status(400).json({ valid: false, message: "This coupon is currently inactive or deactivated by management." });
+    }
+
+    const today = new Date().toISOString().slice(0, 10);
+    if (coupon.expiryDate && coupon.expiryDate < today) {
+      return res.status(400).json({ valid: false, message: `This coupon has expired on ${coupon.expiryDate}.` });
+    }
+
+    if (coupon.usageLimit > 0 && coupon.usedCount >= coupon.usageLimit) {
+      return res.status(400).json({ valid: false, message: "This coupon has reached its total usage limit." });
+    }
+
+    const rent = Number(packagePrice) || 0;
+    if (coupon.minBookingAmount && rent < coupon.minBookingAmount) {
+      return res.status(400).json({
+        valid: false,
+        message: `Minimum reservation package amount of ₹${coupon.minBookingAmount.toLocaleString("en-IN")} is required to apply this coupon.`,
+      });
+    }
+
+    if (coupon.category === "client_exclusive" && coupon.specificCustomerPhone) {
+      const rawClient = coupon.specificCustomerPhone.replace(/\D/g, "");
+      const rawPhone = phone ? String(phone).replace(/\D/g, "") : "";
+      const matches =
+        rawPhone.length >= 10 &&
+        rawClient.length >= 10 &&
+        (rawPhone.endsWith(rawClient) || rawClient.endsWith(rawPhone));
+      if (!matches) {
+        return res.status(400).json({
+          valid: false,
+          message: `This coupon is exclusively reserved for client number Ending with ...${coupon.specificCustomerPhone.slice(-4)}. Please enter the matching client mobile in Step 4.`,
+        });
+      }
+    }
+
+    if (phone && coupon.perCustomerLimit && coupon.perCustomerLimit > 0) {
+      const rawP = String(phone).replace(/\D/g, "");
+      const uses = (coupon.usedBy || []).filter((u) => {
+        const rawU = u.customerPhone.replace(/\D/g, "");
+        return rawU.length >= 10 && rawP.length >= 10 && (rawU.endsWith(rawP) || rawP.endsWith(rawU));
+      }).length;
+      if (uses >= coupon.perCustomerLimit) {
+        return res.status(400).json({
+          valid: false,
+          message: `You have already redeemed this coupon the maximum allowed limit (${coupon.perCustomerLimit} time).`,
+        });
+      }
+    }
+
+    let discountAmount = 0;
+    if (coupon.discountType === "percentage") {
+      discountAmount = Math.round((rent * coupon.discountValue) / 100);
+      if (coupon.maxDiscountAmount && coupon.maxDiscountAmount > 0) {
+        discountAmount = Math.min(discountAmount, coupon.maxDiscountAmount);
+      }
+    } else {
+      discountAmount = Math.min(rent, coupon.discountValue);
+    }
+
+    const finalRent = Math.max(0, rent - discountAmount);
+    const advanceRequired = Math.round(finalRent * 0.25);
+    const balanceDue = finalRent - advanceRequired;
+
+    res.json({
+      valid: true,
+      coupon: {
+        code: coupon.code,
+        title: coupon.title,
+        description: coupon.description,
+        discountType: coupon.discountType,
+        discountValue: coupon.discountValue,
+        maxDiscountAmount: coupon.maxDiscountAmount,
+        discountAmount,
+        originalPrice: rent,
+        finalRent,
+        advanceRequired,
+        balanceDue,
+        category: coupon.category,
+      },
+    });
+  } catch (err: any) {
+    res.status(500).json({ valid: false, message: err.message || "Failed to validate coupon" });
+  }
 });
 
 // ==========================================

@@ -67,7 +67,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
                   Opposite Juma Masjid, Akkarangadi, Panemangalore, Bantwal — 574231
                 </p>
                 <p className="text-[10.5px] text-neutral-600 font-mono pt-0.5">
-                  Tel: {VENUE_INFO.primaryPhone} &bull; Alt: {VENUE_INFO.secondaryPhone}
+                  Tel: {VENUE_INFO.primaryPhone} &bull; Alt: {VENUE_INFO.secondaryPhone} &bull; WhatsApp: {VENUE_INFO.whatsappPhone}
                 </p>
               </div>
             </div>
@@ -160,11 +160,22 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
                     {booking.slot}
                   </td>
                   <td className="py-3 pl-3 text-right font-mono font-medium text-neutral-900 text-xs">
-                    ₹{totalAmount.toLocaleString('en-IN')}.00
+                    ₹{(booking.originalAmount || (booking.discountAmount ? totalAmount + booking.discountAmount : totalAmount)).toLocaleString('en-IN')}.00
                   </td>
                 </tr>
 
                 {/* Subtotals & Advance Payment */}
+                {booking.couponCode && (booking.discountAmount || 0) > 0 && (
+                  <tr className="text-emerald-700 bg-emerald-50/50">
+                    <td colSpan={2} className="py-1 text-right text-[11px] font-semibold pr-3">
+                      Promotional Discount ({booking.couponCode}):
+                    </td>
+                    <td className="py-1 text-right font-mono text-[11.5px] font-bold text-emerald-700">
+                      - ₹{(booking.discountAmount || 0).toLocaleString('en-IN')}.00
+                    </td>
+                  </tr>
+                )}
+
                 <tr className="text-neutral-600">
                   <td colSpan={2} className="pt-3 pb-1 text-right text-[11px]">
                     Total Agreed Tariff:

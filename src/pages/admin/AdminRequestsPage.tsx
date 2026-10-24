@@ -19,7 +19,8 @@ import {
   Printer,
   Receipt,
   Plus,
-  DollarSign
+  DollarSign,
+  Tag,
 } from 'lucide-react';
 import { AdminLayout } from '../../components/layout/AdminLayout';
 import { Card } from '../../components/ui/Card';
@@ -427,6 +428,12 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
                             <div className="font-mono font-bold">
                               ₹{totalRent.toLocaleString('en-IN')}
                             </div>
+                            {b.couponCode && (
+                              <div className="text-[10px] text-emerald-700 font-semibold flex items-center gap-0.5 mt-0.5">
+                                <Tag className="w-2.5 h-2.5" />
+                                {b.couponCode} (-₹{(b.discountAmount || 0).toLocaleString('en-IN')})
+                              </div>
+                            )}
                             <div className="text-[11px] text-emerald-700 font-medium">
                               Paid: ₹{paid.toLocaleString('en-IN')}
                             </div>
@@ -555,6 +562,17 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
                     ₹{(selectedBooking.estimatedAmount || selectedBooking.totalEstimate || 0).toLocaleString('en-IN')}
                   </span>
                 </div>
+                {selectedBooking.couponCode && (
+                  <div className="flex justify-between items-center text-xs text-emerald-800 bg-emerald-50 px-2.5 py-1.5 rounded-lg border border-emerald-200">
+                    <span className="flex items-center gap-1 font-semibold">
+                      <Tag className="w-3.5 h-3.5 text-emerald-600" />
+                      Discount Coupon ({selectedBooking.couponCode}):
+                    </span>
+                    <span className="font-mono font-bold text-emerald-700">
+                      -₹{(selectedBooking.discountAmount || 0).toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between items-center text-xs text-slate-600">
                   <span>Advance Status:</span>
                   <span className="capitalize font-semibold">{String(selectedBooking.advancePaymentStatus || 'unpaid').replace('_', ' ')}</span>

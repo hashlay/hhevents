@@ -89,6 +89,16 @@ export const LocationPage: React.FC<LocationPageProps> = ({ navigate }) => {
             <a href={`tel:${VENUE_INFO.primaryPhone}`} className="text-[#C9AA72] font-bold hover:underline">
               Call Desk: {VENUE_INFO.primaryPhone}
             </a>
+            <span className="text-[#737373]">&bull;</span>
+            <a
+              href={`https://wa.me/91${VENUE_INFO.whatsappPhone}?text=${encodeURIComponent('Hello H H Events Management, I need location assistance.')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-emerald-700 font-bold hover:underline inline-flex items-center gap-1"
+            >
+              <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
+              WhatsApp: {VENUE_INFO.whatsappPhone}
+            </a>
           </div>
         </div>
       </section>
@@ -180,14 +190,26 @@ export const LocationPage: React.FC<LocationPageProps> = ({ navigate }) => {
               </div>
             </div>
 
-            <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-[#E2DACB] flex items-center justify-between gap-4 text-xs">
+            <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-[#E2DACB] flex flex-wrap items-center justify-between gap-4 text-xs">
               <span className="text-[#4A4A4A]">Need navigation assistance on event day?</span>
-              <a
-                href={`tel:${VENUE_INFO.primaryPhone}`}
-                className="font-bold text-[#C9AA72] hover:underline shrink-0"
-              >
-                Call Desk: {VENUE_INFO.primaryPhone}
-              </a>
+              <div className="flex items-center gap-3 shrink-0">
+                <a
+                  href={`tel:${VENUE_INFO.primaryPhone}`}
+                  className="font-bold text-[#C9AA72] hover:underline"
+                >
+                  Call Desk: {VENUE_INFO.primaryPhone}
+                </a>
+                <span className="text-[#C9AA72]">&bull;</span>
+                <a
+                  href={`https://wa.me/91${VENUE_INFO.whatsappPhone}?text=${encodeURIComponent('Hello H H Events Management, I need navigation directions.')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-bold text-emerald-700 hover:underline inline-flex items-center gap-1"
+                >
+                  <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
+                  WhatsApp: {VENUE_INFO.whatsappPhone}
+                </a>
+              </div>
             </div>
           </div>
         </div>

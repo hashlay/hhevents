@@ -230,11 +230,14 @@
   }
 
   #printable-receipt,
-  #printable-receipt * {
+  #printable-receipt *,
+  #printable-track-summary,
+  #printable-track-summary * {
     visibility: visible !important;
   }
 
-  #printable-receipt {
+  #printable-receipt,
+  #printable-track-summary {
     position: absolute !important;
     top: 0 !important;
     left: 0 !important;

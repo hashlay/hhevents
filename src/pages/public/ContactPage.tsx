@@ -109,15 +109,26 @@ export const ContactPage: React.FC<ContactPageProps> = ({ navigate }) => {
                   <div className="space-y-1">
                     <span className="font-bold text-[#252525] block">Phone Numbers</span>
                     <p className="text-[#4A4A4A] text-xs">
-                      Primary:{' '}
+                      Primary (Calling):{' '}
                       <a href={`tel:${VENUE_INFO.primaryPhone}`} className="text-[#252525] font-semibold hover:underline">
                         {VENUE_INFO.primaryPhone}
                       </a>
                     </p>
                     <p className="text-[#4A4A4A] text-xs">
-                      Alternate:{' '}
+                      Secondary (Calling):{' '}
                       <a href={`tel:${VENUE_INFO.secondaryPhone}`} className="text-[#252525] font-semibold hover:underline">
                         {VENUE_INFO.secondaryPhone}
+                      </a>
+                    </p>
+                    <p className="text-[#4A4A4A] text-xs">
+                      WhatsApp:{' '}
+                      <a
+                        href={`https://wa.me/91${VENUE_INFO.whatsappPhone}?text=${encodeURIComponent('Hello H H Events Management, I would like to inquire about hall availability.')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-emerald-700 font-semibold hover:underline"
+                      >
+                        {VENUE_INFO.whatsappPhone}
                       </a>
                     </p>
                   </div>
@@ -138,13 +149,13 @@ export const ContactPage: React.FC<ContactPageProps> = ({ navigate }) => {
 
               <div className="pt-4 border-t border-[#E2DACB]">
                 <a
-                  href={`https://wa.me/919448133378?text=Hello%20H%20H%20Events%20Management,%20I%20would%20like%20to%20inquire%20about%20hall%20availability.`}
+                  href={`https://wa.me/91${VENUE_INFO.whatsappPhone}?text=${encodeURIComponent('Hello H H Events Management, I would like to inquire about hall availability.')}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider transition-colors shadow-2xs"
                 >
                   <MessageCircle className="w-4 h-4" />
-                  <span>Chat on WhatsApp</span>
+                  <span>Chat on WhatsApp ({VENUE_INFO.whatsappPhone})</span>
                 </a>
               </div>
             </div>

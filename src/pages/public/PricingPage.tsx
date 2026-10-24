@@ -12,6 +12,7 @@ import {
   ArrowRight,
   Filter,
   Sparkles,
+  MessageCircle,
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { BackButton } from '../../components/ui/BackButton';
@@ -225,6 +226,15 @@ export const PricingPage: React.FC<PricingPageProps> = ({ navigate }) => {
               <span>&bull;</span>
               <a href={`tel:${VENUE_INFO.secondaryPhone}`} className="hover:text-[#C9AA72] flex items-center gap-1">
                 <PhoneCall className="w-3.5 h-3.5 text-[#C9AA72]" /> Alt: {VENUE_INFO.secondaryPhone}
+              </a>
+              <span>&bull;</span>
+              <a
+                href={`https://wa.me/91${VENUE_INFO.whatsappPhone}?text=${encodeURIComponent('Hello H H Events Management, I would like to inquire about booking tariffs.')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-emerald-700 hover:text-emerald-800 flex items-center gap-1"
+              >
+                <MessageCircle className="w-3.5 h-3.5 text-emerald-600" /> WhatsApp: {VENUE_INFO.whatsappPhone}
               </a>
             </div>
           </div>

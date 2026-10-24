@@ -53,7 +53,8 @@ export function checkResourceConflict(
   date: string,
   slot: 'day' | 'evening',
   requiredResources: string[],
-  ignoreBookingId?: string
+  ignoreBookingId?: string,
+  onlyConfirmed?: boolean
 ): ConflictCheckResult {
   // 1. Check Manager Blackout blocks
   for (const block of db.availabilityBlackouts) {
@@ -94,8 +95,13 @@ export function checkResourceConflict(
   }
 
   // 3. Check Confirmed & Active Reservations
+  // When onlyConfirmed is true (e.g. for admin approvals or admin direct bookings),
+  // pending unapproved inquiries do NOT block the admin.
   const activeBookings = db.bookings.filter((b) => {
     if (ignoreBookingId && b.id === ignoreBookingId) return false;
+    if (onlyConfirmed) {
+      return b.status === 'APPROVED' || b.status === 'CONFIRMED';
+    }
     return b.status === 'APPROVED' || b.status === 'CONFIRMED' || b.status === 'PENDING';
   });
 

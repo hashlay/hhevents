@@ -428,8 +428,9 @@
     "name": "H H Events & Conventions",
     "tagline": "Premier Convention, Wedding & Grand Event Destination",
     "address": "Opposite Juma Masjid, Akkarangadi, Panemangalore, Bantwal, Karnataka 574231",
-    "primaryPhone": "09448133378",
-    "secondaryPhone": "9741575078",
+    "primaryPhone": "9448151878",
+    "secondaryPhone": "9448133378",
+    "whatsappPhone": "9741575078",
     "googleMapsUrl": "https://maps.app.goo.gl/JxfruJVzpVDhxUhx6?g_st=ac",
     "daySlotHours": "10:00 AM – 3:00 PM",
     "eveningSlotHours": "6:00 PM – 10:00 PM",
@@ -439,5 +440,6 @@
     "termsAndConditions": "Standard venue guidelines apply. Advance deposit is required to confirm the reservation.",
     "updatedAt": "2026-10-17T16:27:58.317Z"
   },
+  "coupons": [],
   "lastUpdated": "2026-10-18T06:48:08.843Z"
 }

@@ -5,6 +5,7 @@ import {
   Clock,
   CalendarCheck,
   ExternalLink,
+  MessageCircle,
 } from 'lucide-react';
 import { VENUE_INFO } from '../../services/hallData';
 
@@ -166,6 +167,7 @@ export const Footer: React.FC<FooterProps> = ({ navigate }) => {
               <a
                 href={`tel:${VENUE_INFO.primaryPhone}`}
                 className="hover:text-[#C9AA72] transition-colors font-medium"
+                title="Primary Calling Desk"
               >
                 {VENUE_INFO.primaryPhone}
               </a>
@@ -173,8 +175,20 @@ export const Footer: React.FC<FooterProps> = ({ navigate }) => {
               <a
                 href={`tel:${VENUE_INFO.secondaryPhone}`}
                 className="hover:text-[#C9AA72] transition-colors text-slate-300"
+                title="Secondary Calling Desk"
               >
                 {VENUE_INFO.secondaryPhone}
+              </a>
+              <span className="text-[#C9AA72]/60 font-bold">&bull;</span>
+              <a
+                href={`https://wa.me/91${VENUE_INFO.whatsappPhone}?text=${encodeURIComponent('Hello H H Events Management, I would like to inquire about hall availability.')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-emerald-400 hover:text-emerald-300 transition-colors font-semibold"
+                title="Chat on WhatsApp"
+              >
+                <MessageCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                <span>WhatsApp: {VENUE_INFO.whatsappPhone}</span>
               </a>
             </div>
 

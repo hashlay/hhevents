@@ -36,6 +36,7 @@ import { AdminHistoryPage } from './pages/admin/AdminHistoryPage';
 import { AdminSettingsPage } from './pages/admin/AdminSettingsPage';
 import { AdminPhotosPage } from './pages/admin/AdminPhotosPage';
 import { AdminPackagesPage } from './pages/admin/AdminPackagesPage';
+import { AdminCouponsPage } from './pages/admin/AdminCouponsPage';
 
 const AppContent: React.FC = () => {
   const { currentPath, navigate } = useNavigation();
@@ -84,6 +85,9 @@ const AppContent: React.FC = () => {
         return <AdminHistoryPage navigate={navigate} />;
       case '/admin/settings':
         return <AdminSettingsPage navigate={navigate} />;
+      case '/admin/coupons':
+      case '/admin/discounts':
+        return <AdminCouponsPage navigate={navigate} />;
       default:
         return <AdminDashboardPage navigate={navigate} />;
     }

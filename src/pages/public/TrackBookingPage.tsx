@@ -18,8 +18,10 @@ import {
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { BackButton } from '../../components/ui/BackButton';
+import { InvoiceModal } from '../../components/ui/InvoiceModal';
 import { trackBooking } from '../../services/bookingStorage';
 import { VENUE_INFO } from '../../services/hallData';
+import { BookingRequest } from '../../types';
 
 interface TrackedBooking {
   id: string;
@@ -52,6 +54,7 @@ export const TrackBookingPage: React.FC<{ navigate: (path: string) => void }> = 
   const [hasSearched, setHasSearched] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showInvoice, setShowInvoice] = useState(false);
 
   const performSearch = async (queryId: string, queryPhone?: string) => {
     const cleanId = queryId.trim();
@@ -228,7 +231,7 @@ export const TrackBookingPage: React.FC<{ navigate: (path: string) => void }> = 
           )}
 
           {booking && (
-            <div className="bg-white rounded-3xl p-6 sm:p-10 border border-[#E2DACB] shadow-md space-y-6">
+            <div id="printable-track-summary" className="bg-white rounded-3xl p-6 sm:p-10 border border-[#E2DACB] shadow-md space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#E2DACB] pb-6">
                 <div>
                   <span className="text-xs text-[#737373] uppercase tracking-wider block">Reservation Reference</span>
@@ -291,24 +294,74 @@ export const TrackBookingPage: React.FC<{ navigate: (path: string) => void }> = 
               </div>
 
               <div className="pt-2 flex flex-wrap items-center justify-between gap-4">
-                <a
-                  href={`tel:${VENUE_INFO.primaryPhone}`}
-                  className="inline-flex items-center gap-1.5 text-xs text-[#252525] font-semibold hover:text-[#C9AA72]"
-                >
-                  <PhoneCall className="w-3.5 h-3.5 text-[#C9AA72]" />
-                  <span>Call Venue Management: {VENUE_INFO.primaryPhone}</span>
-                </a>
+                <div className="flex flex-wrap items-center gap-3">
+                  <a
+                    href={`tel:${VENUE_INFO.primaryPhone}`}
+                    className="inline-flex items-center gap-1.5 text-xs text-[#252525] font-semibold hover:text-[#C9AA72]"
+                  >
+                    <PhoneCall className="w-3.5 h-3.5 text-[#C9AA72]" />
+                    <span>Call Venue Management: {VENUE_INFO.primaryPhone}</span>
+                  </a>
+                  <span className="text-[#C9AA72]">&bull;</span>
+                  <a
+                    href={`https://wa.me/91${VENUE_INFO.whatsappPhone}?text=${encodeURIComponent(
+                      `Assalamu Alaikum / Greetings,\n\nI am inquiring about my booking request.\n\n*Booking ID:* ${booking.id}\n*Customer:* ${booking.customerName}\n*Package:* ${booking.packageName}\n*Date:* ${booking.date}\n\nPlease update me on the latest status.`
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-xs text-emerald-700 font-semibold hover:text-emerald-800"
+                  >
+                    <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>WhatsApp: {VENUE_INFO.whatsappPhone}</span>
+                  </a>
+                </div>
 
-                <Button
-                  onClick={() => window.print()}
-                  variant="outline"
-                  size="sm"
-                  leftIcon={<Printer className="w-3.5 h-3.5" />}
-                >
-                  Print Summary
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    onClick={() => setShowInvoice(true)}
+                    variant="outline"
+                    size="sm"
+                    leftIcon={<Receipt className="w-3.5 h-3.5 text-[#C9AA72]" />}
+                  >
+                    Official Invoice &amp; Receipt
+                  </Button>
+                  <Button
+                    onClick={() => window.print()}
+                    variant="outline"
+                    size="sm"
+                    leftIcon={<Printer className="w-3.5 h-3.5" />}
+                  >
+                    Print Summary
+                  </Button>
+                </div>
               </div>
             </div>
+          )}
+
+          {booking && showInvoice && (
+            <InvoiceModal
+              isOpen={showInvoice}
+              onClose={() => setShowInvoice(false)}
+              booking={{
+                id: booking.id,
+                customerName: booking.customerName,
+                phone: phoneQuery || 'Customer',
+                email: '',
+                packageId: 'package',
+                packageName: booking.packageName || 'Official Package',
+                date: booking.date,
+                slot: booking.slot as any,
+                hall: (booking.hallSelection || booking.hall || 'both') as any,
+                acOption: (booking.acOption || 'ac') as any,
+                totalEstimate: booking.totalAmount || booking.estimatedAmount || 65000,
+                amountPaid: booking.amountPaid || 0,
+                balanceDue: booking.balanceDue,
+                status: booking.status as any,
+                advancePaymentStatus: (booking.paymentStatus || 'unpaid') as any,
+                submittedAt: booking.submittedAt || new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              }}
+            />
           )}
         </div>
       </section>

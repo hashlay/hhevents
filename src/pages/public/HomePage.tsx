@@ -10,6 +10,7 @@ import {
   ExternalLink,
   ShieldCheck,
   Check,
+  MessageCircle,
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
@@ -572,6 +573,16 @@ export const HomePage: React.FC<HomePageProps> = ({ navigate }) => {
                 >
                   <PhoneCall className="w-3.5 h-3.5 text-[#C9AA72]" />
                   <span>Call {VENUE_INFO.primaryPhone}</span>
+                </a>
+
+                <a
+                  href={`https://wa.me/91${VENUE_INFO.whatsappPhone}?text=${encodeURIComponent('Hello H H Events Management, I would like to inquire about hall availability.')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition-colors shadow-xs"
+                >
+                  <MessageCircle className="w-3.5 h-3.5 text-white" />
+                  <span>WhatsApp {VENUE_INFO.whatsappPhone}</span>
                 </a>
 
                 <a

@@ -20,6 +20,9 @@ import {
   UtensilsCrossed,
   ChefHat,
   Package as PackageIcon,
+  Ticket,
+  Tag,
+  Sparkles,
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { BackButton } from '../../components/ui/BackButton';
@@ -76,6 +79,35 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedBooking, setSubmittedBooking] = useState<BookingRequest | null>(null);
 
+  // Promotional coupon state
+  const [couponInput, setCouponInput] = useState('');
+  const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
+  const [appliedCoupon, setAppliedCoupon] = useState<{
+    code: string;
+    title: string;
+    discountType: string;
+    discountValue: number;
+    maxDiscountAmount?: number;
+    discountAmount: number;
+    originalPrice: number;
+    finalRent: number;
+    advanceRequired: number;
+    balanceDue: number;
+    category?: string;
+  } | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [publicOffers, setPublicOffers] = useState<any[]>([]);
+
+  // Fetch active seasonal/promotional coupons
+  useEffect(() => {
+    fetch('/api/coupons/public')
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data)) setPublicOffers(data);
+      })
+      .catch(() => {});
+  }, []);
+
   // Load packages from server with fallback to DEFAULT_BOOKING_PACKAGES
   useEffect(() => {
     async function fetchPackages() {
@@ -129,8 +161,79 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
     }
   }, [date, slot, currentPackage, hallPreference]);
 
+  // Revalidate coupon if package changes
+  useEffect(() => {
+    if (appliedCoupon && currentPackage) {
+      fetch('/api/coupons/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: appliedCoupon.code,
+          packagePrice: currentPackage.rent,
+          phone: phone.trim(),
+        }),
+      })
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.valid && data.coupon) {
+            setAppliedCoupon(data.coupon);
+          } else {
+            setAppliedCoupon(null);
+            showToast(data.message || 'Coupon removed due to package change', 'info');
+          }
+        })
+        .catch(() => {});
+    }
+  }, [selectedPackageId]);
+
+  const handleApplyCoupon = async (overrideCode?: string) => {
+    const codeToValidate = (overrideCode || couponInput).trim();
+    if (!codeToValidate) return;
+    setIsValidatingCoupon(true);
+    setCouponError(null);
+    try {
+      const res = await fetch('/api/coupons/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: codeToValidate,
+          packagePrice: currentPackage ? currentPackage.rent : 30000,
+          phone: phone.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.valid && data.coupon) {
+        setAppliedCoupon(data.coupon);
+        setCouponInput(data.coupon.code);
+        setCouponError(null);
+        showToast(
+          `Coupon '${data.coupon.code}' applied: ₹${data.coupon.discountAmount.toLocaleString('en-IN')} off!`,
+          'success'
+        );
+      } else {
+        setCouponError(data.message || 'Invalid or expired coupon code.');
+        showToast(data.message || 'Failed to apply coupon', 'error');
+      }
+    } catch {
+      setCouponError('Could not reach coupon validation service.');
+      showToast('Validation server error', 'error');
+    } finally {
+      setIsValidatingCoupon(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponInput('');
+    setCouponError(null);
+    showToast('Discount coupon removed', 'info');
+  };
+
   const packagePrice = currentPackage ? currentPackage.rent : 30000;
-  const advanceRequired = Math.round(packagePrice * 0.25);
+  const couponDiscount = appliedCoupon ? appliedCoupon.discountAmount : 0;
+  const netRent = Math.max(0, packagePrice - couponDiscount);
+  const advanceRequired = Math.round(netRent * 0.25);
+  const balanceDue = netRent - advanceRequired;
 
   const stepsList: { id: BookingStep; label: string; number: number }[] = [
     { id: 'date', label: 'Date & Slot', number: 1 },
@@ -201,6 +304,7 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
       expectedAttendees: expectedAttendees ? Number(expectedAttendees) : undefined,
       additionalInfo: additionalInfo.trim(),
       eventType,
+      couponCode: appliedCoupon ? appliedCoupon.code : undefined,
     };
 
     try {
@@ -238,7 +342,10 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
       eventType: bookingPayload.eventType as any,
       estimatedAttendees: bookingPayload.expectedAttendees || 500,
       status: 'pending',
-      totalEstimate: currentPackage?.rent || 65000,
+      totalEstimate: netRent,
+      couponCode: appliedCoupon ? appliedCoupon.code : undefined,
+      discountAmount: couponDiscount > 0 ? couponDiscount : undefined,
+      originalAmount: couponDiscount > 0 ? packagePrice : undefined,
       advancePaymentStatus: 'unpaid',
       submittedAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -779,16 +886,33 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
                 <h4 className="text-xs font-bold uppercase tracking-wider text-[#C9AA72]">Financial Summary</h4>
                 <div className="space-y-1.5 text-xs">
                   <div className="flex justify-between py-1 border-b border-slate-200">
-                    <span className="text-slate-500">Package Rent:</span>
+                    <span className="text-slate-500">Package Base Rent:</span>
                     <strong className="text-slate-900 font-mono">₹{packagePrice.toLocaleString('en-IN')}</strong>
                   </div>
+                  {appliedCoupon && (
+                    <div className="flex justify-between py-1.5 border-b border-emerald-200 text-emerald-800 bg-emerald-50 px-2 rounded-lg">
+                      <span className="font-semibold flex items-center gap-1">
+                        <Tag className="w-3.5 h-3.5 text-emerald-600" />
+                        Discount ({appliedCoupon.code}):
+                      </span>
+                      <strong className="font-mono font-bold text-emerald-700">
+                        -₹{appliedCoupon.discountAmount.toLocaleString('en-IN')}
+                      </strong>
+                    </div>
+                  )}
+                  {appliedCoupon && (
+                    <div className="flex justify-between py-1 border-b border-slate-200">
+                      <span className="text-slate-500">Net Package Rent:</span>
+                      <strong className="text-slate-900 font-mono font-bold">₹{netRent.toLocaleString('en-IN')}</strong>
+                    </div>
+                  )}
                   <div className="flex justify-between py-1 border-b border-slate-200">
                     <span className="text-slate-500">25% Advance Token Required:</span>
                     <strong className="text-amber-700 font-mono">₹{advanceRequired.toLocaleString('en-IN')}</strong>
                   </div>
                   <div className="flex justify-between py-1 border-b border-slate-200">
                     <span className="text-slate-500">Balance on Agreement:</span>
-                    <strong className="text-slate-900 font-mono">₹{(packagePrice - advanceRequired).toLocaleString('en-IN')}</strong>
+                    <strong className="text-slate-900 font-mono">₹{balanceDue.toLocaleString('en-IN')}</strong>
                   </div>
                   <div className="flex justify-between py-1">
                     <span className="text-slate-500">Payment Notice:</span>
@@ -798,6 +922,96 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
                   </div>
                 </div>
               </div>
+            </div>
+
+            {/* PROMOTIONAL COUPON & VOUCHER MODULE */}
+            <div className="p-5 rounded-3xl bg-[#FAF8F5] border border-[#E2DACB] space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Ticket className="w-4 h-4 text-[#C9AA72]" />
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-800">
+                    Have a Discount Coupon / Referral Code?
+                  </span>
+                </div>
+                {publicOffers.length > 0 && !appliedCoupon && (
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[11px] text-slate-500">Available Deals:</span>
+                    {publicOffers.slice(0, 2).map((offer: any) => (
+                      <button
+                        key={offer.code}
+                        type="button"
+                        onClick={() => handleApplyCoupon(offer.code)}
+                        className="text-[11px] font-bold text-amber-900 bg-amber-100 hover:bg-amber-200 border border-amber-300 px-2.5 py-0.5 rounded-full inline-flex items-center gap-1 cursor-pointer transition-colors"
+                      >
+                        <Sparkles className="w-3 h-3 text-amber-600" />
+                        {offer.code} ({offer.discountType === 'percentage' ? `${offer.discountValue}% OFF` : `₹${offer.discountValue.toLocaleString('en-IN')} OFF`})
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {!appliedCoupon ? (
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <div className="relative flex-1">
+                    <input
+                      type="text"
+                      placeholder="Enter coupon code (e.g. EID2026, VIP...)"
+                      value={couponInput}
+                      onChange={(e) => {
+                        setCouponInput(e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, ''));
+                        setCouponError(null);
+                      }}
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-xs sm:text-sm font-mono font-bold uppercase focus:outline-none focus:ring-2 focus:ring-[#C9AA72] bg-white tracking-wider"
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="gold"
+                    size="sm"
+                    disabled={!couponInput.trim() || isValidatingCoupon}
+                    onClick={() => handleApplyCoupon()}
+                    className="font-bold sm:min-w-[120px]"
+                  >
+                    {isValidatingCoupon ? 'Checking...' : 'Apply Code'}
+                  </Button>
+                </div>
+              ) : (
+                <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-300 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                      <Check className="w-4 h-4 stroke-[3]" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <strong className="text-xs font-mono font-bold text-emerald-950 uppercase tracking-wider">
+                          {appliedCoupon.code}
+                        </strong>
+                        <span className="text-[10px] uppercase font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-200">
+                          Coupon Applied
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-emerald-800 font-medium">
+                        {appliedCoupon.title} &bull; Concession: <strong>-₹{appliedCoupon.discountAmount.toLocaleString('en-IN')}</strong>
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRemoveCoupon}
+                    className="text-xs text-rose-600 hover:text-rose-800 hover:underline font-semibold cursor-pointer shrink-0"
+                  >
+                    Remove
+                  </button>
+                </div>
+              )}
+
+              {couponError && (
+                <p className="text-[11px] text-rose-600 font-medium flex items-center gap-1">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  {couponError}
+                </p>
+              )}
             </div>
 
             {/* Terms checkbox */}
@@ -891,7 +1105,7 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
             {/* Direct WhatsApp Trigger */}
             <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
               <a
-                href={`https://wa.me/91${VENUE_INFO.primaryPhone.replace(/\D/g, '')}?text=${encodeURIComponent(
+                href={`https://wa.me/91${VENUE_INFO.whatsappPhone.replace(/\D/g, '')}?text=${encodeURIComponent(
                   `Assalamu Alaikum / Greetings,\n\nI have submitted a booking request at H H Events & Conventions.\n\n*Booking ID:* ${submittedBooking.id}\n*Customer:* ${customerName}\n*Package:* ${submittedBooking.packageName}\n*Date:* ${submittedBooking.date}\n*Session:* ${submittedBooking.slot === 'day' ? 'Day (10 AM - 3 PM)' : 'Evening (6 PM - 10 PM)'}\n\nPlease let me know the advance token payment details for confirmation.\n\nThank you!`
                 )}`}
                 target="_blank"
@@ -899,7 +1113,7 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md transition-all cursor-pointer"
               >
                 <MessageCircle className="w-5 h-5" />
-                Contact Venue via WhatsApp
+                Contact Venue via WhatsApp ({VENUE_INFO.whatsappPhone})
               </a>
 
               <Button

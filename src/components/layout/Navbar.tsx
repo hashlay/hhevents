@@ -12,6 +12,7 @@ import {
   ChevronDown,
   Sparkles,
   Info,
+  MessageCircle,
 } from 'lucide-react';
 import { VENUE_INFO } from '../../services/hallData';
 
@@ -511,13 +512,22 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, navigate }) => {
                 <span>Reserve Venue Now</span>
               </button>
 
-              <div className="flex items-center justify-center text-xs text-[#737373] pt-1">
+              <div className="flex flex-col items-center justify-center gap-2 text-xs text-[#737373] pt-1">
                 <a
                   href={`tel:${VENUE_INFO.primaryPhone}`}
                   className="flex items-center gap-1.5 text-[#173D35] hover:underline font-semibold"
                 >
                   <PhoneCall className="w-3.5 h-3.5 text-[#C9AA72]" />
                   <span>Call Venue Office: {VENUE_INFO.primaryPhone}</span>
+                </a>
+                <a
+                  href={`https://wa.me/91${VENUE_INFO.whatsappPhone}?text=${encodeURIComponent('Hello H H Events Management, I would like to inquire about hall availability.')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 text-emerald-700 hover:underline font-semibold"
+                >
+                  <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>WhatsApp: {VENUE_INFO.whatsappPhone}</span>
                 </a>
               </div>
             </div>

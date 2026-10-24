@@ -69,13 +69,19 @@ export const AdminCalendarPage: React.FC<AdminCalendarPageProps> = ({ navigate }
   const [quickBookForm, setQuickBookForm] = useState<{
     customerName: string;
     phone: string;
+    hall: HallTarget;
     slot: SlotTarget;
     eventTitle: string;
+    estimatedRent: number;
+    advancePaid: number;
   }>({
     customerName: '',
     phone: '',
+    hall: 'both',
     slot: 'day',
     eventTitle: 'Private Function',
+    estimatedRent: 65000,
+    advancePaid: 15000,
   });
 
   // Subscribe to live availability updates
@@ -220,18 +226,23 @@ export const AdminCalendarPage: React.FC<AdminCalendarPageProps> = ({ navigate }
       return;
     }
 
+    const rent = Number(quickBookForm.estimatedRent) || (quickBookForm.hall === 'both' ? 65000 : 30000);
+    const advance = Number(quickBookForm.advancePaid) || 0;
+
     const newBooking: BookingRequest = {
       id: generateBookingId(),
       customerName: quickBookForm.customerName.trim(),
       phone: quickBookForm.phone.trim(),
       email: '',
-      hall: selectedHall as any,
+      hall: quickBookForm.hall as any,
       slot: quickBookForm.slot,
       date: selectedDate,
       status: 'CONFIRMED',
       acOption: 'ac',
-      advancePaymentStatus: 'advance_paid',
-      totalEstimate: 0,
+      advancePaymentStatus: advance > 0 ? 'advance_paid' : 'unpaid',
+      totalEstimate: rent,
+      amountPaid: advance,
+      balanceDue: Math.max(0, rent - advance),
       additionalInfo: quickBookForm.eventTitle || 'Manager Manual Reservation',
       submittedAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -246,17 +257,43 @@ export const AdminCalendarPage: React.FC<AdminCalendarPageProps> = ({ navigate }
       setQuickBookForm({
         customerName: '',
         phone: '',
+        hall: selectedHall,
         slot: 'day',
         eventTitle: 'Private Function',
+        estimatedRent: selectedHall === 'both' ? 65000 : 30000,
+        advancePaid: 15000,
       });
-      showToast(`Reservation confirmed for ${newBooking.customerName} on ${selectedDate}.`, 'success');
-    } catch (err) {
-      showToast('Failed to save manual reservation.', 'error');
+      showToast(`Direct Reservation confirmed for ${newBooking.customerName} on ${selectedDate}.`, 'success');
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to save manual reservation.', 'error');
+    }
+  };
+
+  const handleApproveBooking = async (bookingId: string) => {
+    try {
+      await updateBookingStatusAsync(
+        bookingId,
+        'APPROVED',
+        'Approved by manager via Master Calendar',
+        user?.email || 'admin@hhevents.in'
+      );
+      const fresh = await syncBookingsFromServer();
+      setBookings(fresh);
+      await syncAvailabilityFromServer();
+      showToast(`Booking #${bookingId} has been successfully approved!`, 'success');
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to approve booking.', 'error');
     }
   };
 
   const openQuickBook = (slot: SlotTarget) => {
-    setQuickBookForm((prev) => ({ ...prev, slot }));
+    setQuickBookForm((prev) => ({
+      ...prev,
+      slot,
+      hall: selectedHall,
+      estimatedRent: selectedHall === 'both' ? 65000 : 30000,
+      advancePaid: 15000,
+    }));
     setIsQuickBookModalOpen(true);
   };
 
@@ -425,13 +462,25 @@ export const AdminCalendarPage: React.FC<AdminCalendarPageProps> = ({ navigate }
                         </>
                       )}
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => handleCancelBooking(dayBooking.id)}
-                      className="text-[11px] font-bold text-rose-600 hover:text-rose-800 hover:underline"
-                    >
-                      Cancel & Free Slot
-                    </button>
+                    <div className="flex items-center gap-2">
+                      {dayBooking.status === 'PENDING' && (
+                        <Button
+                          variant="gold"
+                          size="sm"
+                          className="text-xs font-bold py-1 px-2.5 shadow-2xs"
+                          onClick={() => handleApproveBooking(dayBooking.id)}
+                        >
+                          Approve Request
+                        </Button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleCancelBooking(dayBooking.id)}
+                        className="text-[11px] font-bold text-rose-600 hover:text-rose-800 hover:underline"
+                      >
+                        Cancel & Free Slot
+                      </button>
+                    </div>
                   </div>
                 </div>
               ) : (
@@ -539,13 +588,25 @@ export const AdminCalendarPage: React.FC<AdminCalendarPageProps> = ({ navigate }
                         </>
                       )}
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => handleCancelBooking(eveningBooking.id)}
-                      className="text-[11px] font-bold text-rose-600 hover:text-rose-800 hover:underline"
-                    >
-                      Cancel & Free Slot
-                    </button>
+                    <div className="flex items-center gap-2">
+                      {eveningBooking.status === 'PENDING' && (
+                        <Button
+                          variant="gold"
+                          size="sm"
+                          className="text-xs font-bold py-1 px-2.5 shadow-2xs"
+                          onClick={() => handleApproveBooking(eveningBooking.id)}
+                        >
+                          Approve Request
+                        </Button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleCancelBooking(eveningBooking.id)}
+                        className="text-[11px] font-bold text-rose-600 hover:text-rose-800 hover:underline"
+                      >
+                        Cancel & Free Slot
+                      </button>
+                    </div>
                   </div>
                 </div>
               ) : (
@@ -639,24 +700,62 @@ export const AdminCalendarPage: React.FC<AdminCalendarPageProps> = ({ navigate }
       {/* Quick Manual Reservation Modal */}
       {isQuickBookModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/50 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl max-w-md w-full p-5 sm:p-6 shadow-2xl border border-slate-200 space-y-4 max-h-[92vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-2xl border border-slate-200 space-y-4 max-h-[92vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
-                <h4 className="font-bold text-slate-900 text-base">Direct Manual Reservation</h4>
+                <h4 className="font-bold text-slate-900 text-base font-serif-heading">Direct Manual Reservation</h4>
                 <p className="text-xs text-slate-500">
-                  {selectedDate} &bull; {getHallTitle(selectedHall)} &bull; {quickBookForm.slot === 'day' ? 'Day Session' : 'Evening Session'}
+                  Instantly book and confirm a reservation on {selectedDate}
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setIsQuickBookModalOpen(false)}
-                className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700"
+                className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveQuickBooking} className="space-y-4">
+            <form onSubmit={handleSaveQuickBooking} className="space-y-4 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Select Hall / Wing *
+                  </label>
+                  <select
+                    value={quickBookForm.hall}
+                    onChange={(e) => {
+                      const h = e.target.value as HallTarget;
+                      setQuickBookForm({
+                        ...quickBookForm,
+                        hall: h,
+                        estimatedRent: h === 'both' ? 65000 : 30000,
+                      });
+                    }}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#173D35] bg-white"
+                  >
+                    <option value="both">Combined Hall (Full Campus)</option>
+                    <option value="hall_1">Hall 1 (Gents Wing)</option>
+                    <option value="hall_2">Hall 2 (Ladies Wing)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Session Slot *
+                  </label>
+                  <select
+                    value={quickBookForm.slot}
+                    onChange={(e) => setQuickBookForm({ ...quickBookForm, slot: e.target.value as SlotTarget })}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#173D35] bg-white"
+                  >
+                    <option value="day">Day Session (10 AM – 3 PM)</option>
+                    <option value="evening">Evening Session (6 PM – 10 PM)</option>
+                  </select>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
                   Customer / Organizer Name *
@@ -667,7 +766,7 @@ export const AdminCalendarPage: React.FC<AdminCalendarPageProps> = ({ navigate }
                   placeholder="e.g. Mohammed Farooq"
                   value={quickBookForm.customerName}
                   onChange={(e) => setQuickBookForm({ ...quickBookForm, customerName: e.target.value })}
-                  className="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#173D35]"
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#173D35]"
                 />
               </div>
 
@@ -681,8 +780,39 @@ export const AdminCalendarPage: React.FC<AdminCalendarPageProps> = ({ navigate }
                   placeholder="e.g. 9876543210"
                   value={quickBookForm.phone}
                   onChange={(e) => setQuickBookForm({ ...quickBookForm, phone: e.target.value })}
-                  className="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#173D35]"
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#173D35]"
                 />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Total Package Rent (₹) *
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1000"
+                    required
+                    value={quickBookForm.estimatedRent}
+                    onChange={(e) => setQuickBookForm({ ...quickBookForm, estimatedRent: Number(e.target.value) })}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#173D35] font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Advance Paid (₹)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1000"
+                    value={quickBookForm.advancePaid}
+                    onChange={(e) => setQuickBookForm({ ...quickBookForm, advancePaid: Number(e.target.value) })}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#173D35] font-mono"
+                  />
+                </div>
               </div>
 
               <div>
@@ -694,11 +824,11 @@ export const AdminCalendarPage: React.FC<AdminCalendarPageProps> = ({ navigate }
                   placeholder="e.g. Wedding Reception, Engagement, Family Meet"
                   value={quickBookForm.eventTitle}
                   onChange={(e) => setQuickBookForm({ ...quickBookForm, eventTitle: e.target.value })}
-                  className="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#173D35]"
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#173D35]"
                 />
               </div>
 
-              <div className="pt-2 flex items-center justify-end gap-3 border-t border-slate-100">
+              <div className="pt-3 flex items-center justify-end gap-3 border-t border-slate-100">
                 <Button
                   type="button"
                   variant="outline"
@@ -709,10 +839,11 @@ export const AdminCalendarPage: React.FC<AdminCalendarPageProps> = ({ navigate }
                 </Button>
                 <Button
                   type="submit"
-                  variant="primary"
+                  variant="gold"
                   size="sm"
+                  className="font-bold"
                 >
-                  Confirm & Reserve
+                  Confirm & Reserve Instantly
                 </Button>
               </div>
             </form>

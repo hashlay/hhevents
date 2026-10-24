@@ -92,7 +92,7 @@ async function runQA() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         email: 'hheventsconvention@gmail.com',
-        phone: '9448133378',
+        phone: '9448151878',
         password: 'HHEvents@Manager2026',
       }),
     });

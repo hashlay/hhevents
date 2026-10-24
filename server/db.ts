@@ -204,6 +204,40 @@ export interface PaymentTransaction {
   createdAt: string;
 }
 
+export interface CouponUsageRecord {
+  bookingId: string;
+  referenceNo: string;
+  customerName: string;
+  customerPhone: string;
+  usedAt: string;
+  originalAmount: number;
+  discountAmount: number;
+  finalAmount: number;
+}
+
+export interface DiscountCoupon {
+  id: string; // e.g. CPN-172976483921
+  code: string; // uppercase, e.g. EID2026, HHVIP5000
+  title: string; // e.g. Grand Eid Season Special
+  description?: string;
+  discountType: 'percentage' | 'fixed'; // '%' or '₹'
+  discountValue: number; // e.g. 10 (for 10%) or 5000 (for ₹5,000)
+  maxDiscountAmount?: number; // e.g. cap ₹10,000 max for percentage coupons
+  minBookingAmount?: number; // e.g. ₹30,000
+  expiryDate: string; // YYYY-MM-DD
+  usageLimit: number; // 0 for unlimited
+  usedCount: number; // starts at 0
+  perCustomerLimit: number; // default 1
+  category: 'seasonal' | 'client_exclusive' | 'general';
+  specificCustomerPhone?: string; // For exclusive client offers
+  specificCustomerName?: string;
+  isActive: boolean;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+  usedBy: CouponUsageRecord[];
+}
+
 export interface BookingRecord {
   id: string; // e.g. HH-2026-104921
   customerName: string;
@@ -212,6 +246,9 @@ export interface BookingRecord {
   packageId: string;
   packageName: string;
   packagePrice: number;
+  couponCode?: string;
+  discountAmount?: number;
+  originalAmount?: number;
   // Resource occupancy
   occupiedResources: string[]; // e.g. ['gents_hall', 'dining_1', 'kitchen']
   hallSelection: 'hall_1' | 'hall_2' | 'both';
@@ -274,6 +311,7 @@ export interface VenueSettingsRecord {
   address: string;
   primaryPhone: string;
   secondaryPhone: string;
+  whatsappPhone?: string;
   googleMapsUrl: string;
   daySlotHours: string;
   eveningSlotHours: string;
@@ -291,6 +329,7 @@ export interface DatabaseSchema {
   maintenance: MaintenanceBlock[];
   auditLogs: AuditRecord[];
   settings: VenueSettingsRecord;
+  coupons: DiscountCoupon[];
   lastUpdated: string;
 }
 
@@ -366,8 +405,9 @@ function getInitialDatabase(): DatabaseSchema {
       name: 'H H Events & Conventions',
       tagline: 'Premier Convention, Wedding & Grand Event Destination',
       address: 'Opposite Juma Masjid, Akkarangadi, Panemangalore, Bantwal, Karnataka 574231',
-      primaryPhone: '09448133378',
-      secondaryPhone: '9741575078',
+      primaryPhone: '9448151878',
+      secondaryPhone: '9448133378',
+      whatsappPhone: '9741575078',
       googleMapsUrl: 'https://maps.app.goo.gl/JxfruJVzpVDhxUhx6?g_st=ac',
       daySlotHours: '10:00 AM – 3:00 PM',
       eveningSlotHours: '6:00 PM – 10:00 PM',
@@ -378,6 +418,7 @@ function getInitialDatabase(): DatabaseSchema {
       termsAndConditions: 'Standard venue guidelines apply. Advance deposit is required to confirm the reservation.',
       updatedAt: new Date().toISOString(),
     },
+    coupons: [],
     lastUpdated: new Date().toISOString(),
   };
 }
@@ -397,7 +438,10 @@ async function writeLocalMirror(data: DatabaseSchema): Promise<void> {
 }
 
 export async function getDb(): Promise<DatabaseSchema> {
-  if (dbCache) return dbCache;
+  if (dbCache) {
+    if (!dbCache.coupons) dbCache.coupons = [];
+    return dbCache;
+  }
 
   // 1. Try to load authoritative state from MongoDB Atlas
   try {
@@ -410,6 +454,9 @@ export async function getDb(): Promise<DatabaseSchema> {
         dbCache = rest as DatabaseSchema;
         if (!dbCache.packages || dbCache.packages.length === 0) {
           dbCache.packages = INITIAL_PACKAGES;
+        }
+        if (!dbCache.coupons) {
+          dbCache.coupons = [];
         }
         await writeLocalMirror(dbCache);
         return dbCache;
@@ -435,6 +482,9 @@ export async function getDb(): Promise<DatabaseSchema> {
       dbCache = JSON.parse(raw);
       if (!dbCache!.packages || dbCache!.packages.length === 0) {
         dbCache!.packages = INITIAL_PACKAGES;
+      }
+      if (!dbCache!.coupons) {
+        dbCache!.coupons = [];
       }
       return dbCache!;
     }

@@ -29,6 +29,7 @@ export const AdminSettingsPage: React.FC<AdminSettingsPageProps> = ({ navigate }
 
   const [primaryPhone, setPrimaryPhone] = useState(VENUE_INFO.primaryPhone);
   const [secondaryPhone, setSecondaryPhone] = useState(VENUE_INFO.secondaryPhone);
+  const [whatsappPhone, setWhatsappPhone] = useState(VENUE_INFO.whatsappPhone);
   const [daySlotHours, setDaySlotHours] = useState(VENUE_INFO.daySlotHours);
   const [eveningSlotHours, setEveningSlotHours] = useState(VENUE_INFO.eveningSlotHours);
   const [paymentNotice, setPaymentNotice] = useState(VENUE_INFO.paymentNotice);
@@ -42,6 +43,7 @@ export const AdminSettingsPage: React.FC<AdminSettingsPageProps> = ({ navigate }
         const parsed = JSON.parse(stored);
         if (parsed.primaryPhone) setPrimaryPhone(parsed.primaryPhone);
         if (parsed.secondaryPhone) setSecondaryPhone(parsed.secondaryPhone);
+        if (parsed.whatsappPhone) setWhatsappPhone(parsed.whatsappPhone);
         if (parsed.daySlotHours) setDaySlotHours(parsed.daySlotHours);
         if (parsed.eveningSlotHours) setEveningSlotHours(parsed.eveningSlotHours);
         if (parsed.paymentNotice) setPaymentNotice(parsed.paymentNotice);
@@ -59,6 +61,7 @@ export const AdminSettingsPage: React.FC<AdminSettingsPageProps> = ({ navigate }
       const payload = {
         primaryPhone: primaryPhone.trim(),
         secondaryPhone: secondaryPhone.trim(),
+        whatsappPhone: whatsappPhone.trim(),
         daySlotHours: daySlotHours.trim(),
         eveningSlotHours: eveningSlotHours.trim(),
         paymentNotice: paymentNotice.trim(),
@@ -77,6 +80,7 @@ export const AdminSettingsPage: React.FC<AdminSettingsPageProps> = ({ navigate }
   const handleReset = () => {
     setPrimaryPhone(VENUE_INFO.primaryPhone);
     setSecondaryPhone(VENUE_INFO.secondaryPhone);
+    setWhatsappPhone(VENUE_INFO.whatsappPhone);
     setDaySlotHours(VENUE_INFO.daySlotHours);
     setEveningSlotHours(VENUE_INFO.eveningSlotHours);
     setPaymentNotice(VENUE_INFO.paymentNotice);
@@ -137,10 +141,10 @@ export const AdminSettingsPage: React.FC<AdminSettingsPageProps> = ({ navigate }
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
-                  Primary Mobile Number
+                  Primary Calling Number
                 </label>
                 <input
                   type="tel"
@@ -153,12 +157,25 @@ export const AdminSettingsPage: React.FC<AdminSettingsPageProps> = ({ navigate }
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
-                  Secondary Mobile Number
+                  Secondary Calling Number
                 </label>
                 <input
                   type="tel"
                   value={secondaryPhone}
                   onChange={(e) => setSecondaryPhone(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
+                  WhatsApp Contact Number
+                </label>
+                <input
+                  type="tel"
+                  value={whatsappPhone}
+                  onChange={(e) => setWhatsappPhone(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none"
                   required
                 />

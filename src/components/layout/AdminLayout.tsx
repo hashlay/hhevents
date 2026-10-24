@@ -16,6 +16,7 @@ import {
   Activity,
   Layers,
   Sparkles,
+  Ticket,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { BackButton } from '../ui/BackButton';
@@ -91,6 +92,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
     { label: 'Calendar', path: '/admin/calendar', icon: Calendar },
     { label: 'Hall Rates', path: '/admin/packages', icon: Package },
     { label: 'Settings', path: '/admin/settings', icon: Settings },
+    { label: 'Discount Coupons', path: '/admin/coupons', icon: Ticket },
   ];
 
   const secondaryTools = [

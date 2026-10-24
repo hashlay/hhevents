@@ -39,6 +39,11 @@ export interface BookingRequest {
   totalEstimate?: number;
   submittedAt: string;
   updatedAt: string;
+  amountPaid?: number;
+  balanceDue?: number;
+  couponCode?: string;
+  discountAmount?: number;
+  originalAmount?: number;
 
   // Compatibility fields for existing forms/views
   applicantName?: string;
@@ -86,6 +91,7 @@ export interface VenueSettings {
   address: string;
   primaryPhone: string;
   secondaryPhone: string;
+  whatsappPhone: string;
   googleMapsUrl: string;
   daySlotHours: string;
   eveningSlotHours: string;
@@ -186,3 +192,38 @@ export interface ManagerSession {
   token: string;
   phone?: string;
 }
+
+export interface CouponUsageRecord {
+  bookingId: string;
+  referenceNo: string;
+  customerName: string;
+  customerPhone: string;
+  usedAt: string;
+  originalAmount: number;
+  discountAmount: number;
+  finalAmount: number;
+}
+
+export interface DiscountCoupon {
+  id: string; // e.g. CPN-172976483921
+  code: string; // uppercase, e.g. EID2026, HHVIP5000
+  title: string; // e.g. Grand Eid Season Special
+  description?: string;
+  discountType: 'percentage' | 'fixed'; // '%' or '₹'
+  discountValue: number; // e.g. 10 (for 10%) or 5000 (for ₹5,000)
+  maxDiscountAmount?: number; // e.g. cap ₹10,000 max for percentage coupons
+  minBookingAmount?: number; // e.g. ₹30,000
+  expiryDate: string; // YYYY-MM-DD
+  usageLimit: number; // 0 for unlimited
+  usedCount: number; // starts at 0
+  perCustomerLimit: number; // default 1
+  category: 'seasonal' | 'client_exclusive' | 'general';
+  specificCustomerPhone?: string; // For exclusive client offers
+  specificCustomerName?: string;
+  isActive: boolean;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+  usedBy: CouponUsageRecord[];
+}
+

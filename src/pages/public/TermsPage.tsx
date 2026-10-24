@@ -142,7 +142,7 @@ export const TermsPage: React.FC<TermsPageProps> = ({ navigate }) => {
                     Opposite Juma Masjid, Akkarangadi, Panemangalore, Bantwal, Karnataka 574231
                   </p>
                   <p className="text-[#737373]">
-                    Official Desk: {VENUE_INFO.primaryPhone} &bull; {VENUE_INFO.secondaryPhone}
+                    Official Desk: {VENUE_INFO.primaryPhone} &bull; Alt: {VENUE_INFO.secondaryPhone} &bull; WhatsApp: {VENUE_INFO.whatsappPhone}
                   </p>
                 </div>
               </div>
