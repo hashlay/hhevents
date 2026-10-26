@@ -73,6 +73,9 @@ export const AdminCalendarPage: React.FC<AdminCalendarPageProps> = ({ navigate }
     slot: SlotTarget;
     eventTitle: string;
     estimatedRent: number;
+    discountType: 'percentage' | 'fixed';
+    discountValue: number;
+    discountReason: string;
     advancePaid: number;
   }>({
     customerName: '',
@@ -81,6 +84,9 @@ export const AdminCalendarPage: React.FC<AdminCalendarPageProps> = ({ navigate }
     slot: 'day',
     eventTitle: 'Private Function',
     estimatedRent: 65000,
+    discountType: 'fixed',
+    discountValue: 0,
+    discountReason: '',
     advancePaid: 15000,
   });
 
@@ -116,22 +122,58 @@ export const AdminCalendarPage: React.FC<AdminCalendarPageProps> = ({ navigate }
     };
   }, []);
 
+  // Helper to determine if a booking occupies or conflicts with the selected hall
+  const isBookingOccupying = (b: BookingRequest, targetHall: HallTarget) => {
+    const rawHall = (b as any).hallSelection || b.hall || '';
+    const pkgId = (b.packageId || '').toLowerCase();
+    const pkgName = ((b as any).packageName || '').toLowerCase();
+    const resources: string[] = Array.isArray((b as any).occupiedResources) ? (b as any).occupiedResources : [];
+
+    const isFullCampus =
+      rawHall === 'both' ||
+      pkgId.includes('full') ||
+      pkgName.includes('full') ||
+      pkgName.includes('combined') ||
+      (resources.includes('gents_hall') && resources.includes('ladies_hall'));
+
+    const isHall1 =
+      rawHall === 'hall_1' ||
+      pkgId.includes('single') ||
+      pkgName.includes('gents') ||
+      resources.includes('gents_hall');
+
+    const isHall2 =
+      rawHall === 'hall_2' ||
+      pkgName.includes('ladies') ||
+      resources.includes('ladies_hall');
+
+    if (targetHall === 'both') {
+      // Combined hall is unavailable if ANY hall is booked (Full Campus, Hall 1, or Hall 2)
+      return isFullCampus || isHall1 || isHall2;
+    }
+
+    if (targetHall === 'hall_1') {
+      // Hall 1 is unavailable if Full Campus is booked OR Hall 1 is booked
+      return isFullCampus || isHall1;
+    }
+
+    if (targetHall === 'hall_2') {
+      // Hall 2 is unavailable if Full Campus is booked OR Hall 2 is booked
+      return isFullCampus || isHall2;
+    }
+
+    return isFullCampus;
+  };
+
   // Filter bookings strictly for the selected hall & date
   const hallBookingsOnDate = bookings.filter((b) => {
     const isDateMatch = b.date === selectedDate || b.eventDate === selectedDate;
     if (!isDateMatch) return false;
-    // Exclude cancelled / rejected bookings
+    // Exclude cancelled / rejected bookings - they immediately free the slot
     const st = (b.status || '').toUpperCase();
     if (st === 'CANCELLED' || st === 'REJECTED') return false;
 
-    if (selectedHall === 'hall_1') {
-      return b.hall === 'hall_1' || b.hall === 'both';
-    }
-    if (selectedHall === 'hall_2') {
-      return b.hall === 'hall_2' || b.hall === 'both';
-    }
-    // Combined hall shows all bookings
-    return true;
+    return isBookingOccupying(b, selectedHall);
   });
 
   // Separate day session booking vs evening session booking
@@ -226,23 +268,32 @@ export const AdminCalendarPage: React.FC<AdminCalendarPageProps> = ({ navigate }
       return;
     }
 
-    const rent = Number(quickBookForm.estimatedRent) || (quickBookForm.hall === 'both' ? 65000 : 30000);
+    const baseRent = Number(quickBookForm.estimatedRent) || (quickBookForm.hall === 'both' ? 65000 : 30000);
+    const discAmount = quickBookForm.discountValue > 0
+      ? quickBookForm.discountType === 'percentage'
+        ? Math.round((baseRent * quickBookForm.discountValue) / 100)
+        : Math.min(baseRent, quickBookForm.discountValue)
+      : 0;
+    const netRent = Math.max(0, baseRent - discAmount);
     const advance = Number(quickBookForm.advancePaid) || 0;
 
-    const newBooking: BookingRequest = {
+    const newBooking: BookingRequest & any = {
       id: generateBookingId(),
       customerName: quickBookForm.customerName.trim(),
       phone: quickBookForm.phone.trim(),
       email: '',
       hall: quickBookForm.hall as any,
       slot: quickBookForm.slot,
+      packageId: quickBookForm.hall === 'both' ? 'full-ac-hall' : (quickBookForm.hall === 'hall_2' ? 'hall-2-ac' : 'single-ac-hall'),
       date: selectedDate,
       status: 'CONFIRMED',
       acOption: 'ac',
-      advancePaymentStatus: advance > 0 ? 'advance_paid' : 'unpaid',
-      totalEstimate: rent,
+      advancePaymentStatus: advance >= netRent && netRent > 0 ? 'fully_paid' : advance > 0 ? 'advance_paid' : 'unpaid',
+      totalEstimate: netRent,
       amountPaid: advance,
-      balanceDue: Math.max(0, rent - advance),
+      balanceDue: Math.max(0, netRent - advance),
+      customDiscountAmount: discAmount > 0 ? discAmount : undefined,
+      customDiscountReason: discAmount > 0 ? (quickBookForm.discountReason || 'Manager Direct Discount') : undefined,
       additionalInfo: quickBookForm.eventTitle || 'Manager Manual Reservation',
       submittedAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -261,6 +312,9 @@ export const AdminCalendarPage: React.FC<AdminCalendarPageProps> = ({ navigate }
         slot: 'day',
         eventTitle: 'Private Function',
         estimatedRent: selectedHall === 'both' ? 65000 : 30000,
+        discountType: 'fixed',
+        discountValue: 0,
+        discountReason: '',
         advancePaid: 15000,
       });
       showToast(`Direct Reservation confirmed for ${newBooking.customerName} on ${selectedDate}.`, 'success');
@@ -292,6 +346,9 @@ export const AdminCalendarPage: React.FC<AdminCalendarPageProps> = ({ navigate }
       slot,
       hall: selectedHall,
       estimatedRent: selectedHall === 'both' ? 65000 : 30000,
+      discountType: 'fixed',
+      discountValue: 0,
+      discountReason: '',
       advancePaid: 15000,
     }));
     setIsQuickBookModalOpen(true);
@@ -784,36 +841,106 @@ export const AdminCalendarPage: React.FC<AdminCalendarPageProps> = ({ navigate }
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Total Package Rent (₹) *
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="1000"
-                    required
-                    value={quickBookForm.estimatedRent}
-                    onChange={(e) => setQuickBookForm({ ...quickBookForm, estimatedRent: Number(e.target.value) })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#173D35] font-mono"
-                  />
-                </div>
+              {(() => {
+                const baseRent = Number(quickBookForm.estimatedRent) || 0;
+                const discAmount = quickBookForm.discountValue > 0
+                  ? quickBookForm.discountType === 'percentage'
+                    ? Math.round((baseRent * quickBookForm.discountValue) / 100)
+                    : Math.min(baseRent, quickBookForm.discountValue)
+                  : 0;
+                const netRent = Math.max(0, baseRent - discAmount);
+                const advance = Number(quickBookForm.advancePaid) || 0;
+                const balanceDue = Math.max(0, netRent - advance);
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Advance Paid (₹)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="1000"
-                    value={quickBookForm.advancePaid}
-                    onChange={(e) => setQuickBookForm({ ...quickBookForm, advancePaid: Number(e.target.value) })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#173D35] font-mono"
-                  />
-                </div>
-              </div>
+                return (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                          Package Rent Tariff (₹) *
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="1000"
+                          required
+                          value={quickBookForm.estimatedRent}
+                          onChange={(e) => setQuickBookForm({ ...quickBookForm, estimatedRent: Number(e.target.value) })}
+                          className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#173D35] font-mono"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                          Direct Manager Discount
+                        </label>
+                        <div className="flex items-center gap-1.5">
+                          <select
+                            value={quickBookForm.discountType}
+                            onChange={(e) => setQuickBookForm({ ...quickBookForm, discountType: e.target.value as any })}
+                            className="px-2.5 py-2 text-xs rounded-xl border border-slate-300 bg-white font-bold text-slate-700"
+                          >
+                            <option value="fixed">₹ Flat</option>
+                            <option value="percentage">% Off</option>
+                          </select>
+                          <input
+                            type="number"
+                            min="0"
+                            placeholder="Discount value"
+                            value={quickBookForm.discountValue || ''}
+                            onChange={(e) => setQuickBookForm({ ...quickBookForm, discountValue: Number(e.target.value) })}
+                            className="flex-1 px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#173D35] font-mono"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Financial Summary Breakdown */}
+                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5 text-xs">
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-500">Agreed Package Price:</span>
+                        <span className={`font-mono ${discAmount > 0 ? 'line-through text-slate-400' : 'font-bold text-slate-800'}`}>
+                          ₹{baseRent.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                      {discAmount > 0 && (
+                        <div className="flex justify-between items-center text-emerald-700 font-semibold">
+                          <span>Special Discount ({quickBookForm.discountType === 'percentage' ? `${quickBookForm.discountValue}%` : 'Flat'}):</span>
+                          <span className="font-mono">- ₹{discAmount.toLocaleString('en-IN')}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between items-center pt-1 border-t border-slate-200 font-bold">
+                        <span className="text-slate-900">Net Payable Rent:</span>
+                        <span className="text-slate-900 font-mono text-sm">₹{netRent.toLocaleString('en-IN')}</span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                          Advance Token Paid Now (₹)
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="1000"
+                          value={quickBookForm.advancePaid}
+                          onChange={(e) => setQuickBookForm({ ...quickBookForm, advancePaid: Number(e.target.value) })}
+                          className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#173D35] font-mono font-bold text-emerald-700"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                          Remaining Balance Due (₹)
+                        </label>
+                        <div className="px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-100 font-mono font-bold text-amber-800">
+                          ₹{balanceDue.toLocaleString('en-IN')}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">

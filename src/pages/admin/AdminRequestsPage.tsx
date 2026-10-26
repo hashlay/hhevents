@@ -21,6 +21,8 @@ import {
   Plus,
   DollarSign,
   Tag,
+  Trash2,
+  Percent,
 } from 'lucide-react';
 import { AdminLayout } from '../../components/layout/AdminLayout';
 import { Card } from '../../components/ui/Card';
@@ -69,6 +71,14 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
   const [paymentRefNo, setPaymentRefNo] = useState('');
   const [paymentNotes, setPaymentNotes] = useState('');
   const [isRecordingPayment, setIsRecordingPayment] = useState(false);
+
+  // Discount Modal State
+  const [discountBooking, setDiscountBooking] = useState<BookingRequest | null>(null);
+  const [customDiscountType, setCustomDiscountType] = useState<'fixed' | 'percentage'>('fixed');
+  const [customDiscountVal, setCustomDiscountVal] = useState<number>(0);
+  const [customDiscountReason, setCustomDiscountReason] = useState<string>('');
+  const [isApplyingDiscount, setIsApplyingDiscount] = useState(false);
+  const [deletingBookingId, setDeletingBookingId] = useState<string | null>(null);
 
   const loadBookings = async () => {
     setIsLoading(true);
@@ -192,6 +202,75 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
       showToast('Network error while recording payment transaction.', 'error');
     } finally {
       setIsRecordingPayment(false);
+    }
+  };
+
+  const handleDeleteBooking = async (bookingId: string) => {
+    if (
+      !window.confirm(
+        `Are you sure you want to permanently delete booking #${bookingId} from the database? This will completely remove it and release the slot.`
+      )
+    ) {
+      return;
+    }
+    setDeletingBookingId(bookingId);
+    try {
+      const res = await fetch(`/api/bookings/${bookingId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('hh_admin_token') || sessionStorage.getItem('hh_admin_token') || ''}`,
+        },
+      });
+      if (res.ok) {
+        setBookings((prev) => prev.filter((b) => b.id !== bookingId));
+        if (selectedBooking?.id === bookingId) {
+          setSelectedBooking(null);
+        }
+        showToast(`Booking #${bookingId} has been permanently deleted from database.`, 'success');
+      } else {
+        showToast('Failed to delete booking from server', 'error');
+      }
+    } catch {
+      showToast('Error deleting booking', 'error');
+    } finally {
+      setDeletingBookingId(null);
+    }
+  };
+
+  const handleApplyDiscount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!discountBooking) return;
+    setIsApplyingDiscount(true);
+    try {
+      const res = await fetch(`/api/bookings/${discountBooking.id}/discount`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('hh_admin_token') || sessionStorage.getItem('hh_admin_token') || ''}`,
+        },
+        body: JSON.stringify({
+          discountType: customDiscountType,
+          discountValue: customDiscountVal,
+          reason: customDiscountReason,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setBookings((prev) =>
+          prev.map((b) => (b.id === discountBooking.id ? { ...b, ...data.booking } : b))
+        );
+        if (selectedBooking?.id === discountBooking.id) {
+          setSelectedBooking({ ...selectedBooking, ...data.booking });
+        }
+        setDiscountBooking(null);
+        showToast(`Discount applied to #${discountBooking.id}. Total & balance updated.`, 'success');
+      } else {
+        showToast('Failed to apply discount', 'error');
+      }
+    } catch {
+      showToast('Error applying discount', 'error');
+    } finally {
+      setIsApplyingDiscount(false);
     }
   };
 
@@ -498,6 +577,17 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
                               >
                                 {b.status === 'PENDING' ? 'Review Request' : 'Manage'}
                               </Button>
+
+                              {/* Permanently Delete Booking */}
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteBooking(b.id)}
+                                disabled={deletingBookingId === b.id}
+                                className="p-1.5 rounded-lg text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-colors cursor-pointer"
+                                title="Permanently Delete Booking from Database"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
                             </div>
                           </td>
                         </tr>
@@ -560,28 +650,46 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
                 <div className="flex justify-between items-center text-sm font-bold text-slate-900">
                   <span>Grand Total Tariff:</span>
                   <span className="font-mono text-base text-[#173D35]">
-                    ₹{(selectedBooking.estimatedAmount || selectedBooking.totalEstimate || 0).toLocaleString('en-IN')}
+                    ₹{((selectedBooking as any).totalAmount || selectedBooking.estimatedAmount || selectedBooking.totalEstimate || 0).toLocaleString('en-IN')}
                   </span>
                 </div>
                 {selectedBooking.couponCode && (
                   <div className="flex justify-between items-center text-xs text-emerald-800 bg-emerald-50 px-2.5 py-1.5 rounded-lg border border-emerald-200">
                     <span className="flex items-center gap-1 font-semibold">
                       <Tag className="w-3.5 h-3.5 text-emerald-600" />
-                      Discount Coupon ({selectedBooking.couponCode}):
+                      Discount ({selectedBooking.couponCode}):
                     </span>
                     <span className="font-mono font-bold text-emerald-700">
                       -₹{(selectedBooking.discountAmount || 0).toLocaleString('en-IN')}
                     </span>
                   </div>
                 )}
-                <div className="flex justify-between items-center text-xs text-slate-600">
-                  <span>Advance Status:</span>
-                  <span className="capitalize font-semibold">{String(selectedBooking.advancePaymentStatus || 'unpaid').replace('_', ' ')}</span>
-                </div>
+                {(() => {
+                  const bObj = selectedBooking as any;
+                  const total = bObj.totalAmount || selectedBooking.totalEstimate || selectedBooking.estimatedAmount || 0;
+                  const paid = bObj.amountPaid !== undefined ? Number(bObj.amountPaid) : (selectedBooking.advancePaymentStatus === 'fully_paid' ? total : selectedBooking.advancePaymentStatus === 'advance_paid' ? Math.round(total * 0.25) : 0);
+                  const balance = bObj.balanceDue !== undefined ? Number(bObj.balanceDue) : Math.max(0, total - paid);
+                  return (
+                    <>
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-slate-600 font-semibold">Advance / Paid Amount:</span>
+                        <span className="font-mono font-bold text-emerald-700">
+                          ₹{paid.toLocaleString('en-IN')} Paid ({selectedBooking.advancePaymentStatus === 'fully_paid' ? 'Fully Paid' : paid > 0 ? 'Advance Paid' : 'Unpaid'})
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-slate-600 font-semibold">Outstanding Balance:</span>
+                        <span className="font-mono font-bold text-amber-800">
+                          ₹{balance.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
 
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-3 border-t border-slate-200">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <Button
                     variant="outline"
                     size="sm"
@@ -605,6 +713,30 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
                     leftIcon={<CreditCard className="w-4 h-4 text-emerald-600" />}
                   >
                     Record Payment
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setDiscountBooking(selectedBooking);
+                      setCustomDiscountType('fixed');
+                      setCustomDiscountVal(selectedBooking.discountAmount || 0);
+                      setCustomDiscountReason('');
+                    }}
+                    leftIcon={<Percent className="w-3.5 h-3.5 text-amber-600" />}
+                  >
+                    Add Discount
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDeleteBooking(selectedBooking.id)}
+                    leftIcon={<Trash2 className="w-3.5 h-3.5 text-rose-600" />}
+                    className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-200"
+                  >
+                    Delete Booking
                   </Button>
                 </div>
 
@@ -767,6 +899,104 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
                   leftIcon={<CreditCard className="w-4 h-4" />}
                 >
                   {isRecordingPayment ? 'Recording...' : 'Record Payment & Issue Receipt'}
+                </Button>
+              </div>
+            </form>
+          </Dialog>
+        )}
+
+        {/* Direct Discount Dialog */}
+        {discountBooking && (
+          <Dialog
+            isOpen={!!discountBooking}
+            onClose={() => setDiscountBooking(null)}
+            title={`Apply Direct Discount — ${discountBooking.id}`}
+            maxWidth="md"
+          >
+            <form onSubmit={handleApplyDiscount} className="space-y-4 text-xs">
+              {(() => {
+                const bObj = discountBooking as any;
+                const origTotal = bObj.totalEstimate || bObj.totalAmount || bObj.estimatedAmount || bObj.packagePrice || 0;
+                let computedDiscount = 0;
+                if (customDiscountType === 'percentage') {
+                  computedDiscount = Math.round((origTotal * customDiscountVal) / 100);
+                } else {
+                  computedDiscount = Math.min(origTotal, customDiscountVal);
+                }
+                const netPayable = Math.max(0, origTotal - computedDiscount);
+                return (
+                  <div className="p-3.5 rounded-xl bg-amber-50/50 border border-amber-200/60 space-y-2">
+                    <div className="flex justify-between items-center text-xs text-slate-700">
+                      <span>Original Booking Total:</span>
+                      <strong className="font-mono text-sm">₹{origTotal.toLocaleString('en-IN')}</strong>
+                    </div>
+                    {computedDiscount > 0 && (
+                      <div className="flex justify-between items-center text-xs text-emerald-700 font-bold">
+                        <span>Discount to Deduct:</span>
+                        <span className="font-mono">- ₹{computedDiscount.toLocaleString('en-IN')}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between items-center text-xs text-slate-900 font-bold pt-2 border-t border-amber-200">
+                      <span>New Net Payable Rent:</span>
+                      <span className="font-mono text-base text-amber-900">₹{netPayable.toLocaleString('en-IN')}</span>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 uppercase">Discount Type</label>
+                  <select
+                    value={customDiscountType}
+                    onChange={(e) => setCustomDiscountType(e.target.value as 'fixed' | 'percentage')}
+                    className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs bg-white font-medium"
+                  >
+                    <option value="fixed">Flat Amount (₹)</option>
+                    <option value="percentage">Percentage (%)</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 uppercase">
+                    {customDiscountType === 'percentage' ? 'Discount (%) *' : 'Discount Amount (₹) *'}
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max={customDiscountType === 'percentage' ? 100 : undefined}
+                    value={customDiscountVal || ''}
+                    onChange={(e) => setCustomDiscountVal(Number(e.target.value))}
+                    placeholder={customDiscountType === 'percentage' ? 'e.g. 10' : 'e.g. 5000'}
+                    className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 uppercase">Reason / Remarks</label>
+                <input
+                  type="text"
+                  value={customDiscountReason}
+                  onChange={(e) => setCustomDiscountReason(e.target.value)}
+                  placeholder="e.g. Special management waiver / festival promotion"
+                  className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
+                <Button type="button" variant="outline" size="sm" onClick={() => setDiscountBooking(null)}>
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  variant="gold"
+                  size="sm"
+                  disabled={isApplyingDiscount}
+                  leftIcon={<Percent className="w-4 h-4" />}
+                >
+                  {isApplyingDiscount ? 'Applying...' : 'Apply & Save Discount'}
                 </Button>
               </div>
             </form>

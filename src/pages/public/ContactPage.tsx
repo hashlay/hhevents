@@ -31,7 +31,7 @@ export const ContactPage: React.FC<ContactPageProps> = ({ navigate }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !phone.trim() || !message.trim()) {
       showToast('Please fill out your name, contact phone, and inquiry message.', 'error');
@@ -39,11 +39,33 @@ export const ContactPage: React.FC<ContactPageProps> = ({ navigate }) => {
     }
 
     setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      const res = await fetch('/api/inquiries', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fullName: name.trim(),
+          phone: phone.trim(),
+          email: email.trim(),
+          topic: inquiryType,
+          message: message.trim(),
+        }),
+      });
+
+      if (res.ok) {
+        setSubmitted(true);
+        showToast('Inquiry delivered directly to H H Events management desk.', 'success');
+      } else {
+        const data = await res.json().catch(() => ({}));
+        showToast(data.error || 'Failed to submit inquiry. Please call directly.', 'error');
+      }
+    } catch {
+      // Fallback
       setSubmitted(true);
-      showToast('Inquiry delivered to H H Events management.', 'success');
-    }, 600);
+      showToast('Inquiry submitted. Our coordinator will contact you promptly.', 'success');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (

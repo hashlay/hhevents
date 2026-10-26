@@ -322,6 +322,19 @@ export interface VenueSettingsRecord {
   updatedAt: string;
 }
 
+export interface InquiryRecord {
+  id: string; // e.g. INQ-1729864210
+  fullName: string;
+  phone: string;
+  email: string;
+  topic: string;
+  message: string;
+  status: 'new' | 'contacted' | 'resolved';
+  submittedAt: string;
+  updatedAt: string;
+  adminNotes?: string;
+}
+
 export interface DatabaseSchema {
   bookings: BookingRecord[];
   packages: HallPackage[];
@@ -330,6 +343,7 @@ export interface DatabaseSchema {
   auditLogs: AuditRecord[];
   settings: VenueSettingsRecord;
   coupons: DiscountCoupon[];
+  inquiries: InquiryRecord[];
   lastUpdated: string;
 }
 
@@ -419,6 +433,7 @@ function getInitialDatabase(): DatabaseSchema {
       updatedAt: new Date().toISOString(),
     },
     coupons: [],
+    inquiries: [],
     lastUpdated: new Date().toISOString(),
   };
 }
@@ -440,6 +455,7 @@ async function writeLocalMirror(data: DatabaseSchema): Promise<void> {
 export async function getDb(): Promise<DatabaseSchema> {
   if (dbCache) {
     if (!dbCache.coupons) dbCache.coupons = [];
+    if (!dbCache.inquiries) dbCache.inquiries = [];
     return dbCache;
   }
 
@@ -457,6 +473,9 @@ export async function getDb(): Promise<DatabaseSchema> {
         }
         if (!dbCache.coupons) {
           dbCache.coupons = [];
+        }
+        if (!dbCache.inquiries) {
+          dbCache.inquiries = [];
         }
         await writeLocalMirror(dbCache);
         return dbCache;
@@ -485,6 +504,9 @@ export async function getDb(): Promise<DatabaseSchema> {
       }
       if (!dbCache!.coupons) {
         dbCache!.coupons = [];
+      }
+      if (!dbCache!.inquiries) {
+        dbCache!.inquiries = [];
       }
       return dbCache!;
     }

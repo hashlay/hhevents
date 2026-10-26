@@ -96,6 +96,7 @@ export async function saveBookingAsync(booking: BookingRequest): Promise<Booking
         phone: booking.phone || booking.applicantPhone,
         email: booking.email || booking.applicantEmail,
         hallSelection: booking.hall || 'hall_1',
+        packageId: booking.packageId,
         acOption: booking.acOption || 'ac',
         date: booking.date || booking.eventDate,
         slot: booking.slot || booking.timeSlot,
@@ -105,6 +106,8 @@ export async function saveBookingAsync(booking: BookingRequest): Promise<Booking
         status: booking.status || 'PENDING',
         paymentStatus: booking.advancePaymentStatus || 'unpaid',
         amountPaid: (booking as any).amountPaid || 0,
+        customDiscountAmount: (booking as any).customDiscountAmount,
+        customDiscountReason: (booking as any).customDiscountReason,
       }),
     });
 
@@ -196,7 +199,32 @@ export function updateBooking(id: string, updates: Partial<BookingRequest>): boo
   return false;
 }
 
+export async function deleteBookingAsync(id: string): Promise<boolean> {
+  try {
+    const res = await fetch(`/api/bookings/${id}`, {
+      method: 'DELETE',
+      headers: { ...getAuthHeader() },
+    });
+    if (res.ok) {
+      cachedBookings = cachedBookings.filter((b) => b.id !== id);
+      try {
+        localStorage.setItem(BOOKINGS_KEY, JSON.stringify(cachedBookings));
+      } catch {}
+      return true;
+    }
+  } catch (err) {
+    console.warn('Server delete error, fallback to cache:', err);
+  }
+
+  cachedBookings = cachedBookings.filter((b) => b.id !== id);
+  try {
+    localStorage.setItem(BOOKINGS_KEY, JSON.stringify(cachedBookings));
+  } catch {}
+  return true;
+}
+
 export function deleteBooking(id: string): boolean {
+  deleteBookingAsync(id);
   cachedBookings = cachedBookings.filter((b) => b.id !== id);
   try {
     localStorage.setItem(BOOKINGS_KEY, JSON.stringify(cachedBookings));

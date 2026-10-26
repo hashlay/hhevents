@@ -227,3 +227,16 @@ export interface DiscountCoupon {
   usedBy: CouponUsageRecord[];
 }
 
+export interface InquiryRecord {
+  id: string; // e.g. INQ-1729864210
+  fullName: string;
+  phone: string;
+  email: string;
+  topic: string;
+  message: string;
+  status: 'new' | 'contacted' | 'resolved';
+  submittedAt: string;
+  updatedAt: string;
+  adminNotes?: string;
+}
+

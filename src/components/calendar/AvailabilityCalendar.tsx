@@ -19,6 +19,8 @@ import {
   getDayAvailabilitySummary,
   subscribeAvailability,
 } from '../../services/availabilityManager';
+import { getBookings, syncBookingsFromServer } from '../../services/storageService';
+import { BookingRequest } from '../../types';
 import { Button } from '../ui/Button';
 
 interface AvailabilityCalendarProps {
@@ -133,11 +135,76 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
     }
   };
 
+  const [allBookings, setAllBookings] = useState<BookingRequest[]>(getBookings());
+
+  useEffect(() => {
+    let mounted = true;
+    syncBookingsFromServer()
+      .then((fresh) => {
+        if (mounted) setAllBookings(fresh);
+      })
+      .catch(() => {});
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const isSlotOccupiedByBooking = (hall: HallTarget, date: string, slot: SlotTarget) => {
+    return allBookings.some((b) => {
+      const isDate = b.date === date || b.eventDate === date;
+      if (!isDate) return false;
+      if (b.slot !== slot && (b as any).timeSlot !== slot) return false;
+      const st = (b.status || '').toUpperCase();
+      if (st === 'CANCELLED' || st === 'REJECTED') return false;
+
+      const rawHall = (b as any).hallSelection || b.hall || '';
+      const pkgId = (b.packageId || '').toLowerCase();
+      const pkgName = ((b as any).packageName || '').toLowerCase();
+      const resources: string[] = Array.isArray((b as any).occupiedResources) ? (b as any).occupiedResources : [];
+
+      const isFullCampus =
+        rawHall === 'both' ||
+        pkgId.includes('full') ||
+        pkgName.includes('full') ||
+        pkgName.includes('combined') ||
+        (resources.includes('gents_hall') && resources.includes('ladies_hall'));
+
+      const isHall1 =
+        rawHall === 'hall_1' ||
+        pkgId.includes('single') ||
+        pkgName.includes('gents') ||
+        resources.includes('gents_hall');
+
+      const isHall2 =
+        rawHall === 'hall_2' ||
+        pkgName.includes('ladies') ||
+        resources.includes('ladies_hall');
+
+      if (hall === 'both') {
+        return isFullCampus || isHall1 || isHall2;
+      }
+      if (hall === 'hall_1') {
+        return isFullCampus || isHall1;
+      }
+      if (hall === 'hall_2') {
+        return isFullCampus || isHall2;
+      }
+      return isFullCampus;
+    });
+  };
+
   const isSelectedDatePast = selectedDate < todayStr;
 
-  // Status for selected date & active hall
-  const daySlotAvailable = !isSelectedDatePast && isSlotAvailable(activeHall, selectedDate, 'day');
-  const eveningSlotAvailable = !isSelectedDatePast && isSlotAvailable(activeHall, selectedDate, 'evening');
+  // Status for selected date & active hall (combining manager blockouts AND customer reservations)
+  const daySlotAvailable =
+    !isSelectedDatePast &&
+    isSlotAvailable(activeHall, selectedDate, 'day') &&
+    !isSlotOccupiedByBooking(activeHall, selectedDate, 'day');
+
+  const eveningSlotAvailable =
+    !isSelectedDatePast &&
+    isSlotAvailable(activeHall, selectedDate, 'evening') &&
+    !isSlotOccupiedByBooking(activeHall, selectedDate, 'evening');
 
   const selectedDateObj = new Date(selectedDate + 'T00:00:00');
   const readableDate = isNaN(selectedDateObj.getTime())
@@ -176,10 +243,6 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
             </h3>
             <p className="text-xs text-[#4A4A4A]">Independent wings operate with dedicated dining &amp; kitchen</p>
           </div>
-          <span className="text-xs text-[#173D35] bg-[#F5F1E8] border border-[#E2DACB] px-3 py-1.5 rounded-full font-semibold flex items-center gap-1.5 w-fit shadow-2xs">
-            <Sparkles className="w-3.5 h-3.5 text-[#C9AA72]" />
-            Live Real-Time Availability
-          </span>
         </div>
 
         {/* 3 Executive Hall Option Tabs */}
@@ -369,9 +432,15 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
             const isSelected = selectedDate === dateStr && !isPastDate;
             const isToday = todayStr === dateStr;
 
-            const summary = isPastDate ? 'past' : getDayAvailabilitySummary(activeHall, dateStr);
-            const daySlotOpen = isPastDate ? false : isSlotAvailable(activeHall, dateStr, 'day');
-            const eveSlotOpen = isPastDate ? false : isSlotAvailable(activeHall, dateStr, 'evening');
+            const daySlotOpen = isPastDate ? false : isSlotAvailable(activeHall, dateStr, 'day') && !isSlotOccupiedByBooking(activeHall, dateStr, 'day');
+            const eveSlotOpen = isPastDate ? false : isSlotAvailable(activeHall, dateStr, 'evening') && !isSlotOccupiedByBooking(activeHall, dateStr, 'evening');
+            const summary = isPastDate
+              ? 'past'
+              : daySlotOpen && eveSlotOpen
+              ? 'available'
+              : !daySlotOpen && !eveSlotOpen
+              ? 'unavailable'
+              : 'partial';
 
             return (
               <button

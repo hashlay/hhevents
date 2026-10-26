@@ -14,6 +14,7 @@ import {
   HallPackage,
   INITIAL_PACKAGES,
   DiscountCoupon,
+  InquiryRecord,
 } from "./db";
 import { resolveRequiredResources, checkResourceConflict } from "./conflictEngine";
 import {
@@ -193,6 +194,51 @@ apiRouter.put("/packages", requireAdminAuth, async (req: Request, res: Response)
   res.json({ success: true, packages: db.packages });
 });
 
+apiRouter.post("/packages", requireAdminAuth, async (req: Request, res: Response) => {
+  const { name, displayName, details, rent, acType, requiredResources, inclusions, capacityText } = req.body;
+  if (!name || !rent) {
+    return res.status(400).json({ error: "Package name and rent are required" });
+  }
+  const db = await getDb();
+  const pkgId = req.body.id || `pkg-${Date.now()}`;
+  const newPkg: HallPackage = {
+    id: pkgId,
+    name,
+    displayName: displayName || name,
+    details: details || '',
+    rent: Number(rent),
+    rentFormatted: Number(rent).toLocaleString('en-IN') + '.00',
+    acType: acType || 'AC',
+    requiredResources: Array.isArray(requiredResources) ? requiredResources : ['gents_hall', 'dining_1', 'kitchen'],
+    inclusions: Array.isArray(inclusions) ? inclusions : ['Convention Hall Wing', 'Dining Wing', 'Catering Kitchen Facility'],
+    capacityText: capacityText || 'Up to 600 Persons',
+    active: true,
+    displayOrder: (db.packages || []).length + 1,
+  };
+  if (!db.packages) db.packages = [];
+  db.packages.push(newPkg);
+  await persistDb();
+
+  const admin = (req as any).adminSession;
+  await logAudit("PACKAGE_CREATED", admin.email, "packages", pkgId, `Created package ${newPkg.name}`);
+  res.status(201).json({ success: true, package: newPkg, packages: db.packages });
+});
+
+apiRouter.delete("/packages/:id", requireAdminAuth, async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const db = await getDb();
+  const index = (db.packages || []).findIndex((p) => p.id === id);
+  if (index === -1) {
+    return res.status(404).json({ error: "Package not found" });
+  }
+  const deleted = db.packages.splice(index, 1)[0];
+  await persistDb();
+
+  const admin = (req as any).adminSession;
+  await logAudit("PACKAGE_DELETED", admin.email, "packages", id, `Deleted package ${deleted.name}`);
+  res.json({ success: true, deletedId: id, packages: db.packages });
+});
+
 // ==========================================
 // 4. LIVE AVAILABILITY & CALENDAR
 // ==========================================
@@ -352,11 +398,21 @@ apiRouter.post("/bookings", async (req: Request, res: Response) => {
       }
     }
 
+    // Direct manual discount (if specified by manager during direct reservation)
+    if (isAdmin && !appliedCoupon && req.body.customDiscountAmount) {
+      const customVal = Number(req.body.customDiscountAmount) || 0;
+      if (customVal > 0) {
+        discountAmount = Math.min(pkgRent, customVal);
+      }
+    }
+
     const netRent = Math.max(0, pkgRent - discountAmount);
     const requestedStatus = isAdmin && req.body.status ? req.body.status.toUpperCase() : "PENDING";
-    const initialPaymentStatus = isAdmin && req.body.paymentStatus ? req.body.paymentStatus : (requestedStatus === "CONFIRMED" ? "advance_paid" : "unpaid");
     const initialPaid = isAdmin && req.body.amountPaid !== undefined ? Number(req.body.amountPaid) : 0;
     const initialBalance = Math.max(0, netRent - initialPaid);
+    const initialPaymentStatus = isAdmin && req.body.paymentStatus
+      ? req.body.paymentStatus
+      : (initialBalance === 0 && netRent > 0 ? "fully_paid" : initialPaid > 0 ? "advance_paid" : (requestedStatus === "CONFIRMED" ? "advance_paid" : "unpaid"));
 
     const newBooking: BookingRecord = {
       id: bookingId,
@@ -366,7 +422,7 @@ apiRouter.post("/bookings", async (req: Request, res: Response) => {
       packageId: packageId || (hallSelection === "both" ? "full-ac-hall" : "single-ac-hall"),
       packageName: pkgName,
       packagePrice: pkgRent,
-      couponCode: appliedCoupon ? appliedCoupon.code : undefined,
+      couponCode: appliedCoupon ? appliedCoupon.code : (req.body.customDiscountReason ? `DIRECT-${req.body.customDiscountReason}` : undefined),
       discountAmount: discountAmount > 0 ? discountAmount : undefined,
       originalAmount: discountAmount > 0 ? pkgRent : undefined,
       occupiedResources: requiredResources,
@@ -668,6 +724,74 @@ apiRouter.post("/bookings/:id/payment", requireAdminAuth, async (req: Request, r
     booking,
     payment: newPayment,
   });
+});
+
+// Delete booking permanently from database
+apiRouter.delete("/bookings/:id", requireAdminAuth, async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const db = await getDb();
+  const index = db.bookings.findIndex((b) => b.id === id);
+  if (index === -1) {
+    return res.status(404).json({ error: "Booking reference not found" });
+  }
+
+  const deleted = db.bookings.splice(index, 1)[0];
+  await persistDb();
+
+  const admin = (req as any).adminSession;
+  await logAudit(
+    "BOOKING_DELETED",
+    admin.email,
+    "booking",
+    id,
+    `Booking permanently deleted for ${deleted.customerName} on ${deleted.date} (${deleted.slot}). Slot released.`
+  );
+
+  res.json({ success: true, message: "Booking permanently deleted", deletedId: id });
+});
+
+// Direct Custom Discount on Existing Booking
+apiRouter.patch("/bookings/:id/discount", requireAdminAuth, async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { discountType = "fixed", discountValue = 0, reason = "" } = req.body;
+  const db = await getDb();
+  const booking = db.bookings.find((b) => b.id === id);
+  if (!booking) {
+    return res.status(404).json({ error: "Booking reference not found" });
+  }
+
+  const basePrice = booking.originalAmount || booking.packagePrice || booking.totalAmount;
+  let discountAmount = 0;
+  const val = Number(discountValue) || 0;
+  if (discountType === "percentage") {
+    discountAmount = Math.round((basePrice * val) / 100);
+  } else {
+    discountAmount = val;
+  }
+  discountAmount = Math.max(0, Math.min(basePrice, discountAmount));
+
+  booking.originalAmount = basePrice;
+  booking.discountAmount = discountAmount;
+  booking.totalAmount = Math.max(0, basePrice - discountAmount);
+  booking.balanceDue = Math.max(0, booking.totalAmount - (booking.amountPaid || 0));
+  booking.paymentStatus = booking.balanceDue === 0 && booking.totalAmount > 0 ? "fully_paid" : (booking.amountPaid || 0) > 0 ? "advance_paid" : "unpaid";
+  booking.updatedAt = new Date().toISOString();
+  if (reason) {
+    booking.adminRemarks = `${booking.adminRemarks || ""}\nManager Discount applied: ₹${discountAmount.toLocaleString("en-IN")}${reason ? ` (${reason})` : ""}`.trim();
+  }
+
+  await persistDb();
+
+  const admin = (req as any).adminSession;
+  await logAudit(
+    "BOOKING_DISCOUNT_APPLIED",
+    admin.email,
+    "booking",
+    id,
+    `Applied discount of ₹${discountAmount} (${discountType}: ${discountValue})`
+  );
+
+  res.json({ success: true, booking });
 });
 
 // ==========================================
@@ -1115,6 +1239,85 @@ apiRouter.delete("/photos/:slotId", requireAdminAuth, async (req: Request, res: 
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Failed to remove photo" });
   }
+});
+
+// ==========================================
+// 8. CUSTOMER FORM INQUIRIES
+// ==========================================
+apiRouter.post("/inquiries", async (req: Request, res: Response) => {
+  try {
+    const { fullName, phone, email, topic, message } = req.body;
+    if (!fullName || !phone) {
+      return res.status(400).json({ error: "Full Name and Contact Phone are required." });
+    }
+
+    const db = await getDb();
+    const inquiryId = `INQ-${Date.now().toString().slice(-6)}`;
+    const now = new Date().toISOString();
+
+    const newInquiry: InquiryRecord = {
+      id: inquiryId,
+      fullName: fullName.trim(),
+      phone: phone.trim(),
+      email: (email || "").trim(),
+      topic: topic || "General Hall Inquiry",
+      message: (message || "").trim(),
+      status: "new",
+      submittedAt: now,
+      updatedAt: now,
+    };
+
+    if (!db.inquiries) db.inquiries = [];
+    db.inquiries.unshift(newInquiry);
+    await persistDb();
+
+    res.status(201).json({
+      success: true,
+      message: "Your inquiry has been received. Our executive manager will contact you promptly.",
+      inquiry: newInquiry,
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: "Failed to submit inquiry: " + err.message });
+  }
+});
+
+apiRouter.get("/inquiries", requireAdminAuth, async (req: Request, res: Response) => {
+  const db = await getDb();
+  res.json(db.inquiries || []);
+});
+
+apiRouter.patch("/inquiries/:id", requireAdminAuth, async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { status, adminNotes } = req.body;
+  const db = await getDb();
+  if (!db.inquiries) db.inquiries = [];
+  const inq = db.inquiries.find((i) => i.id === id);
+  if (!inq) {
+    return res.status(404).json({ error: "Inquiry not found" });
+  }
+
+  if (status) inq.status = status;
+  if (adminNotes !== undefined) inq.adminNotes = adminNotes;
+  inq.updatedAt = new Date().toISOString();
+
+  await persistDb();
+  res.json({ success: true, inquiry: inq });
+});
+
+apiRouter.delete("/inquiries/:id", requireAdminAuth, async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const db = await getDb();
+  if (!db.inquiries) db.inquiries = [];
+  const idx = db.inquiries.findIndex((i) => i.id === id);
+  if (idx === -1) {
+    return res.status(404).json({ error: "Inquiry not found" });
+  }
+  const deleted = db.inquiries.splice(idx, 1)[0];
+  await persistDb();
+
+  const admin = (req as any).adminSession;
+  await logAudit("INQUIRY_DELETED", admin.email, "inquiry", id, `Deleted inquiry from ${deleted.fullName}`);
+  res.json({ success: true, message: "Inquiry deleted permanently", deletedId: id });
 });
 
 // Dual mounting: mounts both on /api and root router so it works whether Vercel strips /api or not

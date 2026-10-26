@@ -229,6 +229,33 @@ export const AdminPackagesPage: React.FC<{ navigate: (path: string) => void }> =
     }
   };
 
+  const [deletingPackageId, setDeletingPackageId] = useState<string | null>(null);
+
+  const handleDeletePackage = async (pkg: AdminPackageItem) => {
+    if (!window.confirm(`Are you sure you want to permanently delete package "${pkg.name}" from the database?`)) {
+      return;
+    }
+    setDeletingPackageId(pkg.id);
+    try {
+      const res = await fetch(`/api/packages/${pkg.id}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (res.ok) {
+        setPackages((prev) => prev.filter((p) => p.id !== pkg.id));
+        showToast(`Package "${pkg.name}" permanently deleted.`, 'success');
+      } else {
+        showToast('Failed to delete package from server', 'error');
+      }
+    } catch {
+      showToast('Error deleting package', 'error');
+    } finally {
+      setDeletingPackageId(null);
+    }
+  };
+
   const togglePackageActive = async (pkg: AdminPackageItem) => {
     const updated = packages.map((p) =>
       p.id === pkg.id ? { ...p, active: !p.active } : p
@@ -373,14 +400,25 @@ export const AdminPackagesPage: React.FC<{ navigate: (path: string) => void }> =
                   {pkg.active ? '● Active' : '○ Disabled'}
                 </button>
 
-                <Button
-                  onClick={() => openEditModal(pkg)}
-                  variant="outline"
-                  size="sm"
-                  leftIcon={<Edit2 className="w-3.5 h-3.5" />}
-                >
-                  Edit Configuration
-                </Button>
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    onClick={() => openEditModal(pkg)}
+                    variant="outline"
+                    size="sm"
+                    leftIcon={<Edit2 className="w-3.5 h-3.5" />}
+                  >
+                    Edit
+                  </Button>
+                  <button
+                    type="button"
+                    onClick={() => handleDeletePackage(pkg)}
+                    disabled={deletingPackageId === pkg.id}
+                    title="Permanently Delete Package from Database"
+                    className="p-2 rounded-xl text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-colors cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
             </Card>
           ))}

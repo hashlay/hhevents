@@ -248,6 +248,7 @@ function getInitialDatabase() {
       updatedAt: (/* @__PURE__ */ new Date()).toISOString()
     },
     coupons: [],
+    inquiries: [],
     lastUpdated: (/* @__PURE__ */ new Date()).toISOString()
   };
 }
@@ -267,6 +268,7 @@ async function writeLocalMirror(data) {
 async function getDb() {
   if (dbCache) {
     if (!dbCache.coupons) dbCache.coupons = [];
+    if (!dbCache.inquiries) dbCache.inquiries = [];
     return dbCache;
   }
   try {
@@ -282,6 +284,9 @@ async function getDb() {
         }
         if (!dbCache.coupons) {
           dbCache.coupons = [];
+        }
+        if (!dbCache.inquiries) {
+          dbCache.inquiries = [];
         }
         await writeLocalMirror(dbCache);
         return dbCache;
@@ -307,6 +312,9 @@ async function getDb() {
       }
       if (!dbCache.coupons) {
         dbCache.coupons = [];
+      }
+      if (!dbCache.inquiries) {
+        dbCache.inquiries = [];
       }
       return dbCache;
     }
@@ -774,6 +782,47 @@ apiRouter.put("/packages", requireAdminAuth, async (req, res) => {
   await logAudit("PACKAGES_UPDATED", admin.email, "packages", "all", `Updated ${packages.length} packages.`);
   res.json({ success: true, packages: db.packages });
 });
+apiRouter.post("/packages", requireAdminAuth, async (req, res) => {
+  const { name, displayName, details, rent, acType, requiredResources, inclusions, capacityText } = req.body;
+  if (!name || !rent) {
+    return res.status(400).json({ error: "Package name and rent are required" });
+  }
+  const db = await getDb();
+  const pkgId = req.body.id || `pkg-${Date.now()}`;
+  const newPkg = {
+    id: pkgId,
+    name,
+    displayName: displayName || name,
+    details: details || "",
+    rent: Number(rent),
+    rentFormatted: Number(rent).toLocaleString("en-IN") + ".00",
+    acType: acType || "AC",
+    requiredResources: Array.isArray(requiredResources) ? requiredResources : ["gents_hall", "dining_1", "kitchen"],
+    inclusions: Array.isArray(inclusions) ? inclusions : ["Convention Hall Wing", "Dining Wing", "Catering Kitchen Facility"],
+    capacityText: capacityText || "Up to 600 Persons",
+    active: true,
+    displayOrder: (db.packages || []).length + 1
+  };
+  if (!db.packages) db.packages = [];
+  db.packages.push(newPkg);
+  await persistDb();
+  const admin = req.adminSession;
+  await logAudit("PACKAGE_CREATED", admin.email, "packages", pkgId, `Created package ${newPkg.name}`);
+  res.status(201).json({ success: true, package: newPkg, packages: db.packages });
+});
+apiRouter.delete("/packages/:id", requireAdminAuth, async (req, res) => {
+  const { id } = req.params;
+  const db = await getDb();
+  const index = (db.packages || []).findIndex((p) => p.id === id);
+  if (index === -1) {
+    return res.status(404).json({ error: "Package not found" });
+  }
+  const deleted = db.packages.splice(index, 1)[0];
+  await persistDb();
+  const admin = req.adminSession;
+  await logAudit("PACKAGE_DELETED", admin.email, "packages", id, `Deleted package ${deleted.name}`);
+  res.json({ success: true, deletedId: id, packages: db.packages });
+});
 apiRouter.get("/availability", async (req, res) => {
   const db = await getDb();
   const activeBookings = db.bookings.filter(
@@ -896,11 +945,17 @@ apiRouter.post("/bookings", async (req, res) => {
         }
       }
     }
+    if (isAdmin && !appliedCoupon && req.body.customDiscountAmount) {
+      const customVal = Number(req.body.customDiscountAmount) || 0;
+      if (customVal > 0) {
+        discountAmount = Math.min(pkgRent, customVal);
+      }
+    }
     const netRent = Math.max(0, pkgRent - discountAmount);
     const requestedStatus = isAdmin && req.body.status ? req.body.status.toUpperCase() : "PENDING";
-    const initialPaymentStatus = isAdmin && req.body.paymentStatus ? req.body.paymentStatus : requestedStatus === "CONFIRMED" ? "advance_paid" : "unpaid";
     const initialPaid = isAdmin && req.body.amountPaid !== void 0 ? Number(req.body.amountPaid) : 0;
     const initialBalance = Math.max(0, netRent - initialPaid);
+    const initialPaymentStatus = isAdmin && req.body.paymentStatus ? req.body.paymentStatus : initialBalance === 0 && netRent > 0 ? "fully_paid" : initialPaid > 0 ? "advance_paid" : requestedStatus === "CONFIRMED" ? "advance_paid" : "unpaid";
     const newBooking = {
       id: bookingId,
       customerName: customerName.trim(),
@@ -909,7 +964,7 @@ apiRouter.post("/bookings", async (req, res) => {
       packageId: packageId || (hallSelection === "both" ? "full-ac-hall" : "single-ac-hall"),
       packageName: pkgName,
       packagePrice: pkgRent,
-      couponCode: appliedCoupon ? appliedCoupon.code : void 0,
+      couponCode: appliedCoupon ? appliedCoupon.code : req.body.customDiscountReason ? `DIRECT-${req.body.customDiscountReason}` : void 0,
       discountAmount: discountAmount > 0 ? discountAmount : void 0,
       originalAmount: discountAmount > 0 ? pkgRent : void 0,
       occupiedResources: requiredResources,
@@ -1165,6 +1220,63 @@ apiRouter.post("/bookings/:id/payment", requireAdminAuth, async (req, res) => {
     booking,
     payment: newPayment
   });
+});
+apiRouter.delete("/bookings/:id", requireAdminAuth, async (req, res) => {
+  const { id } = req.params;
+  const db = await getDb();
+  const index = db.bookings.findIndex((b) => b.id === id);
+  if (index === -1) {
+    return res.status(404).json({ error: "Booking reference not found" });
+  }
+  const deleted = db.bookings.splice(index, 1)[0];
+  await persistDb();
+  const admin = req.adminSession;
+  await logAudit(
+    "BOOKING_DELETED",
+    admin.email,
+    "booking",
+    id,
+    `Booking permanently deleted for ${deleted.customerName} on ${deleted.date} (${deleted.slot}). Slot released.`
+  );
+  res.json({ success: true, message: "Booking permanently deleted", deletedId: id });
+});
+apiRouter.patch("/bookings/:id/discount", requireAdminAuth, async (req, res) => {
+  const { id } = req.params;
+  const { discountType = "fixed", discountValue = 0, reason = "" } = req.body;
+  const db = await getDb();
+  const booking = db.bookings.find((b) => b.id === id);
+  if (!booking) {
+    return res.status(404).json({ error: "Booking reference not found" });
+  }
+  const basePrice = booking.originalAmount || booking.packagePrice || booking.totalAmount;
+  let discountAmount = 0;
+  const val = Number(discountValue) || 0;
+  if (discountType === "percentage") {
+    discountAmount = Math.round(basePrice * val / 100);
+  } else {
+    discountAmount = val;
+  }
+  discountAmount = Math.max(0, Math.min(basePrice, discountAmount));
+  booking.originalAmount = basePrice;
+  booking.discountAmount = discountAmount;
+  booking.totalAmount = Math.max(0, basePrice - discountAmount);
+  booking.balanceDue = Math.max(0, booking.totalAmount - (booking.amountPaid || 0));
+  booking.paymentStatus = booking.balanceDue === 0 && booking.totalAmount > 0 ? "fully_paid" : (booking.amountPaid || 0) > 0 ? "advance_paid" : "unpaid";
+  booking.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+  if (reason) {
+    booking.adminRemarks = `${booking.adminRemarks || ""}
+Manager Discount applied: \u20B9${discountAmount.toLocaleString("en-IN")}${reason ? ` (${reason})` : ""}`.trim();
+  }
+  await persistDb();
+  const admin = req.adminSession;
+  await logAudit(
+    "BOOKING_DISCOUNT_APPLIED",
+    admin.email,
+    "booking",
+    id,
+    `Applied discount of \u20B9${discountAmount} (${discountType}: ${discountValue})`
+  );
+  res.json({ success: true, booking });
 });
 apiRouter.get("/settings", async (req, res) => {
   const db = await getDb();
@@ -1534,6 +1646,71 @@ apiRouter.delete("/photos/:slotId", requireAdminAuth, async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message || "Failed to remove photo" });
   }
+});
+apiRouter.post("/inquiries", async (req, res) => {
+  try {
+    const { fullName, phone, email, topic, message } = req.body;
+    if (!fullName || !phone) {
+      return res.status(400).json({ error: "Full Name and Contact Phone are required." });
+    }
+    const db = await getDb();
+    const inquiryId = `INQ-${Date.now().toString().slice(-6)}`;
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    const newInquiry = {
+      id: inquiryId,
+      fullName: fullName.trim(),
+      phone: phone.trim(),
+      email: (email || "").trim(),
+      topic: topic || "General Hall Inquiry",
+      message: (message || "").trim(),
+      status: "new",
+      submittedAt: now,
+      updatedAt: now
+    };
+    if (!db.inquiries) db.inquiries = [];
+    db.inquiries.unshift(newInquiry);
+    await persistDb();
+    res.status(201).json({
+      success: true,
+      message: "Your inquiry has been received. Our executive manager will contact you promptly.",
+      inquiry: newInquiry
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to submit inquiry: " + err.message });
+  }
+});
+apiRouter.get("/inquiries", requireAdminAuth, async (req, res) => {
+  const db = await getDb();
+  res.json(db.inquiries || []);
+});
+apiRouter.patch("/inquiries/:id", requireAdminAuth, async (req, res) => {
+  const { id } = req.params;
+  const { status, adminNotes } = req.body;
+  const db = await getDb();
+  if (!db.inquiries) db.inquiries = [];
+  const inq = db.inquiries.find((i) => i.id === id);
+  if (!inq) {
+    return res.status(404).json({ error: "Inquiry not found" });
+  }
+  if (status) inq.status = status;
+  if (adminNotes !== void 0) inq.adminNotes = adminNotes;
+  inq.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+  await persistDb();
+  res.json({ success: true, inquiry: inq });
+});
+apiRouter.delete("/inquiries/:id", requireAdminAuth, async (req, res) => {
+  const { id } = req.params;
+  const db = await getDb();
+  if (!db.inquiries) db.inquiries = [];
+  const idx = db.inquiries.findIndex((i) => i.id === id);
+  if (idx === -1) {
+    return res.status(404).json({ error: "Inquiry not found" });
+  }
+  const deleted = db.inquiries.splice(idx, 1)[0];
+  await persistDb();
+  const admin = req.adminSession;
+  await logAudit("INQUIRY_DELETED", admin.email, "inquiry", id, `Deleted inquiry from ${deleted.fullName}`);
+  res.json({ success: true, message: "Inquiry deleted permanently", deletedId: id });
 });
 app.use("/api", apiRouter);
 app.use(apiRouter);

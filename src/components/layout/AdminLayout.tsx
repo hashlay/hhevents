@@ -17,6 +17,7 @@ import {
   Layers,
   Sparkles,
   Ticket,
+  MessageSquare,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { BackButton } from '../ui/BackButton';
@@ -93,6 +94,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
     { label: 'Hall Rates', path: '/admin/packages', icon: Package },
     { label: 'Settings', path: '/admin/settings', icon: Settings },
     { label: 'Discount Coupons', path: '/admin/coupons', icon: Ticket },
+    { label: 'Form Inquiries', path: '/admin/inquiries', icon: MessageSquare },
   ];
 
   const secondaryTools = [

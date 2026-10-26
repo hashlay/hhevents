@@ -17,6 +17,7 @@ import {
 import { AdminLayout } from '../../components/layout/AdminLayout';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
+import { Dialog } from '../../components/ui/Dialog';
 import { BookingStatusBadge } from '../../components/ui/Badge';
 import { getBookings, checkSlotAvailability } from '../../services/storageService';
 import { useToast } from '../../context/ToastContext';
@@ -91,6 +92,36 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ navigate
   }, 0);
 
   const outstandingBalance = Math.max(0, totalAgreedRevenue - totalAdvancePaid);
+
+  const [isLedgerModalOpen, setIsLedgerModalOpen] = useState(false);
+  const [ledgerSearch, setLedgerSearch] = useState('');
+
+  // Comprehensive payment transaction ledger
+  const allPayments = bookings.flatMap((b) => {
+    const bObj = b as any;
+    const list = bObj.payments && Array.isArray(bObj.payments) && bObj.payments.length > 0
+      ? bObj.payments
+      : (bObj.amountPaid > 0 ? [{
+          id: `LEGACY-${b.id}`,
+          bookingId: b.id,
+          amount: Number(bObj.amountPaid),
+          paymentType: (b.advancePaymentStatus === 'fully_paid' ? 'full' : 'advance'),
+          paymentMethod: 'cash',
+          receiptNumber: `RCP-${b.id.slice(-6)}`,
+          referenceNo: 'Direct Initial Token',
+          receivedBy: 'Venue Desk',
+          createdAt: b.submittedAt || new Date().toISOString(),
+        }] : []);
+
+    return list.map((p: any) => ({
+      ...p,
+      customerName: b.customerName || bObj.applicantName || 'Customer',
+      phone: b.phone || bObj.applicantPhone || '',
+      date: b.date || bObj.eventDate,
+      hall: b.hall || bObj.hallSelection,
+      slot: b.slot || bObj.timeSlot,
+    }));
+  }).sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   // Real-time Hall Availability for Today
   const hall1TodayDay = checkSlotAvailability('hall_1', today, 'day');
@@ -183,10 +214,15 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ navigate
           </div>
 
           {/* 3. Advance Payments Collected */}
-          <div className="p-5 rounded-2xl bg-white border-2 border-[#E2DACB] hover:border-[#C9AA72] transition-all shadow-xs flex items-start justify-between">
+          <div
+            onClick={() => setIsLedgerModalOpen(true)}
+            className="p-5 rounded-2xl bg-white border-2 border-[#E2DACB] hover:border-[#C9AA72] transition-all shadow-xs flex items-start justify-between cursor-pointer group hover:bg-[#FAF8F5]"
+            title="Click to view comprehensive payment ledger history"
+          >
             <div className="space-y-1">
-              <span className="text-xs font-bold uppercase tracking-wider text-[#173D35]">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#173D35] flex items-center gap-1.5">
                 Advance Received
+                <span className="text-[10px] font-normal text-slate-400 group-hover:text-amber-800 transition-colors">&bull; Click for ledger</span>
               </span>
               <div className="text-3xl font-extrabold text-[#173D35] font-mono">
                 ₹{totalAdvancePaid.toLocaleString('en-IN')}
@@ -195,7 +231,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ navigate
                 Balance due: <strong className="text-amber-800 font-mono">₹{outstandingBalance.toLocaleString('en-IN')}</strong>
               </p>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-[#FAF8F5] text-[#173D35] flex items-center justify-center shrink-0 border border-[#E2DACB]">
+            <div className="w-12 h-12 rounded-xl bg-[#FAF8F5] group-hover:bg-[#F2ECE1] text-[#173D35] flex items-center justify-center shrink-0 border border-[#E2DACB] transition-colors">
               <Receipt className="w-6 h-6 text-[#173D35]" />
             </div>
           </div>
@@ -375,6 +411,158 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ navigate
             )}
           </div>
         </div>
+        {/* Payment Collections & Ledger History Modal */}
+        <Dialog
+          isOpen={isLedgerModalOpen}
+          onClose={() => setIsLedgerModalOpen(false)}
+          title="Executive Payment Ledger & Revenue Transactions"
+          maxWidth="2xl"
+        >
+          <div className="space-y-4 text-xs">
+            {/* 3 Metric Pillars */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 block">Total Collected</span>
+                <strong className="text-xl font-bold text-emerald-900 font-mono">
+                  ₹{totalAdvancePaid.toLocaleString('en-IN')}
+                </strong>
+              </div>
+              <div className="p-3 bg-amber-50 rounded-xl border border-amber-200">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 block">Outstanding Balance</span>
+                <strong className="text-xl font-bold text-amber-900 font-mono">
+                  ₹{outstandingBalance.toLocaleString('en-IN')}
+                </strong>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">Agreed Revenue</span>
+                <strong className="text-xl font-bold text-slate-800 font-mono">
+                  ₹{totalAgreedRevenue.toLocaleString('en-IN')}
+                </strong>
+              </div>
+            </div>
+
+            {/* Filter / Search Bar */}
+            <div className="flex items-center justify-between gap-3 pt-1">
+              <div className="text-xs font-bold text-slate-700 uppercase tracking-wide">
+                All Recorded Payments ({allPayments.length})
+              </div>
+              <input
+                type="text"
+                placeholder="Search by customer, booking ref, or receipt..."
+                value={ledgerSearch}
+                onChange={(e) => setLedgerSearch(e.target.value)}
+                className="px-3 py-1.5 text-xs rounded-xl border border-slate-200 bg-white w-64 focus:outline-none focus:ring-2 focus:ring-amber-500"
+              />
+            </div>
+
+            {/* Transactions Table */}
+            <div className="max-h-80 overflow-y-auto rounded-xl border border-slate-200 bg-white">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[10px] sticky top-0 z-10">
+                    <th className="py-2.5 px-3">Date &amp; Time</th>
+                    <th className="py-2.5 px-3">Customer / Booking</th>
+                    <th className="py-2.5 px-3">Payment Type</th>
+                    <th className="py-2.5 px-3">Method</th>
+                    <th className="py-2.5 px-3 text-right">Amount (₹)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {allPayments.filter((p: any) => {
+                    const q = ledgerSearch.toLowerCase();
+                    return (
+                      !q ||
+                      p.customerName.toLowerCase().includes(q) ||
+                      p.bookingId.toLowerCase().includes(q) ||
+                      (p.receiptNumber && p.receiptNumber.toLowerCase().includes(q)) ||
+                      (p.referenceNo && p.referenceNo.toLowerCase().includes(q))
+                    );
+                  }).length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-8 text-center text-slate-400">
+                        No payment records matching search.
+                      </td>
+                    </tr>
+                  ) : (
+                    allPayments
+                      .filter((p: any) => {
+                        const q = ledgerSearch.toLowerCase();
+                        return (
+                          !q ||
+                          p.customerName.toLowerCase().includes(q) ||
+                          p.bookingId.toLowerCase().includes(q) ||
+                          (p.receiptNumber && p.receiptNumber.toLowerCase().includes(q)) ||
+                          (p.referenceNo && p.referenceNo.toLowerCase().includes(q))
+                        );
+                      })
+                      .map((p: any) => (
+                        <tr key={p.id} className="hover:bg-slate-50/80 transition-colors">
+                          <td className="py-2.5 px-3 font-mono text-[11px] text-slate-500 whitespace-nowrap">
+                            {new Date(p.createdAt).toLocaleDateString('en-IN', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </td>
+                          <td className="py-2.5 px-3">
+                            <strong className="text-slate-900 block font-serif-heading text-xs">
+                              {p.customerName}
+                            </strong>
+                            <span className="font-mono text-[10px] text-slate-500 block">
+                              Ref: {p.bookingId} {p.receiptNumber ? `&bull; ${p.receiptNumber}` : ''}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3 whitespace-nowrap">
+                            <span
+                              className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                                p.paymentType === 'refund'
+                                  ? 'bg-rose-100 text-rose-800'
+                                  : p.paymentType === 'full'
+                                  ? 'bg-blue-100 text-blue-800'
+                                  : 'bg-emerald-100 text-emerald-800'
+                              }`}
+                            >
+                              {p.paymentType === 'refund'
+                                ? 'Refund'
+                                : p.paymentType === 'full'
+                                ? 'Full Settlement'
+                                : p.paymentType === 'balance'
+                                ? 'Remaining Balance'
+                                : 'Token Advance'}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3 text-slate-600 font-mono text-[11px] uppercase whitespace-nowrap">
+                            {p.paymentMethod}
+                          </td>
+                          <td className="py-2.5 px-3 text-right font-mono font-bold text-sm text-emerald-700 whitespace-nowrap">
+                            {p.paymentType === 'refund' ? '-' : '+'}₹{Number(p.amount).toLocaleString('en-IN')}
+                          </td>
+                        </tr>
+                      ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setIsLedgerModalOpen(false);
+                  navigate('/admin/bookings');
+                }}
+              >
+                Go to Full Bookings Ledger &rarr;
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setIsLedgerModalOpen(false)}>
+                Close
+              </Button>
+            </div>
+          </div>
+        </Dialog>
       </div>
     </AdminLayout>
   );

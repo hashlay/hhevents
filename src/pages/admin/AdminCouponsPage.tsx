@@ -67,7 +67,7 @@ export const AdminCouponsPage: React.FC<{ navigate: (path: string) => void }> = 
     expiryDate: defaultExpiry(),
     usageLimit: 20,
     perCustomerLimit: 1,
-    category: 'seasonal' as 'seasonal' | 'client_exclusive' | 'general',
+    category: 'general' as 'seasonal' | 'client_exclusive' | 'general',
     specificCustomerPhone: '',
     specificCustomerName: '',
     isActive: true,
@@ -109,7 +109,7 @@ export const AdminCouponsPage: React.FC<{ navigate: (path: string) => void }> = 
       expiryDate: defaultExpiry(),
       usageLimit: 20,
       perCustomerLimit: 1,
-      category: 'seasonal',
+      category: 'general',
       specificCustomerPhone: '',
       specificCustomerName: '',
       isActive: true,
@@ -297,24 +297,14 @@ export const AdminCouponsPage: React.FC<{ navigate: (path: string) => void }> = 
   return (
     <AdminLayout currentPath="/admin/coupons" title="Discount Coupons & Offers" navigate={navigate}>
       <div className="space-y-6">
-        {/* Top Header Banner */}
-        <div className="bg-[#0B1E19] text-[#FAF8F5] p-6 sm:p-8 rounded-3xl shadow-sm border border-[#183E34] relative overflow-hidden">
-          <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-gradient-to-l from-[#C9AA72]/10 to-transparent pointer-events-none" />
+        {/* Top Header Card */}
+        <div className="bg-white text-slate-900 p-6 sm:p-8 rounded-3xl shadow-xs border border-[#E2DACB] relative overflow-hidden">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
             <div className="space-y-1.5 max-w-2xl">
-              <div className="flex items-center gap-2">
-                <span className="text-xs uppercase font-bold tracking-widest text-[#C9AA72] bg-[#183E34] px-3 py-1 rounded-full border border-[#C9AA72]/30 flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5" />
-                  Privilege &amp; Promotions Hub
-                </span>
-                <span className="text-[11px] text-emerald-300 font-mono bg-emerald-950/60 px-2.5 py-0.5 rounded-full border border-emerald-800">
-                  Verified Executive Engine
-                </span>
-              </div>
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight font-serif-heading">
-                Discount Coupons &amp; Seasonal Offers
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 font-serif-heading">
+                Discount Coupons &amp; Offers
               </h1>
-              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+              <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
                 Create promotional discount codes, festival specials, and VIP client-specific concessions. Coupons are securely deducted during customer checkout and recorded only upon confirmed reservation submission.
               </p>
             </div>
@@ -324,7 +314,7 @@ export const AdminCouponsPage: React.FC<{ navigate: (path: string) => void }> = 
                 variant="outline"
                 size="md"
                 onClick={loadCoupons}
-                className="bg-transparent border-[#C9AA72]/50 text-[#FAF8F5] hover:bg-[#183E34]"
+                className="bg-white border-slate-300 text-slate-700 hover:text-slate-900 hover:bg-slate-50 font-medium"
               >
                 Refresh
               </Button>
@@ -333,52 +323,52 @@ export const AdminCouponsPage: React.FC<{ navigate: (path: string) => void }> = 
                 size="md"
                 onClick={handleOpenCreateModal}
                 leftIcon={<Plus className="w-4 h-4" />}
-                className="shadow-lg shadow-[#C9AA72]/20 font-bold"
+                className="shadow-md shadow-[#C9AA72]/20 font-bold"
               >
-                + Create Discount Coupon
+                Create Discount Coupon
               </Button>
             </div>
           </div>
 
           {/* Quick Metrics Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mt-6 pt-6 border-t border-[#183E34]/80">
-            <div className="bg-[#122A23] p-3.5 rounded-2xl border border-[#1E4D40] flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#C9AA72]/15 text-[#C9AA72] flex items-center justify-center shrink-0">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mt-6 pt-6 border-t border-slate-200">
+            <div className="bg-[#FAF8F5] p-3.5 rounded-2xl border border-[#E2DACB] flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
                 <Ticket className="w-5 h-5" />
               </div>
               <div>
-                <span className="text-[11px] text-slate-400 uppercase tracking-wider block">Total Created</span>
-                <strong className="text-lg font-bold text-white font-mono">{totalCreated}</strong>
+                <span className="text-[11px] text-slate-500 uppercase tracking-wider block font-semibold">Total Created</span>
+                <strong className="text-lg font-bold text-slate-900 font-mono">{totalCreated}</strong>
               </div>
             </div>
 
-            <div className="bg-[#122A23] p-3.5 rounded-2xl border border-[#1E4D40] flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center shrink-0">
+            <div className="bg-[#FAF8F5] p-3.5 rounded-2xl border border-[#E2DACB] flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0">
                 <CheckCircle2 className="w-5 h-5" />
               </div>
               <div>
-                <span className="text-[11px] text-slate-400 uppercase tracking-wider block">Live &amp; Active</span>
-                <strong className="text-lg font-bold text-emerald-300 font-mono">{activeCount}</strong>
+                <span className="text-[11px] text-slate-500 uppercase tracking-wider block font-semibold">Live &amp; Active</span>
+                <strong className="text-lg font-bold text-emerald-700 font-mono">{activeCount}</strong>
               </div>
             </div>
 
-            <div className="bg-[#122A23] p-3.5 rounded-2xl border border-[#1E4D40] flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-500/15 text-blue-400 flex items-center justify-center shrink-0">
+            <div className="bg-[#FAF8F5] p-3.5 rounded-2xl border border-[#E2DACB] flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-800 flex items-center justify-center shrink-0">
                 <Users className="w-5 h-5" />
               </div>
               <div>
-                <span className="text-[11px] text-slate-400 uppercase tracking-wider block">Total Redeemed</span>
-                <strong className="text-lg font-bold text-white font-mono">{totalRedemptions} orders</strong>
+                <span className="text-[11px] text-slate-500 uppercase tracking-wider block font-semibold">Total Redeemed</span>
+                <strong className="text-lg font-bold text-slate-900 font-mono">{totalRedemptions} orders</strong>
               </div>
             </div>
 
-            <div className="bg-[#122A23] p-3.5 rounded-2xl border border-[#1E4D40] flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-500/15 text-amber-300 flex items-center justify-center shrink-0">
+            <div className="bg-[#FAF8F5] p-3.5 rounded-2xl border border-[#E2DACB] flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
                 <TrendingUp className="w-5 h-5" />
               </div>
               <div>
-                <span className="text-[11px] text-slate-400 uppercase tracking-wider block">Client Savings</span>
-                <strong className="text-lg font-bold text-amber-300 font-mono">₹{totalSavingsGiven.toLocaleString('en-IN')}</strong>
+                <span className="text-[11px] text-slate-500 uppercase tracking-wider block font-semibold">Client Savings</span>
+                <strong className="text-lg font-bold text-amber-800 font-mono">₹{totalSavingsGiven.toLocaleString('en-IN')}</strong>
               </div>
             </div>
           </div>
@@ -944,7 +934,7 @@ export const AdminCouponsPage: React.FC<{ navigate: (path: string) => void }> = 
 
               <div>
                 <label className="text-xs font-bold uppercase tracking-wider text-slate-700 block mb-1">
-                  Total Venue Limit
+                  Total Limits (Usage Cap)
                 </label>
                 <input
                   type="number"
@@ -952,9 +942,9 @@ export const AdminCouponsPage: React.FC<{ navigate: (path: string) => void }> = 
                   value={formData.usageLimit}
                   onChange={(e) => setFormData({ ...formData, usageLimit: Number(e.target.value) })}
                   placeholder="0 = Unlimited"
-                  className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#C9AA72] font-mono"
+                  className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#C9AA72] font-mono font-bold"
                 />
-                <span className="text-[10px] text-slate-500 mt-0.5 block">0 for unlimited total redemptions</span>
+                <span className="text-[10px] text-slate-500 mt-0.5 block">Total max times this coupon can be used across all bookings (0 for unlimited)</span>
               </div>
 
               <div>
@@ -967,10 +957,10 @@ export const AdminCouponsPage: React.FC<{ navigate: (path: string) => void }> = 
                   max="10"
                   value={formData.perCustomerLimit}
                   onChange={(e) => setFormData({ ...formData, perCustomerLimit: Number(e.target.value) })}
-                  className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#C9AA72] font-mono"
+                  className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#C9AA72] font-mono font-bold"
                   required
                 />
-                <span className="text-[10px] text-slate-500 mt-0.5 block">Max uses per mobile phone</span>
+                <span className="text-[10px] text-slate-500 mt-0.5 block">Max redemptions allowed per customer phone</span>
               </div>
             </div>
 
