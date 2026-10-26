@@ -18,6 +18,7 @@ import {
   Sparkles,
   Ticket,
   MessageSquare,
+  Receipt,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { BackButton } from '../ui/BackButton';
@@ -91,6 +92,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
     { label: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
     { label: 'Bookings', path: '/admin/bookings', icon: Inbox },
     { label: 'Calendar', path: '/admin/calendar', icon: Calendar },
+    { label: 'Payment Ledger', path: '/admin/payments', icon: Receipt },
     { label: 'Hall Rates', path: '/admin/packages', icon: Package },
     { label: 'Settings', path: '/admin/settings', icon: Settings },
     { label: 'Discount Coupons', path: '/admin/coupons', icon: Ticket },

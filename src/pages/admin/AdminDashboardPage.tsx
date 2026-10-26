@@ -213,16 +213,16 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ navigate
             </div>
           </div>
 
-          {/* 3. Advance Payments Collected */}
+          {/* 3. Payments Collected */}
           <div
-            onClick={() => setIsLedgerModalOpen(true)}
+            onClick={() => navigate('/admin/payments')}
             className="p-5 rounded-2xl bg-white border-2 border-[#E2DACB] hover:border-[#C9AA72] transition-all shadow-xs flex items-start justify-between cursor-pointer group hover:bg-[#FAF8F5]"
-            title="Click to view comprehensive payment ledger history"
+            title="Click to view full payment history and multi-installment ledger"
           >
             <div className="space-y-1">
               <span className="text-xs font-bold uppercase tracking-wider text-[#173D35] flex items-center gap-1.5">
-                Advance Received
-                <span className="text-[10px] font-normal text-slate-400 group-hover:text-amber-800 transition-colors">&bull; Click for ledger</span>
+                Payments Received
+                <span className="text-[10px] font-normal text-slate-400 group-hover:text-amber-800 transition-colors">&bull; Click for full ledger</span>
               </span>
               <div className="text-3xl font-extrabold text-[#173D35] font-mono">
                 ₹{totalAdvancePaid.toLocaleString('en-IN')}

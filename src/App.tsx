@@ -38,6 +38,7 @@ import { AdminPhotosPage } from './pages/admin/AdminPhotosPage';
 import { AdminPackagesPage } from './pages/admin/AdminPackagesPage';
 import { AdminCouponsPage } from './pages/admin/AdminCouponsPage';
 import { AdminInquiriesPage } from './pages/admin/AdminInquiriesPage';
+import { AdminPaymentsPage } from './pages/admin/AdminPaymentsPage';
 
 const AppContent: React.FC = () => {
   const { currentPath, navigate } = useNavigation();
@@ -91,6 +92,9 @@ const AppContent: React.FC = () => {
         return <AdminCouponsPage navigate={navigate} />;
       case '/admin/inquiries':
         return <AdminInquiriesPage navigate={navigate} />;
+      case '/admin/payments':
+      case '/admin/ledger':
+        return <AdminPaymentsPage navigate={navigate} />;
       default:
         return <AdminDashboardPage navigate={navigate} />;
     }
