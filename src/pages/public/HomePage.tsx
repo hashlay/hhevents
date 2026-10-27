@@ -314,9 +314,6 @@ export const HomePage: React.FC<HomePageProps> = ({ navigate }) => {
                 <p className="text-xs sm:text-sm text-[#4A4A4A] leading-relaxed">
                   Real indoor event hall configuration with banquet seating in black-and-gold covers, central processional aisle, overhead lighting, and decorated stage dais.
                 </p>
-                <p className="text-[11px] text-amber-800 italic pt-1">
-                  * Physical hall allocation (Hall 1 vs Hall 2) subject to owner confirmation.
-                </p>
               </div>
             </div>
 
@@ -353,9 +350,6 @@ export const HomePage: React.FC<HomePageProps> = ({ navigate }) => {
                 </h3>
                 <p className="text-xs sm:text-sm text-[#4A4A4A] leading-relaxed">
                   Real indoor event hall arrangement featuring custom yellow H H Events-branded chair covers, central processional aisle, and decorated ceremony dais.
-                </p>
-                <p className="text-[11px] text-amber-800 italic pt-1">
-                  * Physical hall allocation (Hall 1 vs Hall 2) subject to owner confirmation.
                 </p>
               </div>
             </div>
@@ -454,9 +448,6 @@ export const HomePage: React.FC<HomePageProps> = ({ navigate }) => {
                 </h3>
                 <p className="text-xs sm:text-sm text-[#4A4A4A] leading-relaxed">
                   Spacious covered area with tiled flooring, stainless-steel food service counters, high-capacity ceiling fans, and flexible catering turnover space.
-                </p>
-                <p className="text-[11px] text-amber-800 italic pt-1">
-                  * Facility designation awaiting owner confirmation.
                 </p>
               </div>
             </div>

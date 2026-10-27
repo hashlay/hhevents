@@ -567,9 +567,36 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ navigate
                     <span>&bull;</span>
                     <span>Date: <strong>{b.date}</strong> ({b.slot === 'day' ? 'Day' : 'Evening'})</span>
                     <span>&bull;</span>
-                    <span className="font-mono font-semibold text-slate-800">
-                      ₹{(b.totalEstimate || b.estimatedAmount || 0).toLocaleString('en-IN')}
-                    </span>
+                    {(() => {
+                      const bObj = b as any;
+                      const total = Number(bObj.totalAmount || b.totalEstimate || b.estimatedAmount || bObj.packagePrice || 0);
+                      const paid = bObj.amountPaid !== undefined 
+                        ? Number(bObj.amountPaid) 
+                        : (bObj.payments && Array.isArray(bObj.payments) ? bObj.payments.reduce((s: number, p: any) => s + (p.paymentType === 'refund' ? -p.amount : p.amount), 0) : 0);
+                      const due = bObj.balanceDue !== undefined ? Number(bObj.balanceDue) : Math.max(0, total - paid);
+
+                      return (
+                        <div className="inline-flex items-center gap-1.5 flex-wrap">
+                          <span className="font-mono font-bold text-slate-900">
+                            ₹{total.toLocaleString('en-IN')}
+                          </span>
+                          {paid > 0 ? (
+                            <span className="text-[11px] font-mono font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                              Paid: ₹{paid.toLocaleString('en-IN')}
+                            </span>
+                          ) : (
+                            <span className="text-[11px] font-mono text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">
+                              Unpaid
+                            </span>
+                          )}
+                          {due > 0 && paid > 0 && (
+                            <span className="text-[11px] font-mono text-amber-800">
+                              Due: ₹{due.toLocaleString('en-IN')}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
 

@@ -81,12 +81,10 @@ export const DEFAULT_SLOT_PHOTOS: Record<
   hall1: {
     url: VENUE_DEFAULT_ASSETS.hallBlackGold,
     label: 'Event Hall — Black & Gold Seating Arrangement',
-    note: 'Physical hall allocation awaiting owner confirmation',
   },
   hall2: {
     url: VENUE_DEFAULT_ASSETS.hallYellow,
     label: 'Event Hall — Yellow Seating Arrangement',
-    note: 'Physical hall allocation awaiting owner confirmation',
   },
   combined: {
     url: VENUE_DEFAULT_ASSETS.exterior,
@@ -100,7 +98,6 @@ export const DEFAULT_SLOT_PHOTOS: Record<
   dining_open: {
     url: VENUE_DEFAULT_ASSETS.diningOpen,
     label: 'Covered Dining & Service Area',
-    note: 'Facility designation awaiting owner confirmation',
   },
   'single-hall': {
     url: VENUE_DEFAULT_ASSETS.hallBlackGold,

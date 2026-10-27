@@ -591,8 +591,34 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
 
                       return (
                         <tr key={b.id} className="hover:bg-slate-50/70 transition-colors">
-                          <td className="p-3.5 font-mono font-bold text-[#173D35]">
-                            {b.id}
+                          <td className="p-3.5 whitespace-nowrap">
+                            <div className="font-mono font-bold text-[#173D35] text-xs">
+                              {b.id}
+                            </div>
+                            {b.submittedAt ? (
+                              <div className="text-[10.5px] text-slate-500 font-mono flex items-center gap-1 mt-0.5" title={`Booked on: ${b.submittedAt}`}>
+                                <Clock className="w-3 h-3 text-slate-400 shrink-0" />
+                                <span>
+                                  {new Date(b.submittedAt).toLocaleDateString('en-IN', {
+                                    day: '2-digit',
+                                    month: 'short',
+                                    year: 'numeric',
+                                  })}
+                                  {' '}
+                                  <span className="text-slate-400">
+                                    {new Date(b.submittedAt).toLocaleTimeString('en-IN', {
+                                      hour: '2-digit',
+                                      minute: '2-digit',
+                                      hour12: true,
+                                    })}
+                                  </span>
+                                </span>
+                              </div>
+                            ) : (
+                              <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                                Direct Entry
+                              </div>
+                            )}
                           </td>
 
                           <td className="p-3.5">

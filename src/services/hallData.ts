@@ -399,7 +399,6 @@ export const GALLERY_ITEMS: GalleryItem[] = [
     description: 'Real indoor event hall configuration with banquet seating in black-and-gold covers, central processional aisle, overhead lighting, and decorated stage dais.',
     featured: true,
     isConcept: false,
-    note: 'Physical hall allocation awaiting owner confirmation',
   },
   {
     id: 'gal-03',
@@ -409,7 +408,6 @@ export const GALLERY_ITEMS: GalleryItem[] = [
     description: 'Real indoor event hall arrangement featuring custom yellow H H Events-branded chair covers, central processional aisle, and decorated ceremony dais.',
     featured: true,
     isConcept: false,
-    note: 'Physical hall allocation awaiting owner confirmation',
   },
   {
     id: 'gal-04',
@@ -428,7 +426,6 @@ export const GALLERY_ITEMS: GalleryItem[] = [
     description: 'Spacious covered area featuring tiled flooring, stainless-steel food service counters, high-capacity ceiling fans, and flexible turnover space.',
     featured: true,
     isConcept: false,
-    note: 'Facility designation awaiting owner confirmation',
   },
   {
     id: 'gal-06',

@@ -98,9 +98,6 @@ export const HallsPage: React.FC<HallsPageProps> = ({ navigate }) => {
                   <div className="absolute top-4 left-4 bg-white/95 backdrop-blur-md text-[#252525] text-xs font-semibold px-3 py-1.5 rounded-lg border border-[#E2DACB] shadow-2xs">
                     {hall.name} &bull; {isHall1 ? 'Black & Gold Seating Arrangement' : 'Yellow Seating Arrangement'}
                   </div>
-                  <div className="absolute bottom-4 left-4 right-4 bg-[#071512]/85 backdrop-blur-md text-[#F5F1E8] text-[11px] px-3 py-1.5 rounded-lg border border-white/10">
-                    * Physical allocation ({isHall1 ? 'Hall 1' : 'Hall 2'}) awaiting venue owner confirmation
-                  </div>
                 </div>
 
                 {/* Details */}
