@@ -1680,8 +1680,12 @@ apiRouter.post("/inquiries", async (req, res) => {
   }
 });
 apiRouter.get("/inquiries", requireAdminAuth, async (req, res) => {
-  const db = await getDb();
-  res.json(db.inquiries || []);
+  try {
+    const db = await getDb();
+    res.json(db.inquiries || []);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch inquiries: " + err.message });
+  }
 });
 apiRouter.patch("/inquiries/:id", requireAdminAuth, async (req, res) => {
   const { id } = req.params;

@@ -80,6 +80,122 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
   const [isApplyingDiscount, setIsApplyingDiscount] = useState(false);
   const [deletingBookingId, setDeletingBookingId] = useState<string | null>(null);
 
+  // Direct Manual Reservation Modal State
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isSubmittingReservation, setIsSubmittingReservation] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    date: new Date().toISOString().slice(0, 10),
+    hall: 'both' as 'both' | 'hall_1' | 'hall_2',
+    slot: 'day' as 'day' | 'evening',
+    customerName: '',
+    phone: '',
+    estimatedRent: 65000,
+    discountType: 'fixed' as 'fixed' | 'percentage',
+    discountValue: 0,
+    advancePaid: 15000,
+    notes: 'Private Function',
+  });
+
+  const handleCreateReservation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!createForm.customerName.trim() || !createForm.phone.trim() || !createForm.date) {
+      showToast('Please fill in Customer Name, Phone, and Event Date', 'error');
+      return;
+    }
+
+    const cleanPhone = createForm.phone.replace(/\D/g, '');
+    if (cleanPhone.length < 10) {
+      showToast('Please enter a valid 10-digit phone number', 'error');
+      return;
+    }
+
+    const baseRent = Number(createForm.estimatedRent) || 0;
+    const discAmount = createForm.discountValue > 0
+      ? createForm.discountType === 'percentage'
+        ? Math.round((baseRent * createForm.discountValue) / 100)
+        : Math.min(baseRent, createForm.discountValue)
+      : 0;
+    const netRent = Math.max(0, baseRent - discAmount);
+    const advance = Number(createForm.advancePaid) || 0;
+    const balanceDue = Math.max(0, netRent - advance);
+
+    // Conflict check
+    const conflict = checkSlotAvailability(createForm.hall, createForm.date, createForm.slot);
+    if (!conflict.available) {
+      showToast(conflict.conflictReason || conflict.reason || 'Conflict: Slot is already occupied on this date.', 'error');
+      return;
+    }
+
+    setIsSubmittingReservation(true);
+    try {
+      const payload = {
+        customerName: createForm.customerName.trim(),
+        phone: cleanPhone.slice(-10),
+        email: 'desk@hhevents.in',
+        hall: createForm.hall,
+        hallSelection: createForm.hall,
+        slot: createForm.slot,
+        timeSlot: createForm.slot,
+        date: createForm.date,
+        eventDate: createForm.date,
+        acOption: 'AC',
+        totalAmount: netRent,
+        totalEstimate: netRent,
+        packagePrice: baseRent,
+        discountAmount: discAmount,
+        discountType: createForm.discountValue > 0 ? createForm.discountType : undefined,
+        discountValue: createForm.discountValue > 0 ? createForm.discountValue : undefined,
+        amountPaid: advance,
+        balanceDue: balanceDue,
+        paymentStatus: balanceDue === 0 && advance > 0 ? 'fully_paid' : advance > 0 ? 'advance_paid' : 'unpaid',
+        advancePaymentStatus: balanceDue === 0 && advance > 0 ? 'fully_paid' : advance > 0 ? 'advance_paid' : 'unpaid',
+        status: 'CONFIRMED',
+        notes: createForm.notes.trim() || 'Direct manual reservation',
+        packageName:
+          createForm.hall === 'both'
+            ? 'Full Hall (Combined Campus)'
+            : createForm.hall === 'hall_1'
+            ? 'Single AC Hall (Hall 1 Gents)'
+            : 'Single AC Hall (Hall 2 Ladies)',
+      };
+
+      const res = await fetch('/api/bookings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token || localStorage.getItem('hh_auth_token_v5') || ''}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        showToast(data.error || 'Failed to create reservation', 'error');
+        return;
+      }
+
+      showToast(`Reservation successfully confirmed for ${createForm.customerName}!`, 'success');
+      setIsCreateModalOpen(false);
+      setCreateForm({
+        date: new Date().toISOString().slice(0, 10),
+        hall: 'both',
+        slot: 'day',
+        customerName: '',
+        phone: '',
+        estimatedRent: 65000,
+        discountType: 'fixed',
+        discountValue: 0,
+        advancePaid: 15000,
+        notes: 'Private Function',
+      });
+      await loadBookings();
+    } catch {
+      showToast('Error connecting to server', 'error');
+    } finally {
+      setIsSubmittingReservation(false);
+    }
+  };
+
   const loadBookings = async () => {
     setIsLoading(true);
     setError(null);
@@ -309,7 +425,7 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
             Refresh Data
           </Button>
           <Button
-            onClick={() => navigate('/book')}
+            onClick={() => setIsCreateModalOpen(true)}
             variant="gold"
             size="sm"
             leftIcon={<Plus className="w-4 h-4" />}
@@ -1037,6 +1153,237 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
                 </Button>
               </div>
             </div>
+          </Dialog>
+        )}
+
+        {/* Direct Manual Reservation Modal */}
+        {isCreateModalOpen && (
+          <Dialog
+            isOpen={isCreateModalOpen}
+            onClose={() => setIsCreateModalOpen(false)}
+            title="Direct Manual Reservation"
+            maxWidth="md"
+          >
+            <form onSubmit={handleCreateReservation} className="space-y-4 text-xs">
+              <p className="text-slate-500 text-[11px] -mt-1">
+                Instantly book and confirm a reservation directly into the venue database with custom pricing &amp; discounts.
+              </p>
+
+              {/* Hall & Slot */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Select Hall / Wing *
+                  </label>
+                  <select
+                    value={createForm.hall}
+                    onChange={(e) => {
+                      const h = e.target.value as 'both' | 'hall_1' | 'hall_2';
+                      setCreateForm({
+                        ...createForm,
+                        hall: h,
+                        estimatedRent: h === 'both' ? 65000 : 30000,
+                      });
+                    }}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#173D35] bg-white font-medium"
+                  >
+                    <option value="both">Combined Hall (Full Campus)</option>
+                    <option value="hall_1">Hall 1 (Gents Wing)</option>
+                    <option value="hall_2">Hall 2 (Ladies Wing)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Event Date *
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={createForm.date}
+                    onChange={(e) => setCreateForm({ ...createForm, date: e.target.value })}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#173D35] font-mono font-medium"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Session Slot *
+                </label>
+                <select
+                  value={createForm.slot}
+                  onChange={(e) => setCreateForm({ ...createForm, slot: e.target.value as 'day' | 'evening' })}
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#173D35] bg-white font-medium"
+                >
+                  <option value="day">Day Session (10 AM – 3 PM)</option>
+                  <option value="evening">Evening Session (6 PM – 10 PM)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Customer / Organizer Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Mohammed Farooq"
+                  value={createForm.customerName}
+                  onChange={(e) => setCreateForm({ ...createForm, customerName: e.target.value })}
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#173D35]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Phone Number (10 digits) *
+                </label>
+                <input
+                  type="tel"
+                  required
+                  placeholder="e.g. 9876543210"
+                  value={createForm.phone}
+                  onChange={(e) => setCreateForm({ ...createForm, phone: e.target.value })}
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#173D35]"
+                />
+              </div>
+
+              {(() => {
+                const baseRent = Number(createForm.estimatedRent) || 0;
+                const discAmount = createForm.discountValue > 0
+                  ? createForm.discountType === 'percentage'
+                    ? Math.round((baseRent * createForm.discountValue) / 100)
+                    : Math.min(baseRent, createForm.discountValue)
+                  : 0;
+                const netRent = Math.max(0, baseRent - discAmount);
+                const advance = Number(createForm.advancePaid) || 0;
+                const balanceDue = Math.max(0, netRent - advance);
+
+                return (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                          Package Rent Tariff (₹) *
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="1000"
+                          required
+                          value={createForm.estimatedRent}
+                          onChange={(e) => setCreateForm({ ...createForm, estimatedRent: Number(e.target.value) })}
+                          className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#173D35] font-mono font-bold"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                          Direct Manager Discount
+                        </label>
+                        <div className="flex items-center gap-1.5">
+                          <select
+                            value={createForm.discountType}
+                            onChange={(e) => setCreateForm({ ...createForm, discountType: e.target.value as any })}
+                            className="px-2.5 py-2 text-xs rounded-xl border border-slate-300 bg-white font-bold text-slate-700"
+                          >
+                            <option value="fixed">₹ Flat</option>
+                            <option value="percentage">% Off</option>
+                          </select>
+                          <input
+                            type="number"
+                            min="0"
+                            placeholder="Discount value"
+                            value={createForm.discountValue || ''}
+                            onChange={(e) => setCreateForm({ ...createForm, discountValue: Number(e.target.value) })}
+                            className="flex-1 px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#173D35] font-mono"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Financial Summary Breakdown */}
+                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5 text-xs">
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-500">Agreed Package Price:</span>
+                        <span className={`font-mono ${discAmount > 0 ? 'line-through text-slate-400' : 'font-bold text-slate-800'}`}>
+                          ₹{baseRent.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                      {discAmount > 0 && (
+                        <div className="flex justify-between items-center text-emerald-700 font-semibold">
+                          <span>Special Discount ({createForm.discountType === 'percentage' ? `${createForm.discountValue}%` : 'Flat'}):</span>
+                          <span className="font-mono">- ₹{discAmount.toLocaleString('en-IN')}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between items-center pt-1 border-t border-slate-200 font-bold">
+                        <span className="text-slate-900">Net Payable Rent:</span>
+                        <span className="text-slate-900 font-mono text-sm">₹{netRent.toLocaleString('en-IN')}</span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                          Advance Token Paid Now (₹)
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="1000"
+                          value={createForm.advancePaid}
+                          onChange={(e) => setCreateForm({ ...createForm, advancePaid: Number(e.target.value) })}
+                          className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#173D35] font-mono text-emerald-700 font-bold"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                          Remaining Balance Due (₹)
+                        </label>
+                        <div className="px-3 py-2 text-xs rounded-xl bg-slate-100 border border-slate-200 font-mono text-amber-800 font-bold">
+                          ₹{balanceDue.toLocaleString('en-IN')}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Occasion / Event Note
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Wedding Reception / Engagement / Conference"
+                  value={createForm.notes}
+                  onChange={(e) => setCreateForm({ ...createForm, notes: e.target.value })}
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#173D35]"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsCreateModalOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  variant="gold"
+                  size="sm"
+                  disabled={isSubmittingReservation}
+                  leftIcon={<Check className="w-4 h-4" />}
+                >
+                  {isSubmittingReservation ? 'Reserving...' : 'Confirm & Reserve Instantly'}
+                </Button>
+              </div>
+            </form>
           </Dialog>
         )}
 

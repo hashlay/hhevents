@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   TrendingUp,
   Phone,
+  BarChart3,
 } from 'lucide-react';
 import { AdminLayout } from '../../components/layout/AdminLayout';
 import { Card } from '../../components/ui/Card';
@@ -92,6 +93,86 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ navigate
   }, 0);
 
   const outstandingBalance = Math.max(0, totalAgreedRevenue - totalAdvancePaid);
+
+  // Financial & Booking Analytics State
+  const [analyticsMode, setAnalyticsMode] = useState<'month' | 'week' | 'year'>('month');
+
+  const monthAnalytics = React.useMemo(() => {
+    const map: { [key: string]: { label: string; count: number; revenue: number; collected: number; key: string } } = {};
+    bookings.forEach((b) => {
+      const dStr = b.date || (b as any).eventDate || b.submittedAt;
+      if (!dStr) return;
+      const d = new Date(dStr);
+      if (isNaN(d.getTime())) return;
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const label = d.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
+      if (!map[key]) {
+        map[key] = { label, count: 0, revenue: 0, collected: 0, key };
+      }
+      const bObj = b as any;
+      const rent = Number(bObj.totalAmount || b.totalEstimate || b.estimatedAmount || bObj.packagePrice || 0);
+      const paid = Number(bObj.amountPaid || (bObj.payments ? bObj.payments.reduce((s: number, p: any) => s + (p.paymentType === 'refund' ? -p.amount : p.amount), 0) : 0));
+      map[key].count += 1;
+      map[key].revenue += rent;
+      map[key].collected += paid;
+    });
+
+    const currentKey = '2026-10';
+    if (!map[currentKey]) {
+      map[currentKey] = { label: 'Oct 2026', count: 0, revenue: 0, collected: 0, key: currentKey };
+    }
+
+    return Object.values(map).sort((a, b) => a.key.localeCompare(b.key));
+  }, [bookings]);
+
+  const yearAnalytics = React.useMemo(() => {
+    const map: { [key: string]: { label: string; count: number; revenue: number; collected: number; key: string } } = {};
+    bookings.forEach((b) => {
+      const dStr = b.date || (b as any).eventDate || b.submittedAt;
+      if (!dStr) return;
+      const d = new Date(dStr);
+      if (isNaN(d.getTime())) return;
+      const yr = String(d.getFullYear());
+      if (!map[yr]) {
+        map[yr] = { label: `Year ${yr}`, count: 0, revenue: 0, collected: 0, key: yr };
+      }
+      const bObj = b as any;
+      const rent = Number(bObj.totalAmount || b.totalEstimate || b.estimatedAmount || bObj.packagePrice || 0);
+      const paid = Number(bObj.amountPaid || 0);
+      map[yr].count += 1;
+      map[yr].revenue += rent;
+      map[yr].collected += paid;
+    });
+    return Object.values(map).sort((a, b) => a.key.localeCompare(b.key));
+  }, [bookings]);
+
+  const weekAnalytics = React.useMemo(() => {
+    const map: { [key: string]: { label: string; count: number; revenue: number; collected: number; key: string } } = {};
+    bookings.forEach((b) => {
+      const dStr = b.date || (b as any).eventDate || b.submittedAt;
+      if (!dStr) return;
+      const d = new Date(dStr);
+      if (isNaN(d.getTime())) return;
+      const startOfYear = new Date(d.getFullYear(), 0, 1);
+      const pastDays = (d.getTime() - startOfYear.getTime()) / 86400000;
+      const weekNum = Math.ceil((pastDays + startOfYear.getDay() + 1) / 7);
+      const key = `${d.getFullYear()}-W${String(weekNum).padStart(2, '0')}`;
+      const label = `W${weekNum} (${d.toLocaleDateString('en-IN', { month: 'short' })})`;
+      if (!map[key]) {
+        map[key] = { label, count: 0, revenue: 0, collected: 0, key };
+      }
+      const bObj = b as any;
+      const rent = Number(bObj.totalAmount || b.totalEstimate || b.estimatedAmount || bObj.packagePrice || 0);
+      const paid = Number(bObj.amountPaid || 0);
+      map[key].count += 1;
+      map[key].revenue += rent;
+      map[key].collected += paid;
+    });
+    return Object.values(map).sort((a, b) => a.key.localeCompare(b.key));
+  }, [bookings]);
+
+  const activeAnalytics = analyticsMode === 'month' ? monthAnalytics : analyticsMode === 'week' ? weekAnalytics : yearAnalytics;
+  const maxRevenue = Math.max(...activeAnalytics.map((a) => a.revenue), 50000);
 
   const [isLedgerModalOpen, setIsLedgerModalOpen] = useState(false);
   const [ledgerSearch, setLedgerSearch] = useState('');
@@ -234,6 +315,131 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ navigate
             <div className="w-12 h-12 rounded-xl bg-[#FAF8F5] group-hover:bg-[#F2ECE1] text-[#173D35] flex items-center justify-center shrink-0 border border-[#E2DACB] transition-colors">
               <Receipt className="w-6 h-6 text-[#173D35]" />
             </div>
+          </div>
+        </div>
+
+        {/* Executive Revenue & Booking Trends Visualizer */}
+        <div className="p-5 sm:p-6 rounded-2xl bg-white border border-[#E2DACB] shadow-xs space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center border border-amber-200 shrink-0">
+                <BarChart3 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-[#173D35] font-serif-heading">
+                  Revenue &amp; Booking Trends
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Visual breakdown of customer bookings, income volume, and advance collections
+                </p>
+              </div>
+            </div>
+
+            {/* View Mode Pills */}
+            <div className="flex items-center gap-1.5 bg-[#FAF8F5] p-1 rounded-xl border border-slate-200 self-start sm:self-auto">
+              <button
+                type="button"
+                onClick={() => setAnalyticsMode('month')}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  analyticsMode === 'month'
+                    ? 'bg-[#173D35] text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Month-wise
+              </button>
+              <button
+                type="button"
+                onClick={() => setAnalyticsMode('week')}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  analyticsMode === 'week'
+                    ? 'bg-[#173D35] text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Week-wise
+              </button>
+              <button
+                type="button"
+                onClick={() => setAnalyticsMode('year')}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  analyticsMode === 'year'
+                    ? 'bg-[#173D35] text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Year-wise
+              </button>
+            </div>
+          </div>
+
+          {/* Quick Period Summary Numbers */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-3 rounded-xl bg-[#FAF8F5] border border-[#E2DACB]/60 text-xs">
+            <div>
+              <span className="text-[10px] uppercase font-bold text-slate-500 block">Total Invoiced</span>
+              <strong className="text-sm sm:text-base font-bold font-mono text-slate-900">
+                ₹{activeAnalytics.reduce((s, a) => s + a.revenue, 0).toLocaleString('en-IN')}
+              </strong>
+            </div>
+            <div>
+              <span className="text-[10px] uppercase font-bold text-emerald-700 block">Collected in Advance</span>
+              <strong className="text-sm sm:text-base font-bold font-mono text-emerald-800">
+                ₹{activeAnalytics.reduce((s, a) => s + a.collected, 0).toLocaleString('en-IN')}
+              </strong>
+            </div>
+            <div className="col-span-2 sm:col-span-1">
+              <span className="text-[10px] uppercase font-bold text-amber-800 block">Total Functions</span>
+              <strong className="text-sm sm:text-base font-bold font-mono text-amber-900">
+                {activeAnalytics.reduce((s, a) => s + a.count, 0)} Bookings
+              </strong>
+            </div>
+          </div>
+
+          {/* Graphical Bars */}
+          <div className="pt-2">
+            {activeAnalytics.length === 0 ? (
+              <div className="py-8 text-center text-slate-400 text-xs">
+                No bookings recorded in this timeframe yet.
+              </div>
+            ) : (
+              <div className="flex items-end gap-2 sm:gap-4 overflow-x-auto pb-2 pt-6 min-h-[190px]">
+                {activeAnalytics.map((item) => {
+                  const barHeight = Math.max(24, Math.round((item.revenue / maxRevenue) * 120));
+                  return (
+                    <div
+                      key={item.key}
+                      onClick={() => navigate('/admin/bookings')}
+                      className="flex-1 min-w-[70px] sm:min-w-[85px] flex flex-col items-center gap-1.5 group cursor-pointer"
+                      title={`${item.label}: ${item.count} bookings, ₹${item.revenue.toLocaleString('en-IN')} total, ₹${item.collected.toLocaleString('en-IN')} collected. Click to open Bookings.`}
+                    >
+                      {/* Top value */}
+                      <span className="text-[10px] font-mono font-bold text-slate-700 group-hover:text-amber-700 transition-colors">
+                        ₹{(item.revenue / 1000).toFixed(0)}k
+                      </span>
+
+                      {/* Bar Pillar */}
+                      <div className="w-full bg-slate-100 rounded-t-xl overflow-hidden relative border border-slate-200/80 group-hover:border-amber-400 transition-colors" style={{ height: '120px' }}>
+                        <div
+                          className="w-full bg-gradient-to-t from-[#173D35] to-[#C9AA72] rounded-t-lg transition-all duration-500 absolute bottom-0 left-0 right-0 flex items-center justify-center group-hover:brightness-110"
+                          style={{ height: `${barHeight}px` }}
+                        >
+                          {item.count > 0 && (
+                            <span className="text-[9px] font-mono font-bold text-white shadow-2xs">
+                              {item.count}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Bottom Label */}
+                      <span className="text-[11px] font-semibold text-slate-600 group-hover:text-slate-900 transition-colors truncate max-w-full">
+                        {item.label}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
 

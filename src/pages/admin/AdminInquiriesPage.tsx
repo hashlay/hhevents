@@ -20,6 +20,7 @@ import { AdminLayout } from '../../components/layout/AdminLayout';
 import { Button } from '../../components/ui/Button';
 import { Dialog } from '../../components/ui/Dialog';
 import { useToast } from '../../context/ToastContext';
+import { useAuth } from '../../context/AuthContext';
 import { InquiryRecord } from '../../types';
 
 interface AdminInquiriesPageProps {
@@ -28,6 +29,7 @@ interface AdminInquiriesPageProps {
 
 export const AdminInquiriesPage: React.FC<AdminInquiriesPageProps> = ({ navigate }) => {
   const { showToast } = useToast();
+  const { token } = useAuth();
   const [inquiries, setInquiries] = useState<InquiryRecord[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -39,8 +41,19 @@ export const AdminInquiriesPage: React.FC<AdminInquiriesPageProps> = ({ navigate
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const getAuthHeader = () => {
-    const token = localStorage.getItem('hh_admin_token') || sessionStorage.getItem('hh_admin_token');
-    return token ? { Authorization: `Bearer ${token}` } : {};
+    const activeToken =
+      token ||
+      localStorage.getItem('hh_auth_token_v5') ||
+      sessionStorage.getItem('hh_auth_token_v5') ||
+      localStorage.getItem('hh_admin_token') ||
+      sessionStorage.getItem('hh_admin_token') ||
+      '';
+    return activeToken
+      ? {
+          Authorization: `Bearer ${activeToken}`,
+          'x-admin-token': activeToken,
+        }
+      : {};
   };
 
   const loadInquiries = async () => {
