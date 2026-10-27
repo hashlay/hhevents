@@ -58,6 +58,8 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [horizonFilter, setHorizonFilter] = useState<'upcoming' | 'all' | 'past'>('upcoming');
+  const [sortBy, setSortBy] = useState<'function_upcoming' | 'booked_newest' | 'function_desc'>('function_upcoming');
   const [selectedBooking, setSelectedBooking] = useState<BookingRequest | null>(null);
 
   // Rejection dialog state
@@ -440,23 +442,81 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
     }
   };
 
-  const filteredBookings = bookings.filter((b) => {
-    const searchLower = searchQuery.toLowerCase();
-    const matchesSearch =
-      (b.customerName || b.applicantName || '').toLowerCase().includes(searchLower) ||
-      (b.phone || b.applicantPhone || '').includes(searchQuery) ||
-      b.id.toLowerCase().includes(searchLower) ||
-      (b.packageName || '').toLowerCase().includes(searchLower);
+  const todayStr = new Date().toISOString().slice(0, 10);
 
-    const statusUpper = (b.status || '').toUpperCase();
-    const filterUpper = statusFilter.toUpperCase();
+  const upcomingCount = React.useMemo(() => {
+    return bookings.filter((b) => {
+      const d = b.date || (b as any).eventDate || '';
+      return d >= todayStr;
+    }).length;
+  }, [bookings, todayStr]);
 
-    const matchesStatus =
-      statusFilter === 'all' ||
-      statusUpper === filterUpper;
+  const pastCount = React.useMemo(() => {
+    return bookings.filter((b) => {
+      const d = b.date || (b as any).eventDate || '';
+      return d && d < todayStr;
+    }).length;
+  }, [bookings, todayStr]);
 
-    return matchesSearch && matchesStatus;
-  });
+  const filteredBookings = React.useMemo(() => {
+    return bookings
+      .filter((b) => {
+        const searchLower = searchQuery.toLowerCase();
+        const matchesSearch =
+          (b.customerName || b.applicantName || '').toLowerCase().includes(searchLower) ||
+          (b.phone || b.applicantPhone || '').includes(searchQuery) ||
+          b.id.toLowerCase().includes(searchLower) ||
+          (b.packageName || '').toLowerCase().includes(searchLower) ||
+          (b.date || (b as any).eventDate || '').includes(searchLower);
+
+        const statusUpper = (b.status || '').toUpperCase();
+        const filterUpper = statusFilter.toUpperCase();
+        const matchesStatus = statusFilter === 'all' || statusUpper === filterUpper;
+
+        const eventD = b.date || (b as any).eventDate || '';
+        const isPast = eventD && eventD < todayStr;
+        const matchesHorizon =
+          horizonFilter === 'all'
+            ? true
+            : horizonFilter === 'upcoming'
+            ? !isPast
+            : isPast;
+
+        return matchesSearch && matchesStatus && matchesHorizon;
+      })
+      .sort((a, b) => {
+        if (sortBy === 'booked_newest') {
+          const tA = new Date(a.submittedAt || 0).getTime();
+          const tB = new Date(b.submittedAt || 0).getTime();
+          return tB - tA;
+        }
+
+        if (sortBy === 'function_desc') {
+          const dA = a.date || (a as any).eventDate || '';
+          const dB = b.date || (b as any).eventDate || '';
+          return dB.localeCompare(dA);
+        }
+
+        // Default: 'function_upcoming'
+        // Nearest upcoming functions first (ascending order)
+        // Followed by past functions at the very bottom
+        const dA = a.date || (a as any).eventDate || '';
+        const dB = b.date || (b as any).eventDate || '';
+        const isPastA = dA && dA < todayStr;
+        const isPastB = dB && dB < todayStr;
+
+        if (!isPastA && isPastB) return -1;
+        if (isPastA && !isPastB) return 1;
+
+        if (!isPastA && !isPastB) {
+          if (dA !== dB) return dA.localeCompare(dB);
+          return (a.slot || '').localeCompare(b.slot || '');
+        }
+
+        // Both are past: sort descending (most recently passed function first among past)
+        return dB.localeCompare(dA);
+      });
+  }, [bookings, searchQuery, statusFilter, horizonFilter, sortBy, todayStr]);
 
   return (
     <AdminLayout
@@ -485,34 +545,106 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
         </div>
       }
     >
-      <div className="space-y-6">
+      <div className="space-y-5">
         {/* Filters and Search Bar */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
-          <div className="relative flex-1">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by customer name, mobile, reference, or package..."
-              className="w-full pl-10 pr-4 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white"
-            />
+        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs space-y-3">
+          {/* Top Row: Search Input + Sort Dropdown */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search by customer name, mobile, reference, package, or event date..."
+                className="w-full pl-10 pr-4 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#173D35] bg-white"
+              />
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-[11px] font-bold text-slate-500 whitespace-nowrap">Sort:</span>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+                className="px-3 py-1.5 text-xs font-semibold rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#173D35] cursor-pointer"
+              >
+                <option value="function_upcoming">📅 Function Date (Upcoming First)</option>
+                <option value="booked_newest">🕒 Booked Time (Newest First)</option>
+                <option value="function_desc">📅 Function Date (Farthest First)</option>
+              </select>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
-            {['all', 'pending', 'approved', 'confirmed', 'completed', 'rejected'].map((st) => (
+          {/* Bottom Row: Horizon Tabs + Status Filters */}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pt-2.5 border-t border-slate-100">
+            {/* Horizon Filter: Upcoming vs All vs Past */}
+            <div className="flex items-center gap-1.5 bg-[#FAF8F5] p-1 rounded-xl border border-[#E2DACB] self-start">
               <button
-                key={st}
-                onClick={() => setStatusFilter(st)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
-                  statusFilter === st
-                    ? 'bg-[#173D35] text-white'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                type="button"
+                onClick={() => setHorizonFilter('upcoming')}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  horizonFilter === 'upcoming'
+                    ? 'bg-[#173D35] text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                {st.charAt(0).toUpperCase() + st.slice(1)}
+                <span>Upcoming</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                  horizonFilter === 'upcoming' ? 'bg-white/25 text-white' : 'bg-slate-200 text-slate-700'
+                }`}>
+                  {upcomingCount}
+                </span>
               </button>
-            ))}
+              <button
+                type="button"
+                onClick={() => setHorizonFilter('all')}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  horizonFilter === 'all'
+                    ? 'bg-[#173D35] text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <span>All</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                  horizonFilter === 'all' ? 'bg-white/25 text-white' : 'bg-slate-200 text-slate-700'
+                }`}>
+                  {bookings.length}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setHorizonFilter('past')}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  horizonFilter === 'past'
+                    ? 'bg-[#173D35] text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <span>Past</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                  horizonFilter === 'past' ? 'bg-white/25 text-white' : 'bg-slate-200 text-slate-700'
+                }`}>
+                  {pastCount}
+                </span>
+              </button>
+            </div>
+
+            {/* Status Pills */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0">
+              {['all', 'pending', 'approved', 'confirmed', 'completed', 'rejected'].map((st) => (
+                <button
+                  key={st}
+                  onClick={() => setStatusFilter(st)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-medium whitespace-nowrap transition-colors cursor-pointer ${
+                    statusFilter === st
+                      ? 'bg-slate-900 text-white font-bold'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  {st.charAt(0).toUpperCase() + st.slice(1)}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -552,9 +684,26 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
                       <span className="px-2 py-0.5 rounded bg-slate-100 font-medium text-slate-700">
                         {b.packageName || (b.hall === 'both' ? 'Full Combined Hall' : b.hall === 'hall_2' ? 'Hall 2 (Ladies)' : 'Hall 1 (Gents)')}
                       </span>
-                      <span className="px-2 py-0.5 rounded bg-amber-50 text-amber-800 font-medium">
-                        {b.date || b.eventDate} ({b.slot || b.timeSlot})
-                      </span>
+                      {(() => {
+                        const evDate = b.date || b.eventDate || '';
+                        const isToday = evDate === todayStr;
+                        const isPast = evDate && evDate < todayStr;
+                        const diffDays = evDate ? Math.round((new Date(evDate + 'T00:00:00').getTime() - new Date(todayStr + 'T00:00:00').getTime()) / 86400000) : null;
+                        return (
+                          <span className={`px-2 py-0.5 rounded font-medium flex items-center gap-1 ${
+                            isToday
+                              ? 'bg-emerald-600 text-white font-bold'
+                              : isPast
+                              ? 'bg-slate-100 text-slate-500'
+                              : 'bg-amber-50 text-amber-800'
+                          }`}>
+                            <span>{evDate} ({b.slot || b.timeSlot})</span>
+                            {isToday && <span className="bg-white/30 px-1 rounded text-[9px]">TODAY</span>}
+                            {!isToday && !isPast && diffDays === 1 && <span className="text-[10px]">• Tomorrow</span>}
+                            {isPast && <span className="text-[10px]">• Past</span>}
+                          </span>
+                        );
+                      })()}
                     </div>
 
                     <div className="grid grid-cols-3 gap-2 text-xs pt-2 border-t border-slate-100 bg-slate-50/60 p-2.5 rounded-xl">
@@ -689,11 +838,39 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
                             </span>
                           </td>
 
-                          <td className="p-3.5 text-slate-700 font-mono">
-                            <div>{b.date || b.eventDate}</div>
-                            <span className="text-[10px] text-slate-400 uppercase">
-                              {b.slot || b.timeSlot} Session
-                            </span>
+                          <td className="p-3.5 text-slate-700">
+                            {(() => {
+                              const evDate = b.date || b.eventDate || '';
+                              const isToday = evDate === todayStr;
+                              const isPast = evDate && evDate < todayStr;
+                              const diffDays = evDate ? Math.round((new Date(evDate + 'T00:00:00').getTime() - new Date(todayStr + 'T00:00:00').getTime()) / 86400000) : null;
+
+                              return (
+                                <div>
+                                  <div className="flex items-center gap-1.5 font-mono font-bold text-slate-900">
+                                    <span>{evDate}</span>
+                                    {isToday && (
+                                      <span className="px-1.5 py-0.2 rounded-full bg-emerald-600 text-white text-[9px] font-bold uppercase tracking-wider animate-pulse">
+                                        Today
+                                      </span>
+                                    )}
+                                    {!isToday && !isPast && diffDays !== null && diffDays <= 7 && (
+                                      <span className="px-1.5 py-0.2 rounded-full bg-amber-100 text-amber-800 text-[9px] font-bold">
+                                        {diffDays === 1 ? 'Tomorrow' : `In ${diffDays}d`}
+                                      </span>
+                                    )}
+                                    {isPast && (
+                                      <span className="px-1.5 py-0.2 rounded-full bg-slate-100 text-slate-500 text-[9px] font-medium">
+                                        Past
+                                      </span>
+                                    )}
+                                  </div>
+                                  <span className="text-[10px] text-slate-400 uppercase font-mono block mt-0.5">
+                                    {b.slot || b.timeSlot} Session
+                                  </span>
+                                </div>
+                              );
+                            })()}
                           </td>
 
                           <td className="p-3.5 text-slate-900">

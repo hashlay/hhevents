@@ -95,8 +95,12 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ navigate
   const outstandingBalance = Math.max(0, totalAgreedRevenue - totalAdvancePaid);
 
   // Financial & Booking Analytics State
-  const [analyticsMode, setAnalyticsMode] = useState<'month' | 'week' | 'year'>('month');
+  // Analytics & Graph Configuration (Line Chart)
+  const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const [chartYear, setChartYear] = useState<string>('2026');
+  const [hoveredPointIdx, setHoveredPointIdx] = useState<number | null>(null);
 
+  // Group bookings by YYYY-MM
   const monthAnalytics = React.useMemo(() => {
     const map: { [key: string]: { label: string; count: number; revenue: number; collected: number; key: string } } = {};
     bookings.forEach((b) => {
@@ -116,63 +120,89 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ navigate
       map[key].revenue += rent;
       map[key].collected += paid;
     });
+    return Object.values(map).sort((a, b) => a.key.localeCompare(b.key));
+  }, [bookings]);
 
-    const currentKey = '2026-10';
-    if (!map[currentKey]) {
-      map[currentKey] = { label: 'Oct 2026', count: 0, revenue: 0, collected: 0, key: currentKey };
+  // Generate 12 data points for the selected year (or active periods)
+  const chartSeries = React.useMemo(() => {
+    if (chartYear === 'all') {
+      return monthAnalytics.length > 0 ? monthAnalytics : [
+        { label: 'Oct', count: 0, revenue: 0, collected: 0, key: '2026-10' }
+      ];
     }
 
-    return Object.values(map).sort((a, b) => a.key.localeCompare(b.key));
-  }, [bookings]);
-
-  const yearAnalytics = React.useMemo(() => {
-    const map: { [key: string]: { label: string; count: number; revenue: number; collected: number; key: string } } = {};
-    bookings.forEach((b) => {
-      const dStr = b.date || (b as any).eventDate || b.submittedAt;
-      if (!dStr) return;
-      const d = new Date(dStr);
-      if (isNaN(d.getTime())) return;
-      const yr = String(d.getFullYear());
-      if (!map[yr]) {
-        map[yr] = { label: `Year ${yr}`, count: 0, revenue: 0, collected: 0, key: yr };
-      }
-      const bObj = b as any;
-      const rent = Number(bObj.totalAmount || b.totalEstimate || b.estimatedAmount || bObj.packagePrice || 0);
-      const paid = Number(bObj.amountPaid || 0);
-      map[yr].count += 1;
-      map[yr].revenue += rent;
-      map[yr].collected += paid;
+    const yr = Number(chartYear) || 2026;
+    return MONTH_NAMES.map((mName, idx) => {
+      const monthStr = String(idx + 1).padStart(2, '0');
+      const key = `${yr}-${monthStr}`;
+      const found = monthAnalytics.find((item) => item.key === key);
+      return {
+        label: mName,
+        fullLabel: `${mName} ${yr}`,
+        count: found ? found.count : 0,
+        revenue: found ? found.revenue : 0,
+        collected: found ? found.collected : 0,
+        key,
+      };
     });
-    return Object.values(map).sort((a, b) => a.key.localeCompare(b.key));
-  }, [bookings]);
+  }, [chartYear, monthAnalytics]);
 
-  const weekAnalytics = React.useMemo(() => {
-    const map: { [key: string]: { label: string; count: number; revenue: number; collected: number; key: string } } = {};
-    bookings.forEach((b) => {
-      const dStr = b.date || (b as any).eventDate || b.submittedAt;
-      if (!dStr) return;
-      const d = new Date(dStr);
-      if (isNaN(d.getTime())) return;
-      const startOfYear = new Date(d.getFullYear(), 0, 1);
-      const pastDays = (d.getTime() - startOfYear.getTime()) / 86400000;
-      const weekNum = Math.ceil((pastDays + startOfYear.getDay() + 1) / 7);
-      const key = `${d.getFullYear()}-W${String(weekNum).padStart(2, '0')}`;
-      const label = `W${weekNum} (${d.toLocaleDateString('en-IN', { month: 'short' })})`;
-      if (!map[key]) {
-        map[key] = { label, count: 0, revenue: 0, collected: 0, key };
-      }
-      const bObj = b as any;
-      const rent = Number(bObj.totalAmount || b.totalEstimate || b.estimatedAmount || bObj.packagePrice || 0);
-      const paid = Number(bObj.amountPaid || 0);
-      map[key].count += 1;
-      map[key].revenue += rent;
-      map[key].collected += paid;
+  const maxChartRevenue = Math.max(...chartSeries.map((s) => s.revenue), 100000);
+  const roundedMax = Math.ceil(maxChartRevenue / 50000) * 50000;
+
+  // Chart dimensions (viewBox="0 0 620 220")
+  const padLeft = 52;
+  const padRight = 20;
+  const padTop = 25;
+  const padBottom = 35;
+  const plotW = 620 - padLeft - padRight;
+  const plotH = 220 - padTop - padBottom; // 160
+  const bottomY = padTop + plotH; // 185
+
+  const points = React.useMemo(() => {
+    if (chartSeries.length === 0) return [];
+    return chartSeries.map((item, idx) => {
+      const x = chartSeries.length === 1
+        ? padLeft + plotW / 2
+        : padLeft + (idx / (chartSeries.length - 1)) * plotW;
+      const y = bottomY - (item.revenue / roundedMax) * plotH;
+      return {
+        ...item,
+        x,
+        y: Math.max(padTop, Math.min(bottomY, y)),
+      };
     });
-    return Object.values(map).sort((a, b) => a.key.localeCompare(b.key));
-  }, [bookings]);
+  }, [chartSeries, roundedMax, plotW, plotH, bottomY]);
 
-  const activeAnalytics = analyticsMode === 'month' ? monthAnalytics : analyticsMode === 'week' ? weekAnalytics : yearAnalytics;
-  const maxRevenue = Math.max(...activeAnalytics.map((a) => a.revenue), 50000);
+  // Smooth curve paths
+  const { linePath, areaPath } = React.useMemo(() => {
+    if (points.length === 0) return { linePath: '', areaPath: '' };
+    if (points.length === 1) {
+      return {
+        linePath: `M ${points[0].x} ${points[0].y}`,
+        areaPath: `M ${points[0].x} ${points[0].y} L ${points[0].x} ${bottomY} Z`,
+      };
+    }
+
+    let d = `M ${points[0].x.toFixed(1)} ${points[0].y.toFixed(1)}`;
+    for (let i = 0; i < points.length - 1; i++) {
+      const cur = points[i];
+      const nxt = points[i + 1];
+      const mx = ((cur.x + nxt.x) / 2).toFixed(1);
+      d += ` C ${mx} ${cur.y.toFixed(1)}, ${mx} ${nxt.y.toFixed(1)}, ${nxt.x.toFixed(1)} ${nxt.y.toFixed(1)}`;
+    }
+
+    const aPath = `${d} L ${points[points.length - 1].x.toFixed(1)} ${bottomY} L ${points[0].x.toFixed(1)} ${bottomY} Z`;
+    return { linePath: d, areaPath: aPath };
+  }, [points, bottomY]);
+
+  // Top months for right panel breakdown
+  const topMonths = React.useMemo(() => {
+    return [...monthAnalytics]
+      .filter((m) => m.revenue > 0 || m.count > 0)
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 4);
+  }, [monthAnalytics]);
 
   const [isLedgerModalOpen, setIsLedgerModalOpen] = useState(false);
   const [ledgerSearch, setLedgerSearch] = useState('');
@@ -318,128 +348,278 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ navigate
           </div>
         </div>
 
-        {/* Executive Revenue & Booking Trends Visualizer */}
-        <div className="p-5 sm:p-6 rounded-2xl bg-white border border-[#E2DACB] shadow-xs space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center border border-amber-200 shrink-0">
-                <BarChart3 className="w-5 h-5" />
-              </div>
+        {/* Modern Line Graph & Trajectory Analytics (Matching Google Reference Design) */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          {/* Left Panel: Line Graph (Overall Revenue / Volume) */}
+          <div className="lg:col-span-2 p-5 sm:p-6 rounded-2xl bg-white border border-[#E2DACB] shadow-xs space-y-4 flex flex-col justify-between">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
-                <h3 className="text-base font-bold text-[#173D35] font-serif-heading">
-                  Revenue &amp; Booking Trends
+                <h3 className="text-base font-bold text-slate-900 font-serif-heading flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-[#0284c7]" />
+                  <span>Overall Revenue &amp; Volume</span>
                 </h3>
                 <p className="text-xs text-slate-500">
-                  Visual breakdown of customer bookings, income volume, and advance collections
+                  Continuous performance curve across booking dates
                 </p>
               </div>
-            </div>
 
-            {/* View Mode Pills */}
-            <div className="flex items-center gap-1.5 bg-[#FAF8F5] p-1 rounded-xl border border-slate-200 self-start sm:self-auto">
-              <button
-                type="button"
-                onClick={() => setAnalyticsMode('month')}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  analyticsMode === 'month'
-                    ? 'bg-[#173D35] text-white shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Month-wise
-              </button>
-              <button
-                type="button"
-                onClick={() => setAnalyticsMode('week')}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  analyticsMode === 'week'
-                    ? 'bg-[#173D35] text-white shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Week-wise
-              </button>
-              <button
-                type="button"
-                onClick={() => setAnalyticsMode('year')}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  analyticsMode === 'year'
-                    ? 'bg-[#173D35] text-white shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Year-wise
-              </button>
-            </div>
-          </div>
-
-          {/* Quick Period Summary Numbers */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-3 rounded-xl bg-[#FAF8F5] border border-[#E2DACB]/60 text-xs">
-            <div>
-              <span className="text-[10px] uppercase font-bold text-slate-500 block">Total Invoiced</span>
-              <strong className="text-sm sm:text-base font-bold font-mono text-slate-900">
-                ₹{activeAnalytics.reduce((s, a) => s + a.revenue, 0).toLocaleString('en-IN')}
-              </strong>
-            </div>
-            <div>
-              <span className="text-[10px] uppercase font-bold text-emerald-700 block">Collected in Advance</span>
-              <strong className="text-sm sm:text-base font-bold font-mono text-emerald-800">
-                ₹{activeAnalytics.reduce((s, a) => s + a.collected, 0).toLocaleString('en-IN')}
-              </strong>
-            </div>
-            <div className="col-span-2 sm:col-span-1">
-              <span className="text-[10px] uppercase font-bold text-amber-800 block">Total Functions</span>
-              <strong className="text-sm sm:text-base font-bold font-mono text-amber-900">
-                {activeAnalytics.reduce((s, a) => s + a.count, 0)} Bookings
-              </strong>
-            </div>
-          </div>
-
-          {/* Graphical Bars */}
-          <div className="pt-2">
-            {activeAnalytics.length === 0 ? (
-              <div className="py-8 text-center text-slate-400 text-xs">
-                No bookings recorded in this timeframe yet.
+              {/* Timeframe Dropdown (matching Google screenshot format) */}
+              <div className="flex items-center gap-1.5">
+                <select
+                  value={chartYear}
+                  onChange={(e) => setChartYear(e.target.value)}
+                  className="px-2.5 py-1 text-xs font-bold rounded-lg border border-slate-300 bg-slate-50 text-slate-700 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-[#0284c7] cursor-pointer"
+                >
+                  <option value="2026">Month (2026)</option>
+                  <option value="2027">Month (2027)</option>
+                  <option value="all">All Months</option>
+                </select>
               </div>
-            ) : (
-              <div className="flex items-end gap-2 sm:gap-4 overflow-x-auto pb-2 pt-6 min-h-[190px]">
-                {activeAnalytics.map((item) => {
-                  const barHeight = Math.max(24, Math.round((item.revenue / maxRevenue) * 120));
+            </div>
+
+            {/* SVG Line & Area Chart */}
+            <div className="relative pt-2">
+              <svg viewBox="0 0 620 220" className="w-full h-auto overflow-visible select-none">
+                <defs>
+                  <linearGradient id="revenueLineGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.45" />
+                    <stop offset="60%" stopColor="#38bdf8" stopOpacity="0.12" />
+                    <stop offset="100%" stopColor="#38bdf8" stopOpacity="0.0" />
+                  </linearGradient>
+                </defs>
+
+                {/* Horizontal reference lines & Y-axis numerical ticks */}
+                {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
+                  const yVal = bottomY - ratio * plotH;
+                  const tickVal = Math.round(roundedMax * ratio);
+                  const tickLabel =
+                    tickVal === 0
+                      ? '0'
+                      : tickVal >= 100000
+                      ? `₹${(tickVal / 100000).toFixed(tickVal % 100000 === 0 ? 0 : 1)}L`
+                      : `₹${(tickVal / 1000).toFixed(0)}k`;
+
                   return (
-                    <div
-                      key={item.key}
-                      onClick={() => navigate('/admin/bookings')}
-                      className="flex-1 min-w-[70px] sm:min-w-[85px] flex flex-col items-center gap-1.5 group cursor-pointer"
-                      title={`${item.label}: ${item.count} bookings, ₹${item.revenue.toLocaleString('en-IN')} total, ₹${item.collected.toLocaleString('en-IN')} collected. Click to open Bookings.`}
-                    >
-                      {/* Top value */}
-                      <span className="text-[10px] font-mono font-bold text-slate-700 group-hover:text-amber-700 transition-colors">
-                        ₹{(item.revenue / 1000).toFixed(0)}k
-                      </span>
-
-                      {/* Bar Pillar */}
-                      <div className="w-full bg-slate-100 rounded-t-xl overflow-hidden relative border border-slate-200/80 group-hover:border-amber-400 transition-colors" style={{ height: '120px' }}>
-                        <div
-                          className="w-full bg-gradient-to-t from-[#173D35] to-[#C9AA72] rounded-t-lg transition-all duration-500 absolute bottom-0 left-0 right-0 flex items-center justify-center group-hover:brightness-110"
-                          style={{ height: `${barHeight}px` }}
-                        >
-                          {item.count > 0 && (
-                            <span className="text-[9px] font-mono font-bold text-white shadow-2xs">
-                              {item.count}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Bottom Label */}
-                      <span className="text-[11px] font-semibold text-slate-600 group-hover:text-slate-900 transition-colors truncate max-w-full">
-                        {item.label}
-                      </span>
-                    </div>
+                    <g key={ratio}>
+                      <line
+                        x1={padLeft}
+                        y1={yVal}
+                        x2={padLeft + plotW}
+                        y2={yVal}
+                        stroke="#f1f5f9"
+                        strokeDasharray={ratio === 0 ? undefined : '3 3'}
+                        strokeWidth="1"
+                      />
+                      <text
+                        x={padLeft - 8}
+                        y={yVal + 3.5}
+                        textAnchor="end"
+                        className="text-[10px] fill-slate-400 font-mono font-medium"
+                      >
+                        {tickLabel}
+                      </text>
+                    </g>
                   );
                 })}
+
+                {/* Vertical faint lines from each month on X-axis */}
+                {points.map((p, idx) => (
+                  <line
+                    key={idx}
+                    x1={p.x}
+                    y1={padTop}
+                    x2={p.x}
+                    y2={bottomY}
+                    stroke="#f8fafc"
+                    strokeWidth="1"
+                  />
+                ))}
+
+                {/* Gradient Area Fill */}
+                <path d={areaPath} fill="url(#revenueLineGrad)" />
+
+                {/* Smooth Curve Line */}
+                <path
+                  d={linePath}
+                  fill="none"
+                  stroke="#0284c7"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+
+                {/* Data Points with Hover Cards */}
+                {points.map((p, idx) => {
+                  const isHovered = hoveredPointIdx === idx;
+                  return (
+                    <g
+                      key={idx}
+                      className="cursor-pointer"
+                      onMouseEnter={() => setHoveredPointIdx(idx)}
+                      onMouseLeave={() => setHoveredPointIdx(null)}
+                      onClick={() => navigate('/admin/bookings')}
+                    >
+                      {/* Generous hit target */}
+                      <circle cx={p.x} cy={p.y} r="14" fill="transparent" />
+
+                      {/* Dot */}
+                      <circle
+                        cx={p.x}
+                        cy={p.y}
+                        r={isHovered ? 6 : p.revenue > 0 ? 4 : 2}
+                        fill={p.revenue > 0 ? '#0284c7' : '#cbd5e1'}
+                        stroke="#ffffff"
+                        strokeWidth={p.revenue > 0 ? 2 : 1}
+                        className="transition-all duration-150"
+                      />
+
+                      {/* Tooltip Popup */}
+                      {isHovered && (
+                        <g transform={`translate(${Math.min(540, Math.max(75, p.x))}, ${Math.max(48, p.y - 10)})`}>
+                          <rect
+                            x="-65"
+                            y="-40"
+                            width="130"
+                            height="36"
+                            rx="8"
+                            fill="#0f172a"
+                            className="drop-shadow-lg"
+                          />
+                          <polygon points="0, -4 -5, -9 5, -9" fill="#0f172a" />
+                          <text
+                            x="0"
+                            y="-25"
+                            textAnchor="middle"
+                            className="text-[9.5px] fill-slate-300 font-sans"
+                          >
+                            {p.fullLabel || p.label} • {p.count} event{p.count === 1 ? '' : 's'}
+                          </text>
+                          <text
+                            x="0"
+                            y="-12"
+                            textAnchor="middle"
+                            className="text-[11px] fill-white font-mono font-bold"
+                          >
+                            ₹{p.revenue.toLocaleString('en-IN')}
+                          </text>
+                        </g>
+                      )}
+
+                      {/* X-axis Label */}
+                      <text
+                        x={p.x}
+                        y={204}
+                        textAnchor="middle"
+                        className={`text-[10px] font-sans transition-colors ${
+                          isHovered
+                            ? 'fill-[#0284c7] font-bold'
+                            : p.revenue > 0
+                            ? 'fill-slate-800 font-bold'
+                            : 'fill-slate-400 font-medium'
+                        }`}
+                      >
+                        {p.label}
+                      </text>
+                    </g>
+                  );
+                })}
+              </svg>
+            </div>
+          </div>
+
+          {/* Right Panel: Revenue Highlights & Source/Month Breakdown (Matching Reference Image) */}
+          <div className="lg:col-span-1 p-5 rounded-2xl bg-white border border-[#E2DACB] shadow-xs flex flex-col justify-between space-y-4">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                <h4 className="text-sm font-bold text-slate-900 font-serif-heading">
+                  Revenue Summary
+                </h4>
+                <span className="text-[10px] uppercase font-bold text-slate-400">
+                  {chartYear === 'all' ? 'All Time' : `Year ${chartYear}`}
+                </span>
               </div>
-            )}
+
+              {/* KPI metrics */}
+              <div className="space-y-2.5 text-xs">
+                <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500 font-medium">Total Invoiced:</span>
+                    <strong className="text-slate-900 font-mono font-bold text-sm">
+                      ₹{chartSeries.reduce((s, c) => s + c.revenue, 0).toLocaleString('en-IN')}
+                    </strong>
+                  </div>
+                  <div className="w-full bg-slate-200 h-1.5 rounded-full mt-1.5 overflow-hidden">
+                    <div className="bg-[#0284c7] h-full rounded-full" style={{ width: '100%' }} />
+                  </div>
+                </div>
+
+                <div className="p-2.5 rounded-xl bg-emerald-50/60 border border-emerald-100">
+                  <div className="flex items-center justify-between">
+                    <span className="text-emerald-800 font-medium">Advance Collected:</span>
+                    <strong className="text-emerald-900 font-mono font-bold text-sm">
+                      ₹{chartSeries.reduce((s, c) => s + c.collected, 0).toLocaleString('en-IN')}
+                    </strong>
+                  </div>
+                  <div className="w-full bg-emerald-200/80 h-1.5 rounded-full mt-1.5 overflow-hidden">
+                    <div
+                      className="bg-emerald-600 h-full rounded-full"
+                      style={{
+                        width: `${Math.min(100, Math.round((chartSeries.reduce((s, c) => s + c.collected, 0) / Math.max(1, chartSeries.reduce((s, c) => s + c.revenue, 0))) * 100))}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div className="p-2.5 rounded-xl bg-amber-50/60 border border-amber-100">
+                  <div className="flex items-center justify-between">
+                    <span className="text-amber-800 font-medium">Balance Due:</span>
+                    <strong className="text-amber-900 font-mono font-bold text-sm">
+                      ₹{Math.max(0, chartSeries.reduce((s, c) => s + c.revenue, 0) - chartSeries.reduce((s, c) => s + c.collected, 0)).toLocaleString('en-IN')}
+                    </strong>
+                  </div>
+                  <div className="w-full bg-amber-200/80 h-1.5 rounded-full mt-1.5 overflow-hidden">
+                    <div
+                      className="bg-amber-600 h-full rounded-full"
+                      style={{
+                        width: `${Math.min(100, Math.round((Math.max(0, chartSeries.reduce((s, c) => s + c.revenue, 0) - chartSeries.reduce((s, c) => s + c.collected, 0)) / Math.max(1, chartSeries.reduce((s, c) => s + c.revenue, 0))) * 100))}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Top Active Months Distribution (like Screenshot 3) */}
+            <div className="pt-2 border-t border-slate-100 space-y-2 text-xs">
+              <span className="text-[11px] font-bold text-slate-700 block">
+                Top Active Months
+              </span>
+              {topMonths.length === 0 ? (
+                <div className="text-[11px] text-slate-400 italic">No bookings recorded yet</div>
+              ) : (
+                <div className="space-y-2">
+                  {topMonths.map((m) => {
+                    const pct = Math.min(100, Math.round((m.revenue / Math.max(1, totalAgreedRevenue)) * 100));
+                    return (
+                      <div key={m.key} className="space-y-1">
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="font-semibold text-slate-800">{m.label}</span>
+                          <span className="text-slate-500 font-mono">
+                            {m.count} event{m.count === 1 ? '' : 's'} &bull; ₹{m.revenue.toLocaleString('en-IN')}
+                          </span>
+                        </div>
+                        <div className="w-full bg-slate-100 h-1 rounded-full overflow-hidden">
+                          <div
+                            className="bg-gradient-to-r from-[#0284c7] to-[#C9AA72] h-full rounded-full"
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
