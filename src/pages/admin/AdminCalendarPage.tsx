@@ -45,6 +45,11 @@ import {
 import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../context/AuthContext';
 import { BookingRequest } from '../../types';
+import {
+  RESERVATION_PACKAGE_OPTIONS,
+  ReservationPackageOption,
+  STANDARD_OCCASIONS,
+} from '../../services/hallData';
 
 interface AdminCalendarPageProps {
   navigate: (path: string) => void;
@@ -64,14 +69,19 @@ export const AdminCalendarPage: React.FC<AdminCalendarPageProps> = ({ navigate }
   const [isLoading, setIsLoading] = useState(false);
   const [, setTick] = useState(0);
 
-  // Quick reservation modal state
+  // Quick reservation modal state & dynamic package list
+  const [packageOptions, setPackageOptions] = useState<ReservationPackageOption[]>(RESERVATION_PACKAGE_OPTIONS);
   const [isQuickBookModalOpen, setIsQuickBookModalOpen] = useState(false);
   const [quickBookForm, setQuickBookForm] = useState<{
     customerName: string;
     phone: string;
     hall: HallTarget;
     slot: SlotTarget;
-    eventTitle: string;
+    packageId: string;
+    packageName: string;
+    occasionCategory: string;
+    customOccasion: string;
+    additionalNote: string;
     estimatedRent: number;
     discountType: 'percentage' | 'fixed';
     discountValue: number;
@@ -82,13 +92,45 @@ export const AdminCalendarPage: React.FC<AdminCalendarPageProps> = ({ navigate }
     phone: '',
     hall: 'both',
     slot: 'day',
-    eventTitle: 'Private Function',
+    packageId: 'full-ac-hall',
+    packageName: 'Full AC Hall (Combined Campus)',
+    occasionCategory: 'Wedding / Nikah (Main Ceremony)',
+    customOccasion: '',
+    additionalNote: '',
     estimatedRent: 65000,
     discountType: 'fixed',
     discountValue: 0,
     discountReason: '',
     advancePaid: 15000,
   });
+
+  // Fetch latest packages from server if configured
+  useEffect(() => {
+    fetch('/api/packages')
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          const activeOnly = data.filter((p: any) => p.active !== false);
+          if (activeOnly.length > 0) {
+            const mapped: ReservationPackageOption[] = activeOnly.map((p: any) => {
+              const req = Array.isArray(p.requiredResources) ? p.requiredResources : [];
+              const isBoth = req.includes('gents_hall') && req.includes('ladies_hall');
+              const isLadies = req.includes('ladies_hall') && !req.includes('gents_hall');
+              const hall: HallTarget = isBoth ? 'both' : isLadies ? 'hall_2' : 'hall_1';
+              return {
+                id: p.id,
+                name: p.name || p.displayName,
+                hall,
+                rent: Number(p.rent) || 0,
+                label: `${p.displayName || p.name} — ₹${Number(p.rent).toLocaleString('en-IN')}`,
+              };
+            });
+            setPackageOptions(mapped);
+          }
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // Subscribe to live availability updates
   useEffect(() => {
@@ -277,24 +319,40 @@ export const AdminCalendarPage: React.FC<AdminCalendarPageProps> = ({ navigate }
     const netRent = Math.max(0, baseRent - discAmount);
     const advance = Number(quickBookForm.advancePaid) || 0;
 
+    const effectiveOccasion =
+      quickBookForm.occasionCategory === 'Other (Custom Occasion)'
+        ? (quickBookForm.customOccasion.trim() || 'Custom Function')
+        : quickBookForm.occasionCategory;
+
+    const finalEventTitle = quickBookForm.additionalNote.trim()
+      ? `${effectiveOccasion} — ${quickBookForm.additionalNote.trim()}`
+      : effectiveOccasion;
+
     const newBooking: BookingRequest & any = {
       id: generateBookingId(),
       customerName: quickBookForm.customerName.trim(),
       phone: quickBookForm.phone.trim(),
-      email: '',
+      email: 'desk@hhevents.in',
       hall: quickBookForm.hall as any,
+      hallSelection: quickBookForm.hall as any,
       slot: quickBookForm.slot,
-      packageId: quickBookForm.hall === 'both' ? 'full-ac-hall' : (quickBookForm.hall === 'hall_2' ? 'hall-2-ac' : 'single-ac-hall'),
+      timeSlot: quickBookForm.slot,
+      packageId: quickBookForm.packageId,
+      packageName: quickBookForm.packageName,
       date: selectedDate,
+      eventDate: selectedDate,
       status: 'CONFIRMED',
-      acOption: 'ac',
+      acOption: quickBookForm.packageId.toLowerCase().includes('non-ac') ? 'Non AC' : 'AC',
       advancePaymentStatus: advance >= netRent && netRent > 0 ? 'fully_paid' : advance > 0 ? 'advance_paid' : 'unpaid',
+      totalAmount: netRent,
       totalEstimate: netRent,
+      packagePrice: baseRent,
       amountPaid: advance,
       balanceDue: Math.max(0, netRent - advance),
       customDiscountAmount: discAmount > 0 ? discAmount : undefined,
       customDiscountReason: discAmount > 0 ? (quickBookForm.discountReason || 'Manager Direct Discount') : undefined,
-      additionalInfo: quickBookForm.eventTitle || 'Manager Manual Reservation',
+      additionalInfo: finalEventTitle,
+      notes: finalEventTitle,
       submittedAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -310,8 +368,12 @@ export const AdminCalendarPage: React.FC<AdminCalendarPageProps> = ({ navigate }
         phone: '',
         hall: selectedHall,
         slot: 'day',
-        eventTitle: 'Private Function',
-        estimatedRent: selectedHall === 'both' ? 65000 : 30000,
+        packageId: packageOptions[0]?.id || 'full-ac-hall',
+        packageName: packageOptions[0]?.name || 'Full AC Hall (Combined Campus)',
+        occasionCategory: 'Wedding / Nikah (Main Ceremony)',
+        customOccasion: '',
+        additionalNote: '',
+        estimatedRent: packageOptions[0]?.rent || 65000,
         discountType: 'fixed',
         discountValue: 0,
         discountReason: '',
@@ -341,11 +403,15 @@ export const AdminCalendarPage: React.FC<AdminCalendarPageProps> = ({ navigate }
   };
 
   const openQuickBook = (slot: SlotTarget) => {
+    // Pick the best matching package for current hall view
+    const matchedPkg = packageOptions.find((p) => p.hall === selectedHall) || packageOptions[0];
     setQuickBookForm((prev) => ({
       ...prev,
       slot,
-      hall: selectedHall,
-      estimatedRent: selectedHall === 'both' ? 65000 : 30000,
+      hall: matchedPkg ? matchedPkg.hall : selectedHall,
+      packageId: matchedPkg ? matchedPkg.id : prev.packageId,
+      packageName: matchedPkg ? matchedPkg.name : prev.packageName,
+      estimatedRent: matchedPkg ? matchedPkg.rent : (selectedHall === 'both' ? 65000 : 30000),
       discountType: 'fixed',
       discountValue: 0,
       discountReason: '',
@@ -775,42 +841,51 @@ export const AdminCalendarPage: React.FC<AdminCalendarPageProps> = ({ navigate }
             </div>
 
             <form onSubmit={handleSaveQuickBooking} className="space-y-4 text-xs">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Select Hall / Wing *
-                  </label>
-                  <select
-                    value={quickBookForm.hall}
-                    onChange={(e) => {
-                      const h = e.target.value as HallTarget;
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Select Package &amp; Hall Space *
+                </label>
+                <select
+                  value={quickBookForm.packageId}
+                  onChange={(e) => {
+                    const selId = e.target.value;
+                    const pkg = packageOptions.find((p) => p.id === selId);
+                    if (pkg) {
                       setQuickBookForm({
                         ...quickBookForm,
-                        hall: h,
-                        estimatedRent: h === 'both' ? 65000 : 30000,
+                        packageId: pkg.id,
+                        packageName: pkg.name,
+                        hall: pkg.hall,
+                        estimatedRent: pkg.rent,
                       });
-                    }}
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#173D35] bg-white"
-                  >
-                    <option value="both">Combined Hall (Full Campus)</option>
-                    <option value="hall_1">Hall 1 (Gents Wing)</option>
-                    <option value="hall_2">Hall 2 (Ladies Wing)</option>
-                  </select>
+                    }
+                  }}
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#173D35] bg-white font-medium text-slate-800"
+                >
+                  {packageOptions.map((pkg) => (
+                    <option key={pkg.id} value={pkg.id}>
+                      {pkg.label}
+                    </option>
+                  ))}
+                </select>
+                <div className="flex items-center justify-between text-[11px] text-slate-500 mt-1 px-0.5">
+                  <span>Wing: <strong className="text-slate-700">{quickBookForm.hall === 'both' ? 'Combined Campus (Full Hall)' : quickBookForm.hall === 'hall_1' ? 'Hall 1 (Gents Wing)' : 'Hall 2 (Ladies Wing)'}</strong></span>
+                  <span>Tariff: <strong className="text-emerald-700 font-mono">₹{Number(quickBookForm.estimatedRent).toLocaleString('en-IN')}</strong></span>
                 </div>
+              </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Session Slot *
-                  </label>
-                  <select
-                    value={quickBookForm.slot}
-                    onChange={(e) => setQuickBookForm({ ...quickBookForm, slot: e.target.value as SlotTarget })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#173D35] bg-white"
-                  >
-                    <option value="day">Day Session (10 AM – 3 PM)</option>
-                    <option value="evening">Evening Session (6 PM – 10 PM)</option>
-                  </select>
-                </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Session Slot *
+                </label>
+                <select
+                  value={quickBookForm.slot}
+                  onChange={(e) => setQuickBookForm({ ...quickBookForm, slot: e.target.value as SlotTarget })}
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#173D35] bg-white font-medium"
+                >
+                  <option value="day">Day Session (10 AM – 3 PM)</option>
+                  <option value="evening">Evening Session (6 PM – 10 PM)</option>
+                </select>
               </div>
 
               <div>
@@ -942,17 +1017,58 @@ export const AdminCalendarPage: React.FC<AdminCalendarPageProps> = ({ navigate }
                 );
               })()}
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Occasion / Event Note
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Wedding Reception, Engagement, Family Meet"
-                  value={quickBookForm.eventTitle}
-                  onChange={(e) => setQuickBookForm({ ...quickBookForm, eventTitle: e.target.value })}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#173D35]"
-                />
+              <div className="space-y-2">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Occasion / Function Type *
+                  </label>
+                  <select
+                    value={quickBookForm.occasionCategory}
+                    onChange={(e) => {
+                      const occ = e.target.value;
+                      setQuickBookForm({
+                        ...quickBookForm,
+                        occasionCategory: occ,
+                      });
+                    }}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#173D35] bg-white font-medium text-slate-800"
+                  >
+                    {STANDARD_OCCASIONS.map((occ) => (
+                      <option key={occ} value={occ}>
+                        {occ}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {quickBookForm.occasionCategory === 'Other (Custom Occasion)' && (
+                  <div>
+                    <label className="block text-xs font-bold text-amber-800 mb-1">
+                      Type Custom Occasion Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Political Convention, Award Ceremony, Silver Jubilee"
+                      value={quickBookForm.customOccasion}
+                      onChange={(e) => setQuickBookForm({ ...quickBookForm, customOccasion: e.target.value })}
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-amber-300 bg-amber-50/40 focus:outline-none focus:ring-2 focus:ring-amber-500 font-medium"
+                    />
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-600 mb-0.5">
+                    Additional Event Notes (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Early kitchen access, bride room setup, floral dais decor"
+                    value={quickBookForm.additionalNote}
+                    onChange={(e) => setQuickBookForm({ ...quickBookForm, additionalNote: e.target.value })}
+                    className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#173D35]"
+                  />
+                </div>
               </div>
 
               <div className="pt-3 flex items-center justify-end gap-3 border-t border-slate-100">

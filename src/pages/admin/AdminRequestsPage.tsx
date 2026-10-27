@@ -40,6 +40,11 @@ import {
   checkSlotAvailability,
 } from '../../services/bookingStorage';
 import { BookingRequest, BookingStatus } from '../../types';
+import {
+  RESERVATION_PACKAGE_OPTIONS,
+  ReservationPackageOption,
+  STANDARD_OCCASIONS,
+} from '../../services/hallData';
 
 interface AdminRequestsPageProps {
   navigate: (path: string) => void;
@@ -80,21 +85,55 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
   const [isApplyingDiscount, setIsApplyingDiscount] = useState(false);
   const [deletingBookingId, setDeletingBookingId] = useState<string | null>(null);
 
-  // Direct Manual Reservation Modal State
+  // Direct Manual Reservation Modal State & Packages
+  const [packageOptions, setPackageOptions] = useState<ReservationPackageOption[]>(RESERVATION_PACKAGE_OPTIONS);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isSubmittingReservation, setIsSubmittingReservation] = useState(false);
   const [createForm, setCreateForm] = useState({
     date: new Date().toISOString().slice(0, 10),
     hall: 'both' as 'both' | 'hall_1' | 'hall_2',
     slot: 'day' as 'day' | 'evening',
+    packageId: 'full-ac-hall',
+    packageName: 'Full AC Hall (Combined Campus)',
+    occasionCategory: 'Wedding / Nikah (Main Ceremony)',
+    customOccasion: '',
+    additionalNote: '',
     customerName: '',
     phone: '',
     estimatedRent: 65000,
     discountType: 'fixed' as 'fixed' | 'percentage',
     discountValue: 0,
     advancePaid: 15000,
-    notes: 'Private Function',
+    notes: 'Wedding / Nikah (Main Ceremony)',
   });
+
+  // Fetch latest packages from server if configured
+  useEffect(() => {
+    fetch('/api/packages')
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          const activeOnly = data.filter((p: any) => p.active !== false);
+          if (activeOnly.length > 0) {
+            const mapped: ReservationPackageOption[] = activeOnly.map((p: any) => {
+              const req = Array.isArray(p.requiredResources) ? p.requiredResources : [];
+              const isBoth = req.includes('gents_hall') && req.includes('ladies_hall');
+              const isLadies = req.includes('ladies_hall') && !req.includes('gents_hall');
+              const hall: 'both' | 'hall_1' | 'hall_2' = isBoth ? 'both' : isLadies ? 'hall_2' : 'hall_1';
+              return {
+                id: p.id,
+                name: p.name || p.displayName,
+                hall,
+                rent: Number(p.rent) || 0,
+                label: `${p.displayName || p.name} — ₹${Number(p.rent).toLocaleString('en-IN')}`,
+              };
+            });
+            setPackageOptions(mapped);
+          }
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const handleCreateReservation = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -126,6 +165,15 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
       return;
     }
 
+    const effectiveOccasion =
+      createForm.occasionCategory === 'Other (Custom Occasion)'
+        ? (createForm.customOccasion.trim() || 'Custom Function')
+        : createForm.occasionCategory;
+
+    const finalEventTitle = createForm.additionalNote.trim()
+      ? `${effectiveOccasion} — ${createForm.additionalNote.trim()}`
+      : effectiveOccasion;
+
     setIsSubmittingReservation(true);
     try {
       const payload = {
@@ -138,7 +186,9 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
         timeSlot: createForm.slot,
         date: createForm.date,
         eventDate: createForm.date,
-        acOption: 'AC',
+        packageId: createForm.packageId,
+        packageName: createForm.packageName,
+        acOption: createForm.packageId.toLowerCase().includes('non-ac') ? 'Non AC' : 'AC',
         totalAmount: netRent,
         totalEstimate: netRent,
         packagePrice: baseRent,
@@ -150,13 +200,8 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
         paymentStatus: balanceDue === 0 && advance > 0 ? 'fully_paid' : advance > 0 ? 'advance_paid' : 'unpaid',
         advancePaymentStatus: balanceDue === 0 && advance > 0 ? 'fully_paid' : advance > 0 ? 'advance_paid' : 'unpaid',
         status: 'CONFIRMED',
-        notes: createForm.notes.trim() || 'Direct manual reservation',
-        packageName:
-          createForm.hall === 'both'
-            ? 'Full Hall (Combined Campus)'
-            : createForm.hall === 'hall_1'
-            ? 'Single AC Hall (Hall 1 Gents)'
-            : 'Single AC Hall (Hall 2 Ladies)',
+        notes: finalEventTitle,
+        additionalInfo: finalEventTitle,
       };
 
       const res = await fetch('/api/bookings', {
@@ -178,15 +223,20 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
       setIsCreateModalOpen(false);
       setCreateForm({
         date: new Date().toISOString().slice(0, 10),
-        hall: 'both',
+        hall: packageOptions[0]?.hall || 'both',
         slot: 'day',
+        packageId: packageOptions[0]?.id || 'full-ac-hall',
+        packageName: packageOptions[0]?.name || 'Full AC Hall (Combined Campus)',
+        occasionCategory: 'Wedding / Nikah (Main Ceremony)',
+        customOccasion: '',
+        additionalNote: '',
         customerName: '',
         phone: '',
-        estimatedRent: 65000,
+        estimatedRent: packageOptions[0]?.rent || 65000,
         discountType: 'fixed',
         discountValue: 0,
         advancePaid: 15000,
-        notes: 'Private Function',
+        notes: 'Wedding / Nikah (Main Ceremony)',
       });
       await loadBookings();
     } catch {
@@ -1199,24 +1249,35 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Select Hall / Wing *
+                    Select Package &amp; Hall Space *
                   </label>
                   <select
-                    value={createForm.hall}
+                    value={createForm.packageId}
                     onChange={(e) => {
-                      const h = e.target.value as 'both' | 'hall_1' | 'hall_2';
-                      setCreateForm({
-                        ...createForm,
-                        hall: h,
-                        estimatedRent: h === 'both' ? 65000 : 30000,
-                      });
+                      const selId = e.target.value;
+                      const pkg = packageOptions.find((p) => p.id === selId);
+                      if (pkg) {
+                        setCreateForm({
+                          ...createForm,
+                          packageId: pkg.id,
+                          packageName: pkg.name,
+                          hall: pkg.hall,
+                          estimatedRent: pkg.rent,
+                        });
+                      }
                     }}
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#173D35] bg-white font-medium"
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#173D35] bg-white font-medium text-slate-800"
                   >
-                    <option value="both">Combined Hall (Full Campus)</option>
-                    <option value="hall_1">Hall 1 (Gents Wing)</option>
-                    <option value="hall_2">Hall 2 (Ladies Wing)</option>
+                    {packageOptions.map((pkg) => (
+                      <option key={pkg.id} value={pkg.id}>
+                        {pkg.label}
+                      </option>
+                    ))}
                   </select>
+                  <div className="flex items-center justify-between text-[11px] text-slate-500 mt-1 px-0.5">
+                    <span>Wing: <strong className="text-slate-700">{createForm.hall === 'both' ? 'Combined Campus (Full Hall)' : createForm.hall === 'hall_1' ? 'Hall 1 (Gents Wing)' : 'Hall 2 (Ladies Wing)'}</strong></span>
+                    <span>Tariff: <strong className="text-emerald-700 font-mono">₹{Number(createForm.estimatedRent).toLocaleString('en-IN')}</strong></span>
+                  </div>
                 </div>
 
                 <div>
@@ -1377,17 +1438,58 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
                 );
               })()}
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Occasion / Event Note
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Wedding Reception / Engagement / Conference"
-                  value={createForm.notes}
-                  onChange={(e) => setCreateForm({ ...createForm, notes: e.target.value })}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#173D35]"
-                />
+              <div className="space-y-2">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Occasion / Function Type *
+                  </label>
+                  <select
+                    value={createForm.occasionCategory}
+                    onChange={(e) => {
+                      const occ = e.target.value;
+                      setCreateForm({
+                        ...createForm,
+                        occasionCategory: occ,
+                      });
+                    }}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#173D35] bg-white font-medium text-slate-800"
+                  >
+                    {STANDARD_OCCASIONS.map((occ) => (
+                      <option key={occ} value={occ}>
+                        {occ}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {createForm.occasionCategory === 'Other (Custom Occasion)' && (
+                  <div>
+                    <label className="block text-xs font-bold text-amber-800 mb-1">
+                      Type Custom Occasion Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Political Convention, Award Ceremony, Silver Jubilee"
+                      value={createForm.customOccasion}
+                      onChange={(e) => setCreateForm({ ...createForm, customOccasion: e.target.value })}
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-amber-300 bg-amber-50/40 focus:outline-none focus:ring-2 focus:ring-amber-500 font-medium"
+                    />
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-600 mb-0.5">
+                    Additional Event Notes (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Early kitchen access, bride room setup, floral dais decor"
+                    value={createForm.additionalNote}
+                    onChange={(e) => setCreateForm({ ...createForm, additionalNote: e.target.value })}
+                    className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#173D35]"
+                  />
+                </div>
               </div>
 
               <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">

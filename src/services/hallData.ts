@@ -505,3 +505,100 @@ export const VENUE_SETTINGS: HallSettings = {
   maxAdvanceBookingMonths: 12,
   autoCancelUnpaidDays: 5,
 };
+
+export interface ReservationPackageOption {
+  id: string;
+  name: string;
+  hall: 'both' | 'hall_1' | 'hall_2';
+  rent: number;
+  label: string;
+}
+
+export const RESERVATION_PACKAGE_OPTIONS: ReservationPackageOption[] = [
+  {
+    id: 'full-ac-hall',
+    name: 'Full AC Hall (Combined Campus)',
+    hall: 'both',
+    rent: 65000,
+    label: 'Full AC Hall (Gents & Ladies Hall + Dual Dining + Kitchen) — ₹65,000',
+  },
+  {
+    id: 'full-non-ac-hall',
+    name: 'Full Non AC Hall (Combined Campus)',
+    hall: 'both',
+    rent: 45000,
+    label: 'Full Non AC Hall (Gents & Ladies Hall + Dual Dining + Kitchen) — ₹45,000',
+  },
+  {
+    id: 'single-ac-hall-1',
+    name: 'Single AC Hall - I (Hall 1 Gents)',
+    hall: 'hall_1',
+    rent: 30000,
+    label: 'Single AC Hall - I (Hall 1 Gents + Dining + Kitchen) — ₹30,000',
+  },
+  {
+    id: 'single-ac-hall-2',
+    name: 'Single AC Hall - II (Hall 2 Ladies)',
+    hall: 'hall_2',
+    rent: 30000,
+    label: 'Single AC Hall - II (Hall 2 Ladies + Dining + Kitchen) — ₹30,000',
+  },
+  {
+    id: 'single-ac-hall-ii',
+    name: 'Single AC Hall (Double Dining)',
+    hall: 'hall_1',
+    rent: 45000,
+    label: 'Single AC Hall (Double Dining + Kitchen) — ₹45,000',
+  },
+  {
+    id: 'single-non-ac-hall-1',
+    name: 'Single Non AC Hall - I (Hall 1 Gents)',
+    hall: 'hall_1',
+    rent: 25000,
+    label: 'Single Non AC Hall - I (Hall 1 Gents + Dining + Kitchen) — ₹25,000',
+  },
+  {
+    id: 'single-non-ac-hall-2',
+    name: 'Single Non AC Hall - II (Hall 2 Ladies)',
+    hall: 'hall_2',
+    rent: 25000,
+    label: 'Single Non AC Hall - II (Hall 2 Ladies + Dining + Kitchen) — ₹25,000',
+  },
+  {
+    id: 'single-non-ac-hall-ii',
+    name: 'Single Non AC Hall (Double Dining)',
+    hall: 'hall_1',
+    rent: 30000,
+    label: 'Single Non AC Hall (Double Dining + Kitchen) — ₹30,000',
+  },
+  {
+    id: 'single-dining',
+    name: 'Single Dining + Kitchen',
+    hall: 'hall_1',
+    rent: 15000,
+    label: 'Single Dining + Kitchen (Feast / Catering Only) — ₹15,000',
+  },
+  {
+    id: 'double-dining',
+    name: 'Double Dining + Kitchen',
+    hall: 'both',
+    rent: 20000,
+    label: 'Double Dining + Kitchen (Grand Banquet / Iftar Only) — ₹20,000',
+  },
+];
+
+export const STANDARD_OCCASIONS = [
+  'Wedding / Nikah (Main Ceremony)',
+  'Valima / Wedding Reception',
+  'Engagement Ceremony / Mangani',
+  'Haldi / Mehendi / Sangeet',
+  'Birthday Celebration',
+  'Baby Shower / Seemantha',
+  'Housewarming / Gruhapravesha',
+  'Corporate Conference / Seminar',
+  'Community Banquet / Feast / Iftar',
+  'School / College Annual Day',
+  'Family Gathering / Private Function',
+  'Other (Custom Occasion)',
+];
+
