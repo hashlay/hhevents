@@ -75,7 +75,7 @@ export const AdminPaymentsPage: React.FC<{ navigate: (path: string) => void }> =
     try {
       const res = await fetch('/api/bookings', {
         headers: {
-          Authorization: `Bearer ${token || localStorage.getItem('hh_admin_token') || sessionStorage.getItem('hh_admin_token') || ''}`,
+          Authorization: `Bearer ${token || localStorage.getItem('hh_auth_token_v5') || sessionStorage.getItem('hh_auth_token_v5') || localStorage.getItem('hh_admin_token') || sessionStorage.getItem('hh_admin_token') || ''}`,
         },
       });
       if (res.ok) {
@@ -231,7 +231,7 @@ export const AdminPaymentsPage: React.FC<{ navigate: (path: string) => void }> =
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token || localStorage.getItem('hh_admin_token') || sessionStorage.getItem('hh_admin_token') || ''}`,
+          Authorization: `Bearer ${token || localStorage.getItem('hh_auth_token_v5') || sessionStorage.getItem('hh_auth_token_v5') || localStorage.getItem('hh_admin_token') || sessionStorage.getItem('hh_admin_token') || ''}`,
         },
         body: JSON.stringify({
           amount: Number(payAmount),

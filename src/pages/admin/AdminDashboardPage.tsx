@@ -64,6 +64,44 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ navigate
 
   const today = new Date().toISOString().split('T')[0];
 
+  const getWhatsAppConfirmationMessage = (b: BookingRequest) => {
+    const bObj = b as any;
+    const hostName = b.customerName || bObj.applicantName || 'Sir/Madam';
+    const paid = Number(bObj.amountPaid) || 0;
+
+    const evDateRaw = b.date || bObj.eventDate || '';
+    let evDateShort = '1-1-2027';
+    let dayOfWeek = 'Friday';
+
+    if (evDateRaw) {
+      const parts = evDateRaw.split('-');
+      if (parts.length === 3) {
+        evDateShort = `${parseInt(parts[2], 10)}-${parseInt(parts[1], 10)}-${parts[0]}`;
+      }
+      const dObj = new Date(`${evDateRaw}T00:00:00`);
+      if (!isNaN(dObj.getTime())) {
+        dayOfWeek = dObj.toLocaleDateString('en-IN', { weekday: 'long' });
+      }
+    }
+
+    const sessionSlot = (b.slot || bObj.timeSlot || 'day').toLowerCase();
+    const sessionName = sessionSlot === 'evening' ? 'Night' : 'Day';
+
+    return `Hello ${hostName}, this is regarding your event booking request (${b.id}) at H H Events & Conventions.
+
+Your Hall Booking Is Confirmed
+
+Event Date : ${evDateShort} ${dayOfWeek} ${sessionName} 
+
+Advance Recieved ${paid > 0 ? paid.toFixed(2) : '0.00'} 
+
+Regards,
+H H Events & Conventions 
+Opposite Juma Masjid, Akkarangadi,
+Panemangalore, Bantwal-574231
+Ph:9448151878`;
+  };
+
   const pendingBookings = bookings.filter(
     (b) => (b.status || '').toUpperCase() === 'PENDING'
   );
@@ -492,7 +530,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ navigate
                             textAnchor="middle"
                             className="text-[9.5px] fill-slate-300 font-sans"
                           >
-                            {p.fullLabel || p.label} • {p.count} event{p.count === 1 ? '' : 's'}
+                            {(p as any).fullLabel || p.label} • {p.count} event{p.count === 1 ? '' : 's'}
                           </text>
                           <text
                             x="0"
@@ -784,7 +822,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ navigate
                   {b.phone && (
                     <a
                       href={`https://wa.me/91${b.phone.replace(/\D/g, '').slice(-10)}?text=${encodeURIComponent(
-                        `Hello ${b.customerName || 'Sir/Madam'}, this is H H Events & Conventions regarding your booking request for ${b.date}.`
+                        getWhatsAppConfirmationMessage(b)
                       )}`}
                       target="_blank"
                       rel="noreferrer"

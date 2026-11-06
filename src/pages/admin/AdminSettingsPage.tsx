@@ -11,12 +11,17 @@ import {
   FileText,
   Camera,
   ArrowRight,
+  PenTool,
+  Upload,
+  Trash2,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { AdminLayout } from '../../components/layout/AdminLayout';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { VENUE_INFO } from '../../services/hallData';
 import { useToast } from '../../context/ToastContext';
+import { useAuth } from '../../context/AuthContext';
 
 interface AdminSettingsPageProps {
   navigate: (path: string) => void;
@@ -26,6 +31,7 @@ const SETTINGS_KEY = 'hh_events_local_settings_v4';
 
 export const AdminSettingsPage: React.FC<AdminSettingsPageProps> = ({ navigate }) => {
   const { showToast } = useToast();
+  const { token } = useAuth();
 
   const [primaryPhone, setPrimaryPhone] = useState(VENUE_INFO.primaryPhone);
   const [secondaryPhone, setSecondaryPhone] = useState(VENUE_INFO.secondaryPhone);
@@ -34,44 +40,139 @@ export const AdminSettingsPage: React.FC<AdminSettingsPageProps> = ({ navigate }
   const [eveningSlotHours, setEveningSlotHours] = useState(VENUE_INFO.eveningSlotHours);
   const [paymentNotice, setPaymentNotice] = useState(VENUE_INFO.paymentNotice);
   const [address, setAddress] = useState(VENUE_INFO.address);
+  const [signatorySignature, setSignatorySignature] = useState<string>('');
+  const [signatoryName, setSignatoryName] = useState<string>('Authorized Signatory');
   const [isSaving, setIsSaving] = useState(false);
 
+  const getAuthToken = () => {
+    return (
+      token ||
+      localStorage.getItem('hh_auth_token_v5') ||
+      sessionStorage.getItem('hh_auth_token_v5') ||
+      localStorage.getItem('hh_admin_token') ||
+      sessionStorage.getItem('hh_admin_token') ||
+      ''
+    );
+  };
+
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(SETTINGS_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (parsed.primaryPhone) setPrimaryPhone(parsed.primaryPhone);
-        if (parsed.secondaryPhone) setSecondaryPhone(parsed.secondaryPhone);
-        if (parsed.whatsappPhone) setWhatsappPhone(parsed.whatsappPhone);
-        if (parsed.daySlotHours) setDaySlotHours(parsed.daySlotHours);
-        if (parsed.eveningSlotHours) setEveningSlotHours(parsed.eveningSlotHours);
-        if (parsed.paymentNotice) setPaymentNotice(parsed.paymentNotice);
-        if (parsed.address) setAddress(parsed.address);
-      }
-    } catch (e) {
-      console.error('Failed to load local settings:', e);
-    }
+    // 1. Try loading from server API
+    fetch('/api/settings')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data) {
+          if (data.primaryPhone) setPrimaryPhone(data.primaryPhone);
+          if (data.secondaryPhone) setSecondaryPhone(data.secondaryPhone);
+          if (data.whatsappPhone) setWhatsappPhone(data.whatsappPhone);
+          if (data.daySlotHours) setDaySlotHours(data.daySlotHours);
+          if (data.eveningSlotHours) setEveningSlotHours(data.eveningSlotHours);
+          if (data.paymentNotice) setPaymentNotice(data.paymentNotice);
+          if (data.address) setAddress(data.address);
+          if (data.signatorySignature) setSignatorySignature(data.signatorySignature);
+          if (data.signatoryName) setSignatoryName(data.signatoryName);
+          localStorage.setItem(SETTINGS_KEY, JSON.stringify(data));
+        }
+      })
+      .catch(() => {
+        // Fallback to localStorage
+        try {
+          const stored = localStorage.getItem(SETTINGS_KEY);
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            if (parsed.primaryPhone) setPrimaryPhone(parsed.primaryPhone);
+            if (parsed.secondaryPhone) setSecondaryPhone(parsed.secondaryPhone);
+            if (parsed.whatsappPhone) setWhatsappPhone(parsed.whatsappPhone);
+            if (parsed.daySlotHours) setDaySlotHours(parsed.daySlotHours);
+            if (parsed.eveningSlotHours) setEveningSlotHours(parsed.eveningSlotHours);
+            if (parsed.paymentNotice) setPaymentNotice(parsed.paymentNotice);
+            if (parsed.address) setAddress(parsed.address);
+            if (parsed.signatorySignature) setSignatorySignature(parsed.signatorySignature);
+            if (parsed.signatoryName) setSignatoryName(parsed.signatoryName);
+          }
+        } catch (e) {
+          console.error('Failed to load local settings:', e);
+        }
+      });
   }, []);
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSignatureUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      showToast('Please select a valid image file (PNG, JPG, or WebP)', 'error');
+      return;
+    }
+
+    if (file.size > 3 * 1024 * 1024) {
+      showToast('Image size should be less than 3MB', 'error');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new window.Image();
+      img.onload = () => {
+        // Create canvas to keep image crisp and lightweight
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 600;
+        const scale = Math.min(1, MAX_WIDTH / img.width);
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          const dataUrl = canvas.toDataURL('image/png');
+          setSignatorySignature(dataUrl);
+          showToast('Signature loaded! Remember to click "Save Settings" to apply.', 'success');
+        }
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleClearSignature = () => {
+    setSignatorySignature('');
+    showToast('Signature removed. Blank signatory line will be displayed.', 'info');
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
+    const payload = {
+      primaryPhone: primaryPhone.trim(),
+      secondaryPhone: secondaryPhone.trim(),
+      whatsappPhone: whatsappPhone.trim(),
+      daySlotHours: daySlotHours.trim(),
+      eveningSlotHours: eveningSlotHours.trim(),
+      paymentNotice: paymentNotice.trim(),
+      address: address.trim(),
+      signatorySignature: signatorySignature || '',
+      signatoryName: signatoryName.trim() || 'Authorized Signatory',
+      updatedAt: new Date().toISOString(),
+    };
+
     try {
-      const payload = {
-        primaryPhone: primaryPhone.trim(),
-        secondaryPhone: secondaryPhone.trim(),
-        whatsappPhone: whatsappPhone.trim(),
-        daySlotHours: daySlotHours.trim(),
-        eveningSlotHours: eveningSlotHours.trim(),
-        paymentNotice: paymentNotice.trim(),
-        address: address.trim(),
-        updatedAt: new Date().toISOString(),
-      };
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(payload));
+
+      const activeToken = getAuthToken();
+      const res = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${activeToken}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        showToast('Venue settings & signature successfully saved to server & database!', 'success');
+      } else {
+        showToast('Saved locally in browser (server responded with notice)', 'info');
+      }
+    } catch {
       showToast('Venue parameters saved to local browser storage', 'success');
-    } catch (e) {
-      showToast('Failed to save settings', 'error');
     } finally {
       setIsSaving(false);
     }
@@ -85,6 +186,8 @@ export const AdminSettingsPage: React.FC<AdminSettingsPageProps> = ({ navigate }
     setEveningSlotHours(VENUE_INFO.eveningSlotHours);
     setPaymentNotice(VENUE_INFO.paymentNotice);
     setAddress(VENUE_INFO.address);
+    setSignatorySignature('');
+    setSignatoryName('Authorized Signatory');
     localStorage.removeItem(SETTINGS_KEY);
     showToast('Settings restored to venue defaults', 'info');
   };
@@ -251,6 +354,95 @@ export const AdminSettingsPage: React.FC<AdminSettingsPageProps> = ({ navigate }
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none"
                 required
               />
+            </div>
+          </Card>
+
+          {/* Authorized Signatory & Official Signature for Invoices */}
+          <Card className="p-6 sm:p-8 bg-white border border-slate-200 shadow-sm space-y-5">
+            <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
+              <div className="w-9 h-9 rounded-xl bg-[#0082a6]/10 text-[#0082a6] flex items-center justify-center">
+                <PenTool className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900 font-serif-heading">
+                  Authorized Signatory &amp; Stamp / Signature
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Signature image rendered on official Event Order invoices and customer receipts
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
+                    Signatory Designation Label
+                  </label>
+                  <input
+                    type="text"
+                    value={signatoryName}
+                    onChange={(e) => setSignatoryName(e.target.value)}
+                    placeholder="e.g. Authorized Signatory / General Manager"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-[#0082a6] focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
+                    Upload Signature Image
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#0082a6] text-[#0082a6] hover:bg-[#0082a6]/10 text-xs font-bold transition-all shadow-xs">
+                      <Upload className="w-4 h-4" />
+                      <span>{signatorySignature ? 'Replace Signature' : 'Choose Signature File'}</span>
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                        onChange={handleSignatureUpload}
+                        className="hidden"
+                      />
+                    </label>
+                    {signatorySignature && (
+                      <button
+                        type="button"
+                        onClick={handleClearSignature}
+                        className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl border border-rose-200 text-rose-700 hover:bg-rose-50 text-xs font-semibold transition-all cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Remove</span>
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-2 leading-relaxed">
+                    Recommended: Transparent PNG or crisp photo on white paper. If left blank, a clean blank signature area will appear on receipts for physical signing.
+                  </p>
+                </div>
+              </div>
+
+              {/* Live Preview Box (matches Event Order footer layout) */}
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-center space-y-2">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                  Invoice Footer Preview
+                </span>
+                <div className="bg-white p-4 rounded-lg border border-slate-200 max-w-[260px] mx-auto text-center space-y-1 shadow-xs">
+                  <div className="text-[11px] font-medium text-slate-700">For : H H Events &amp; Conventions</div>
+                  <div className="h-16 flex items-center justify-center border-b border-slate-300 border-dashed my-1">
+                    {signatorySignature ? (
+                      <img
+                        src={signatorySignature}
+                        alt="Authorized Signatory"
+                        className="max-h-14 max-w-[180px] object-contain"
+                      />
+                    ) : (
+                      <span className="text-[10.5px] text-slate-400 italic">
+                        (Blank Signature Area)
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-xs font-bold text-slate-900">{signatoryName || 'Authorized Signatory'}</div>
+                </div>
+              </div>
             </div>
           </Card>
 

@@ -213,6 +213,8 @@ function getDatabaseBackendStatus() {
   };
 }
 var dbCache = null;
+var lastCacheFetchTime = 0;
+var CACHE_TTL_MS = 2500;
 var writeLock = Promise.resolve();
 function getInitialDatabase() {
   return {
@@ -265,8 +267,9 @@ async function writeLocalMirror(data) {
     console.error("[Database] Failed writing local mirror:", err);
   }
 }
-async function getDb() {
-  if (dbCache) {
+async function getDb(forceRefresh = false) {
+  const isFresh = dbCache && !forceRefresh && Date.now() - lastCacheFetchTime < CACHE_TTL_MS;
+  if (isFresh) {
     if (!dbCache.coupons) dbCache.coupons = [];
     if (!dbCache.inquiries) dbCache.inquiries = [];
     return dbCache;
@@ -279,6 +282,7 @@ async function getDb() {
       if (doc) {
         const { _id, ...rest } = doc;
         dbCache = rest;
+        lastCacheFetchTime = Date.now();
         if (!dbCache.packages || dbCache.packages.length === 0) {
           dbCache.packages = INITIAL_PACKAGES;
         }
@@ -293,6 +297,7 @@ async function getDb() {
       } else {
         console.log("[Database] Initializing fresh state in MongoDB Atlas...");
         dbCache = getInitialDatabase();
+        lastCacheFetchTime = Date.now();
         await persistDb();
         return dbCache;
       }
@@ -330,6 +335,7 @@ async function persistDb() {
   writeLock = writeLock.then(async () => {
     try {
       dbCache.lastUpdated = (/* @__PURE__ */ new Date()).toISOString();
+      lastCacheFetchTime = Date.now();
       try {
         const mongo = await getMongoDb();
         if (mongo) {
@@ -945,17 +951,20 @@ apiRouter.post("/bookings", async (req, res) => {
         }
       }
     }
-    if (isAdmin && !appliedCoupon && req.body.customDiscountAmount) {
-      const customVal = Number(req.body.customDiscountAmount) || 0;
-      if (customVal > 0) {
-        discountAmount = Math.min(pkgRent, customVal);
-      }
+    const directDiscountVal = Number(req.body.customDiscountAmount ?? req.body.discountAmount) || 0;
+    if (isAdmin && !appliedCoupon && directDiscountVal > 0) {
+      discountAmount = Math.min(pkgRent, directDiscountVal);
     }
-    const netRent = Math.max(0, pkgRent - discountAmount);
+    const effectiveBaseRent = isAdmin && Number(req.body.packagePrice) > 0 ? Number(req.body.packagePrice) : pkgRent;
+    const extraCharge = isAdmin ? Number(req.body.extraCharge) || 0 : 0;
+    const extraChargeReason = extraCharge > 0 ? req.body.extraChargeReason?.trim() || "Extra Charge" : void 0;
+    const netRent = Math.max(0, effectiveBaseRent - discountAmount + extraCharge);
     const requestedStatus = isAdmin && req.body.status ? req.body.status.toUpperCase() : "PENDING";
     const initialPaid = isAdmin && req.body.amountPaid !== void 0 ? Number(req.body.amountPaid) : 0;
     const initialBalance = Math.max(0, netRent - initialPaid);
     const initialPaymentStatus = isAdmin && req.body.paymentStatus ? req.body.paymentStatus : initialBalance === 0 && netRent > 0 ? "fully_paid" : initialPaid > 0 ? "advance_paid" : requestedStatus === "CONFIRMED" ? "advance_paid" : "unpaid";
+    const rawReason = req.body.customDiscountReason || req.body.discountReason;
+    const discountReasonText = rawReason ? rawReason.trim() : discountAmount > 0 ? "Special Discount" : void 0;
     const newBooking = {
       id: bookingId,
       customerName: customerName.trim(),
@@ -963,10 +972,15 @@ apiRouter.post("/bookings", async (req, res) => {
       email: (email || "").trim(),
       packageId: packageId || (hallSelection === "both" ? "full-ac-hall" : "single-ac-hall"),
       packageName: pkgName,
-      packagePrice: pkgRent,
-      couponCode: appliedCoupon ? appliedCoupon.code : req.body.customDiscountReason ? `DIRECT-${req.body.customDiscountReason}` : void 0,
+      packagePrice: effectiveBaseRent,
+      couponCode: appliedCoupon ? appliedCoupon.code : discountReasonText ? `DIRECT-${discountReasonText}` : void 0,
       discountAmount: discountAmount > 0 ? discountAmount : void 0,
-      originalAmount: discountAmount > 0 ? pkgRent : void 0,
+      discountType: req.body.discountType,
+      discountValue: Number(req.body.discountValue) || (discountAmount > 0 ? discountAmount : void 0),
+      discountReason: discountReasonText,
+      originalAmount: discountAmount > 0 ? effectiveBaseRent : void 0,
+      extraCharge: extraCharge > 0 ? extraCharge : void 0,
+      extraChargeReason,
       occupiedResources: requiredResources,
       hallSelection,
       acOption: acOption || "ac",
@@ -977,6 +991,7 @@ apiRouter.post("/bookings", async (req, res) => {
       eventType: eventType || "wedding",
       status: requestedStatus,
       totalAmount: netRent,
+      totalEstimate: netRent,
       advanceRequired: Math.round(netRent * 0.25),
       amountPaid: initialPaid,
       balanceDue: initialBalance,
@@ -1064,7 +1079,7 @@ apiRouter.get("/bookings/track", async (req, res) => {
   });
 });
 apiRouter.get("/bookings", requireAdminAuth, async (req, res) => {
-  const db = await getDb();
+  const db = await getDb(true);
   res.json(db.bookings);
 });
 apiRouter.patch("/bookings/:id/status", requireAdminAuth, async (req, res) => {
@@ -1223,32 +1238,63 @@ apiRouter.post("/bookings/:id/payment", requireAdminAuth, async (req, res) => {
 });
 apiRouter.delete("/bookings/:id", requireAdminAuth, async (req, res) => {
   const { id } = req.params;
-  const db = await getDb();
-  const index = db.bookings.findIndex((b) => b.id === id);
+  const db = await getDb(true);
+  const cleanId = (id || "").trim().toLowerCase();
+  const index = db.bookings.findIndex((b) => (b.id || "").trim().toLowerCase() === cleanId);
   if (index === -1) {
-    return res.status(404).json({ error: "Booking reference not found" });
+    return res.status(404).json({ error: `Booking reference #${id} not found in database.` });
   }
   const deleted = db.bookings.splice(index, 1)[0];
+  if (db.coupons && Array.isArray(db.coupons)) {
+    for (const c of db.coupons) {
+      if (c.usedBy && Array.isArray(c.usedBy)) {
+        const prevCount = c.usedBy.length;
+        c.usedBy = c.usedBy.filter(
+          (u) => (u.bookingId || "").trim().toLowerCase() !== cleanId && (u.referenceNo || "").trim().toLowerCase() !== cleanId
+        );
+        if (c.usedBy.length < prevCount) {
+          c.usedCount = Math.max(0, (c.usedCount || 0) - (prevCount - c.usedBy.length));
+        }
+      }
+    }
+  }
+  if (db.availabilityBlackouts && Array.isArray(db.availabilityBlackouts)) {
+    db.availabilityBlackouts = db.availabilityBlackouts.filter(
+      (blk) => (blk.bookingId || "").toLowerCase() !== cleanId
+    );
+  }
   await persistDb();
   const admin = req.adminSession;
   await logAudit(
     "BOOKING_DELETED",
-    admin.email,
+    admin?.email || "admin@hhevents.in",
     "booking",
-    id,
-    `Booking permanently deleted for ${deleted.customerName} on ${deleted.date} (${deleted.slot}). Slot released.`
+    deleted.id || id,
+    `Booking permanently deleted for ${deleted.customerName} on ${deleted.date} (${deleted.slot}). Slot released and completely removed from database.`
   );
-  res.json({ success: true, message: "Booking permanently deleted", deletedId: id });
+  res.json({
+    success: true,
+    message: `Booking #${deleted.id || id} permanently deleted from database`,
+    deletedId: deleted.id || id
+  });
 });
 apiRouter.patch("/bookings/:id/discount", requireAdminAuth, async (req, res) => {
   const { id } = req.params;
-  const { discountType = "fixed", discountValue = 0, reason = "" } = req.body;
-  const db = await getDb();
-  const booking = db.bookings.find((b) => b.id === id);
+  const {
+    discountType = "fixed",
+    discountValue = 0,
+    baseAmount,
+    reason = "",
+    extraCharge,
+    extraChargeReason
+  } = req.body;
+  const db = await getDb(true);
+  const cleanId = (id || "").trim().toLowerCase();
+  const booking = db.bookings.find((b) => (b.id || "").trim().toLowerCase() === cleanId);
   if (!booking) {
-    return res.status(404).json({ error: "Booking reference not found" });
+    return res.status(404).json({ error: `Booking reference #${id} not found in database.` });
   }
-  const basePrice = booking.originalAmount || booking.packagePrice || booking.totalAmount;
+  const basePrice = Number(baseAmount) > 0 ? Number(baseAmount) : booking.originalAmount || booking.packagePrice || booking.totalAmount;
   let discountAmount = 0;
   const val = Number(discountValue) || 0;
   if (discountType === "percentage") {
@@ -1257,24 +1303,40 @@ apiRouter.patch("/bookings/:id/discount", requireAdminAuth, async (req, res) => 
     discountAmount = val;
   }
   discountAmount = Math.max(0, Math.min(basePrice, discountAmount));
+  const newExtraCharge = extraCharge !== void 0 ? Number(extraCharge) : booking.extraCharge || 0;
+  const effectiveExtraReason = newExtraCharge > 0 ? extraChargeReason?.trim() || booking.extraChargeReason || "Extra Charge" : void 0;
+  booking.extraCharge = newExtraCharge > 0 ? newExtraCharge : void 0;
+  booking.extraChargeReason = effectiveExtraReason;
   booking.originalAmount = basePrice;
   booking.discountAmount = discountAmount;
-  booking.totalAmount = Math.max(0, basePrice - discountAmount);
+  booking.discountType = discountType;
+  booking.discountValue = val;
+  booking.totalAmount = Math.max(0, basePrice - discountAmount + (booking.extraCharge || 0));
+  booking.totalEstimate = booking.totalAmount;
   booking.balanceDue = Math.max(0, booking.totalAmount - (booking.amountPaid || 0));
   booking.paymentStatus = booking.balanceDue === 0 && booking.totalAmount > 0 ? "fully_paid" : (booking.amountPaid || 0) > 0 ? "advance_paid" : "unpaid";
   booking.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
-  if (reason) {
+  const cleanReason = reason ? reason.trim() : "";
+  if (cleanReason) {
+    booking.couponCode = `DIRECT-${cleanReason}`;
+    booking.discountReason = cleanReason;
     booking.adminRemarks = `${booking.adminRemarks || ""}
-Manager Discount applied: \u20B9${discountAmount.toLocaleString("en-IN")}${reason ? ` (${reason})` : ""}`.trim();
+Special Discount applied: \u20B9${discountAmount.toLocaleString("en-IN")} (${cleanReason})${newExtraCharge > 0 ? ` | Extra charge: \u20B9${newExtraCharge.toLocaleString("en-IN")} (${effectiveExtraReason})` : ""}`.trim();
+  } else if (discountAmount > 0) {
+    booking.couponCode = "DIRECT-Special Discount";
+    booking.discountReason = "Special Discount";
+  } else if (discountAmount === 0 && (!booking.couponCode || booking.couponCode.startsWith("DIRECT-"))) {
+    booking.couponCode = void 0;
+    booking.discountReason = void 0;
   }
   await persistDb();
   const admin = req.adminSession;
   await logAudit(
     "BOOKING_DISCOUNT_APPLIED",
-    admin.email,
+    admin?.email || "admin@hhevents.in",
     "booking",
-    id,
-    `Applied discount of \u20B9${discountAmount} (${discountType}: ${discountValue})`
+    booking.id || id,
+    `Updated pricing on #${booking.id}: Base \u20B9${basePrice}, Discount -\u20B9${discountAmount}${cleanReason ? ` (${cleanReason})` : ""}${newExtraCharge > 0 ? `, Extra Charge +\u20B9${newExtraCharge} (${effectiveExtraReason})` : ""}. Net Total: \u20B9${booking.totalAmount}, Due: \u20B9${booking.balanceDue}`
   );
   res.json({ success: true, booking });
 });

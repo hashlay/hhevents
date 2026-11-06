@@ -248,7 +248,12 @@ export interface BookingRecord {
   packagePrice: number;
   couponCode?: string;
   discountAmount?: number;
+  discountType?: 'fixed' | 'percentage';
+  discountValue?: number;
+  discountReason?: string;
   originalAmount?: number;
+  extraCharge?: number;
+  extraChargeReason?: string;
   // Resource occupancy
   occupiedResources: string[]; // e.g. ['gents_hall', 'dining_1', 'kitchen']
   hallSelection: 'hall_1' | 'hall_2' | 'both';
@@ -260,6 +265,7 @@ export interface BookingRecord {
   eventType?: string;
   status: 'PENDING' | 'APPROVED' | 'CONFIRMED' | 'CANCELLED' | 'REJECTED' | 'COMPLETED';
   totalAmount: number;
+  totalEstimate?: number;
   advanceRequired: number;
   amountPaid: number;
   balanceDue: number;
@@ -319,6 +325,8 @@ export interface VenueSettingsRecord {
   gstNumber?: string;
   panNumber?: string;
   termsAndConditions?: string;
+  signatorySignature?: string;
+  signatoryName?: string;
   updatedAt: string;
 }
 
@@ -396,6 +404,8 @@ export function getDatabaseBackendStatus(): { type: 'mongodb_atlas' | 'local_sto
 
 // Memory cache & mutex
 let dbCache: DatabaseSchema | null = null;
+let lastCacheFetchTime = 0;
+const CACHE_TTL_MS = 2500; // 2.5s TTL ensures multi-instance serverless freshness without hitting DB on every single millisecond
 let writeLock: Promise<void> = Promise.resolve();
 
 function getInitialDatabase(): DatabaseSchema {
@@ -452,11 +462,12 @@ async function writeLocalMirror(data: DatabaseSchema): Promise<void> {
   }
 }
 
-export async function getDb(): Promise<DatabaseSchema> {
-  if (dbCache) {
-    if (!dbCache.coupons) dbCache.coupons = [];
-    if (!dbCache.inquiries) dbCache.inquiries = [];
-    return dbCache;
+export async function getDb(forceRefresh: boolean = false): Promise<DatabaseSchema> {
+  const isFresh = dbCache && !forceRefresh && (Date.now() - lastCacheFetchTime < CACHE_TTL_MS);
+  if (isFresh) {
+    if (!dbCache!.coupons) dbCache!.coupons = [];
+    if (!dbCache!.inquiries) dbCache!.inquiries = [];
+    return dbCache!;
   }
 
   // 1. Try to load authoritative state from MongoDB Atlas
@@ -468,6 +479,7 @@ export async function getDb(): Promise<DatabaseSchema> {
       if (doc) {
         const { _id, ...rest } = doc as any;
         dbCache = rest as DatabaseSchema;
+        lastCacheFetchTime = Date.now();
         if (!dbCache.packages || dbCache.packages.length === 0) {
           dbCache.packages = INITIAL_PACKAGES;
         }
@@ -482,6 +494,7 @@ export async function getDb(): Promise<DatabaseSchema> {
       } else {
         console.log('[Database] Initializing fresh state in MongoDB Atlas...');
         dbCache = getInitialDatabase();
+        lastCacheFetchTime = Date.now();
         await persistDb();
         return dbCache;
       }
@@ -525,6 +538,7 @@ export async function persistDb(): Promise<void> {
   writeLock = writeLock.then(async () => {
     try {
       dbCache!.lastUpdated = new Date().toISOString();
+      lastCacheFetchTime = Date.now();
 
       // 1. Persist to MongoDB Atlas
       try {

@@ -86,6 +86,8 @@ export const AdminCalendarPage: React.FC<AdminCalendarPageProps> = ({ navigate }
     discountType: 'percentage' | 'fixed';
     discountValue: number;
     discountReason: string;
+    extraCharge: number;
+    extraChargeReason: string;
     advancePaid: number;
   }>({
     customerName: '',
@@ -101,8 +103,48 @@ export const AdminCalendarPage: React.FC<AdminCalendarPageProps> = ({ navigate }
     discountType: 'fixed',
     discountValue: 0,
     discountReason: '',
+    extraCharge: 0,
+    extraChargeReason: '',
     advancePaid: 15000,
   });
+
+  const getWhatsAppConfirmationMessage = (b: BookingRequest) => {
+    const bObj = b as any;
+    const hostName = b.customerName || bObj.applicantName || 'Sir/Madam';
+    const paid = Number(bObj.amountPaid) || 0;
+
+    const evDateRaw = b.date || bObj.eventDate || '';
+    let evDateShort = '1-1-2027';
+    let dayOfWeek = 'Friday';
+
+    if (evDateRaw) {
+      const parts = evDateRaw.split('-');
+      if (parts.length === 3) {
+        evDateShort = `${parseInt(parts[2], 10)}-${parseInt(parts[1], 10)}-${parts[0]}`;
+      }
+      const dObj = new Date(`${evDateRaw}T00:00:00`);
+      if (!isNaN(dObj.getTime())) {
+        dayOfWeek = dObj.toLocaleDateString('en-IN', { weekday: 'long' });
+      }
+    }
+
+    const sessionSlot = (b.slot || bObj.timeSlot || 'day').toLowerCase();
+    const sessionName = sessionSlot === 'evening' ? 'Night' : 'Day';
+
+    return `Hello ${hostName}, this is regarding your event booking request (${b.id}) at H H Events & Conventions.
+
+Your Hall Booking Is Confirmed
+
+Event Date : ${evDateShort} ${dayOfWeek} ${sessionName} 
+
+Advance Recieved ${paid > 0 ? paid.toFixed(2) : '0.00'} 
+
+Regards,
+H H Events & Conventions 
+Opposite Juma Masjid, Akkarangadi,
+Panemangalore, Bantwal-574231
+Ph:9448151878`;
+  };
 
   // Fetch latest packages from server if configured
   useEffect(() => {
@@ -316,7 +358,8 @@ export const AdminCalendarPage: React.FC<AdminCalendarPageProps> = ({ navigate }
         ? Math.round((baseRent * quickBookForm.discountValue) / 100)
         : Math.min(baseRent, quickBookForm.discountValue)
       : 0;
-    const netRent = Math.max(0, baseRent - discAmount);
+    const extraAmount = Math.max(0, Number(quickBookForm.extraCharge) || 0);
+    const netRent = Math.max(0, baseRent - discAmount + extraAmount);
     const advance = Number(quickBookForm.advancePaid) || 0;
 
     const effectiveOccasion =
@@ -349,8 +392,15 @@ export const AdminCalendarPage: React.FC<AdminCalendarPageProps> = ({ navigate }
       packagePrice: baseRent,
       amountPaid: advance,
       balanceDue: Math.max(0, netRent - advance),
+      discountAmount: discAmount > 0 ? discAmount : undefined,
+      discountType: quickBookForm.discountValue > 0 ? quickBookForm.discountType : undefined,
+      discountValue: quickBookForm.discountValue > 0 ? quickBookForm.discountValue : undefined,
+      discountReason: discAmount > 0 ? (quickBookForm.discountReason.trim() || undefined) : undefined,
       customDiscountAmount: discAmount > 0 ? discAmount : undefined,
-      customDiscountReason: discAmount > 0 ? (quickBookForm.discountReason || 'Manager Direct Discount') : undefined,
+      customDiscountReason: discAmount > 0 ? (quickBookForm.discountReason.trim() || undefined) : undefined,
+      couponCode: discAmount > 0 ? (quickBookForm.discountReason.trim() ? `DIRECT-${quickBookForm.discountReason.trim()}` : 'DIRECT-Special Discount') : undefined,
+      extraCharge: extraAmount > 0 ? extraAmount : undefined,
+      extraChargeReason: extraAmount > 0 ? (quickBookForm.extraChargeReason.trim() || 'Extra Charge') : undefined,
       additionalInfo: finalEventTitle,
       notes: finalEventTitle,
       submittedAt: new Date().toISOString(),
@@ -377,6 +427,8 @@ export const AdminCalendarPage: React.FC<AdminCalendarPageProps> = ({ navigate }
         discountType: 'fixed',
         discountValue: 0,
         discountReason: '',
+        extraCharge: 0,
+        extraChargeReason: '',
         advancePaid: 15000,
       });
       showToast(`Direct Reservation confirmed for ${newBooking.customerName} on ${selectedDate}.`, 'success');
@@ -565,8 +617,8 @@ export const AdminCalendarPage: React.FC<AdminCalendarPageProps> = ({ navigate }
                       {dayBooking.phone && (
                         <>
                           <a
-                            href={`https://wa.me/91${dayBooking.phone.replace(/\D/g, '')}?text=${encodeURIComponent(
-                              `Hello ${dayBooking.customerName || 'Customer'}, regarding your booking at H H Events on ${selectedDate} (Day Session)...`
+                            href={`https://wa.me/91${dayBooking.phone.replace(/\D/g, '').slice(-10)}?text=${encodeURIComponent(
+                              getWhatsAppConfirmationMessage(dayBooking)
                             )}`}
                             target="_blank"
                             rel="noopener noreferrer"
@@ -691,8 +743,8 @@ export const AdminCalendarPage: React.FC<AdminCalendarPageProps> = ({ navigate }
                       {eveningBooking.phone && (
                         <>
                           <a
-                            href={`https://wa.me/91${eveningBooking.phone.replace(/\D/g, '')}?text=${encodeURIComponent(
-                              `Hello ${eveningBooking.customerName || 'Customer'}, regarding your booking at H H Events on ${selectedDate} (Evening Session)...`
+                            href={`https://wa.me/91${eveningBooking.phone.replace(/\D/g, '').slice(-10)}?text=${encodeURIComponent(
+                              getWhatsAppConfirmationMessage(eveningBooking)
                             )}`}
                             target="_blank"
                             rel="noopener noreferrer"
@@ -923,7 +975,8 @@ export const AdminCalendarPage: React.FC<AdminCalendarPageProps> = ({ navigate }
                     ? Math.round((baseRent * quickBookForm.discountValue) / 100)
                     : Math.min(baseRent, quickBookForm.discountValue)
                   : 0;
-                const netRent = Math.max(0, baseRent - discAmount);
+                const extraAmount = Math.max(0, Number(quickBookForm.extraCharge) || 0);
+                const netRent = Math.max(0, baseRent - discAmount + extraAmount);
                 const advance = Number(quickBookForm.advancePaid) || 0;
                 const balanceDue = Math.max(0, netRent - advance);
 
@@ -970,18 +1023,75 @@ export const AdminCalendarPage: React.FC<AdminCalendarPageProps> = ({ navigate }
                       </div>
                     </div>
 
+                    {quickBookForm.discountValue > 0 && (
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                          Discount Note / Reason (Optional)
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Festival offer, VIP waiver (defaults to 'Special Discount')"
+                          value={quickBookForm.discountReason}
+                          onChange={(e) => setQuickBookForm({ ...quickBookForm, discountReason: e.target.value })}
+                          className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#173D35]"
+                        />
+                      </div>
+                    )}
+
+                    {/* Extra Charge Section */}
+                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 mb-1">
+                            Extra Charge (₹)
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            placeholder="e.g. 3000 (0 if none)"
+                            value={quickBookForm.extraCharge || ''}
+                            onChange={(e) => setQuickBookForm({ ...quickBookForm, extraCharge: Number(e.target.value) })}
+                            className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#173D35] font-mono"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 mb-1">
+                            Extra Charge Reason (Optional)
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Extra cleaning, late session (defaults to 'Extra Charge')"
+                            value={quickBookForm.extraChargeReason}
+                            onChange={(e) => setQuickBookForm({ ...quickBookForm, extraChargeReason: e.target.value })}
+                            className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#173D35]"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
                     {/* Financial Summary Breakdown */}
                     <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5 text-xs">
                       <div className="flex justify-between items-center">
                         <span className="text-slate-500">Agreed Package Price:</span>
-                        <span className={`font-mono ${discAmount > 0 ? 'line-through text-slate-400' : 'font-bold text-slate-800'}`}>
+                        <span className={`font-mono ${(discAmount > 0 || extraAmount > 0) ? 'line-through text-slate-400' : 'font-bold text-slate-800'}`}>
                           ₹{baseRent.toLocaleString('en-IN')}
                         </span>
                       </div>
                       {discAmount > 0 && (
                         <div className="flex justify-between items-center text-emerald-700 font-semibold">
-                          <span>Special Discount ({quickBookForm.discountType === 'percentage' ? `${quickBookForm.discountValue}%` : 'Flat'}):</span>
+                          <span>
+                            {quickBookForm.discountReason.trim()
+                              ? `Special Discount (${quickBookForm.discountReason.trim()}):`
+                              : `Special Discount (${quickBookForm.discountType === 'percentage' ? `${quickBookForm.discountValue}%` : 'Flat'}):`}
+                          </span>
                           <span className="font-mono">- ₹{discAmount.toLocaleString('en-IN')}</span>
+                        </div>
+                      )}
+                      {extraAmount > 0 && (
+                        <div className="flex justify-between items-center text-amber-700 font-semibold">
+                          <span>{quickBookForm.extraChargeReason.trim() ? `Extra Charge (${quickBookForm.extraChargeReason.trim()}):` : 'Extra Charge:'}</span>
+                          <span className="font-mono">+ ₹{extraAmount.toLocaleString('en-IN')}</span>
                         </div>
                       )}
                       <div className="flex justify-between items-center pt-1 border-t border-slate-200 font-bold">

@@ -37,13 +37,20 @@ export interface BookingRequest {
   packageId?: string;
   packageName?: string;
   totalEstimate?: number;
+  totalAmount?: number;
+  packagePrice?: number;
   submittedAt: string;
   updatedAt: string;
   amountPaid?: number;
   balanceDue?: number;
   couponCode?: string;
   discountAmount?: number;
+  discountType?: 'fixed' | 'percentage';
+  discountValue?: number;
+  discountReason?: string;
   originalAmount?: number;
+  extraCharge?: number;
+  extraChargeReason?: string;
 
   // Compatibility fields for existing forms/views
   applicantName?: string;
@@ -96,6 +103,8 @@ export interface VenueSettings {
   daySlotHours: string;
   eveningSlotHours: string;
   paymentNotice: string;
+  signatorySignature?: string;
+  signatoryName?: string;
 }
 
 export interface HallSettings extends VenueSettings {

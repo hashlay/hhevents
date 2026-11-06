@@ -38,6 +38,8 @@ import {
   updateBookingStatusAsync,
   updatePaymentStatusAsync,
   checkSlotAvailability,
+  deleteBooking,
+  updateBooking,
 } from '../../services/bookingStorage';
 import { BookingRequest, BookingStatus } from '../../types';
 import {
@@ -84,8 +86,95 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
   const [customDiscountType, setCustomDiscountType] = useState<'fixed' | 'percentage'>('fixed');
   const [customDiscountVal, setCustomDiscountVal] = useState<number>(0);
   const [customDiscountReason, setCustomDiscountReason] = useState<string>('');
+  const [customExtraCharge, setCustomExtraCharge] = useState<number>(0);
+  const [customExtraChargeReason, setCustomExtraChargeReason] = useState<string>('');
+  const [discountBaseMode, setDiscountBaseMode] = useState<'current' | 'gross'>('current');
+  const [discountBaseAmount, setDiscountBaseAmount] = useState<number>(0);
   const [isApplyingDiscount, setIsApplyingDiscount] = useState(false);
   const [deletingBookingId, setDeletingBookingId] = useState<string | null>(null);
+
+  // Formatting helpers for discounts and extra charges
+  const formatDiscountLabel = (b: BookingRequest) => {
+    const code = (b.couponCode || '').trim();
+    const reason = (b.discountReason || '').trim();
+
+    if (code.startsWith('DIRECT-')) {
+      const raw = code.replace(/^DIRECT-/, '').trim();
+      if (!raw || raw.toLowerCase() === 'special discount' || raw.toLowerCase() === 'manager direct discount') {
+        return reason && reason.toLowerCase() !== 'special discount' && reason.toLowerCase() !== 'manager direct discount'
+          ? `Special Discount (${reason})`
+          : 'Special Discount';
+      }
+      return `Special Discount (${raw})`;
+    }
+
+    if (code) {
+      return `Coupon (${code})`;
+    }
+
+    if (reason && reason.toLowerCase() !== 'manager direct discount') {
+      return reason.toLowerCase().includes('discount') ? reason : `Special Discount (${reason})`;
+    }
+
+    return 'Special Discount';
+  };
+
+  const formatExtraChargeLabel = (b: BookingRequest) => {
+    const reason = (b.extraChargeReason || '').trim();
+    if (!reason || reason.toLowerCase() === 'extra charge') {
+      return 'Extra Charge';
+    }
+    return `Extra Charge (${reason})`;
+  };
+
+  const getWhatsAppConfirmationMessage = (b: BookingRequest) => {
+    const bObj = b as any;
+    const hostName = b.customerName || bObj.applicantName || 'Sir/Madam';
+    const paid = Number(bObj.amountPaid) || 0;
+
+    const evDateRaw = b.date || bObj.eventDate || '';
+    let evDateShort = '1-1-2027';
+    let dayOfWeek = 'Friday';
+
+    if (evDateRaw) {
+      const parts = evDateRaw.split('-');
+      if (parts.length === 3) {
+        evDateShort = `${parseInt(parts[2], 10)}-${parseInt(parts[1], 10)}-${parts[0]}`;
+      }
+      const dObj = new Date(`${evDateRaw}T00:00:00`);
+      if (!isNaN(dObj.getTime())) {
+        dayOfWeek = dObj.toLocaleDateString('en-IN', { weekday: 'long' });
+      }
+    }
+
+    const sessionSlot = (b.slot || bObj.timeSlot || 'day').toLowerCase();
+    const sessionName = sessionSlot === 'evening' ? 'Night' : 'Day';
+
+    return `Hello ${hostName}, this is regarding your event booking request (${b.id}) at H H Events & Conventions.
+
+Your Hall Booking Is Confirmed
+
+Event Date : ${evDateShort} ${dayOfWeek} ${sessionName} 
+
+Advance Recieved ${paid > 0 ? paid.toFixed(2) : '0.00'} 
+
+Regards,
+H H Events & Conventions 
+Opposite Juma Masjid, Akkarangadi,
+Panemangalore, Bantwal-574231
+Ph:9448151878`;
+  };
+
+  const getAuthToken = () => {
+    return (
+      token ||
+      localStorage.getItem('hh_auth_token_v5') ||
+      sessionStorage.getItem('hh_auth_token_v5') ||
+      localStorage.getItem('hh_admin_token') ||
+      sessionStorage.getItem('hh_admin_token') ||
+      ''
+    );
+  };
 
   // Direct Manual Reservation Modal State & Packages
   const [packageOptions, setPackageOptions] = useState<ReservationPackageOption[]>(RESERVATION_PACKAGE_OPTIONS);
@@ -105,6 +194,9 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
     estimatedRent: 65000,
     discountType: 'fixed' as 'fixed' | 'percentage',
     discountValue: 0,
+    discountReason: '',
+    extraCharge: 0,
+    extraChargeReason: '',
     advancePaid: 15000,
     notes: 'Wedding / Nikah (Main Ceremony)',
   });
@@ -156,7 +248,8 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
         ? Math.round((baseRent * createForm.discountValue) / 100)
         : Math.min(baseRent, createForm.discountValue)
       : 0;
-    const netRent = Math.max(0, baseRent - discAmount);
+    const extraAmount = Math.max(0, Number(createForm.extraCharge) || 0);
+    const netRent = Math.max(0, baseRent - discAmount + extraAmount);
     const advance = Number(createForm.advancePaid) || 0;
     const balanceDue = Math.max(0, netRent - advance);
 
@@ -197,6 +290,11 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
         discountAmount: discAmount,
         discountType: createForm.discountValue > 0 ? createForm.discountType : undefined,
         discountValue: createForm.discountValue > 0 ? createForm.discountValue : undefined,
+        discountReason: discAmount > 0 ? (createForm.discountReason.trim() || undefined) : undefined,
+        customDiscountReason: discAmount > 0 ? (createForm.discountReason.trim() || undefined) : undefined,
+        couponCode: discAmount > 0 ? (createForm.discountReason.trim() ? `DIRECT-${createForm.discountReason.trim()}` : 'DIRECT-Special Discount') : undefined,
+        extraCharge: extraAmount > 0 ? extraAmount : undefined,
+        extraChargeReason: extraAmount > 0 ? (createForm.extraChargeReason.trim() || 'Extra Charge') : undefined,
         amountPaid: advance,
         balanceDue: balanceDue,
         paymentStatus: balanceDue === 0 && advance > 0 ? 'fully_paid' : advance > 0 ? 'advance_paid' : 'unpaid',
@@ -210,7 +308,7 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token || localStorage.getItem('hh_auth_token_v5') || ''}`,
+          Authorization: `Bearer ${getAuthToken()}`,
         },
         body: JSON.stringify(payload),
       });
@@ -237,6 +335,9 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
         estimatedRent: packageOptions[0]?.rent || 65000,
         discountType: 'fixed',
         discountValue: 0,
+        discountReason: '',
+        extraCharge: 0,
+        extraChargeReason: '',
         advancePaid: 15000,
         notes: 'Wedding / Nikah (Main Ceremony)',
       });
@@ -346,7 +447,7 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${getAuthToken()}`,
         },
         body: JSON.stringify({
           amount: Number(paymentAmount),
@@ -376,30 +477,41 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
   const handleDeleteBooking = async (bookingId: string) => {
     if (
       !window.confirm(
-        `Are you sure you want to permanently delete booking #${bookingId} from the database? This will completely remove it and release the slot.`
+        `Are you sure you want to permanently delete booking #${bookingId} from the database? This will completely remove it from frontend, backend, and MongoDB database and release the slot.`
       )
     ) {
       return;
     }
     setDeletingBookingId(bookingId);
     try {
-      const res = await fetch(`/api/bookings/${bookingId}`, {
+      const activeToken = getAuthToken();
+      const res = await fetch(`/api/bookings/${encodeURIComponent(bookingId)}`, {
         method: 'DELETE',
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('hh_admin_token') || sessionStorage.getItem('hh_admin_token') || ''}`,
+          Authorization: `Bearer ${activeToken}`,
         },
       });
       if (res.ok) {
-        setBookings((prev) => prev.filter((b) => b.id !== bookingId));
-        if (selectedBooking?.id === bookingId) {
+        const cleanId = (bookingId || '').trim().toLowerCase();
+        setBookings((prev) => prev.filter((b) => (b.id || '').trim().toLowerCase() !== cleanId));
+        if (selectedBooking && (selectedBooking.id || '').trim().toLowerCase() === cleanId) {
           setSelectedBooking(null);
         }
-        showToast(`Booking #${bookingId} has been permanently deleted from database.`, 'success');
+        if (payingBooking && (payingBooking.id || '').trim().toLowerCase() === cleanId) {
+          setPayingBooking(null);
+        }
+        if (discountBooking && (discountBooking.id || '').trim().toLowerCase() === cleanId) {
+          setDiscountBooking(null);
+        }
+        // Purge completely from client storage service and localStorage
+        deleteBooking(bookingId);
+        showToast(`Booking #${bookingId} has been completely removed from database and client records.`, 'success');
       } else {
-        showToast('Failed to delete booking from server', 'error');
+        const data = await res.json().catch(() => ({}));
+        showToast(data.error || 'Failed to delete booking from server', 'error');
       }
     } catch {
-      showToast('Error deleting booking', 'error');
+      showToast('Network error while deleting booking from database', 'error');
     } finally {
       setDeletingBookingId(null);
     }
@@ -410,30 +522,42 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
     if (!discountBooking) return;
     setIsApplyingDiscount(true);
     try {
-      const res = await fetch(`/api/bookings/${discountBooking.id}/discount`, {
+      const activeToken = getAuthToken();
+      const res = await fetch(`/api/bookings/${encodeURIComponent(discountBooking.id)}/discount`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('hh_admin_token') || sessionStorage.getItem('hh_admin_token') || ''}`,
+          Authorization: `Bearer ${activeToken}`,
         },
         body: JSON.stringify({
           discountType: customDiscountType,
           discountValue: customDiscountVal,
-          reason: customDiscountReason,
+          baseAmount: discountBaseAmount,
+          reason: customDiscountReason.trim() || undefined,
+          extraCharge: customExtraCharge,
+          extraChargeReason: customExtraChargeReason.trim() || undefined,
         }),
       });
       if (res.ok) {
         const data = await res.json();
+        const updatedBooking = data.booking;
+        const cleanId = (discountBooking.id || '').trim().toLowerCase();
         setBookings((prev) =>
-          prev.map((b) => (b.id === discountBooking.id ? { ...b, ...data.booking } : b))
+          prev.map((b) => ((b.id || '').trim().toLowerCase() === cleanId ? { ...b, ...updatedBooking } : b))
         );
-        if (selectedBooking?.id === discountBooking.id) {
-          setSelectedBooking({ ...selectedBooking, ...data.booking });
+        if (selectedBooking && (selectedBooking.id || '').trim().toLowerCase() === cleanId) {
+          setSelectedBooking({ ...selectedBooking, ...updatedBooking });
         }
+        // Update local client cache as well
+        updateBooking(discountBooking.id, updatedBooking);
         setDiscountBooking(null);
-        showToast(`Discount applied to #${discountBooking.id}. Total & balance updated.`, 'success');
+        showToast(
+          `Discount applied to #${discountBooking.id}. Net payable: ₹${(updatedBooking.totalAmount || 0).toLocaleString('en-IN')}, Balance due: ₹${(updatedBooking.balanceDue || 0).toLocaleString('en-IN')}`,
+          'success'
+        );
       } else {
-        showToast('Failed to apply discount', 'error');
+        const errData = await res.json().catch(() => ({}));
+        showToast(errData.error || 'Failed to apply discount', 'error');
       }
     } catch {
       showToast('Error applying discount', 'error');
@@ -664,9 +788,18 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
             {/* Mobile Cards (Visible on mobile < md) */}
             <div className="md:hidden space-y-3">
               {filteredBookings.map((b) => {
-                const totalRent = b.totalEstimate || b.estimatedAmount || 30000;
-                const paid = (b as any).amountPaid || 0;
-                const balance = (b as any).balanceDue !== undefined ? (b as any).balanceDue : Math.max(0, totalRent - paid);
+                const bObj = b as any;
+                const netRent = bObj.totalAmount !== undefined
+                  ? Number(bObj.totalAmount)
+                  : (b.totalEstimate || b.estimatedAmount || 30000);
+                const disc = Number(b.discountAmount) || 0;
+                const extra = Number(bObj.extraCharge) || 0;
+                const extraReason = bObj.extraChargeReason || 'Extra Charge';
+                const grossRent = Number(bObj.originalAmount || bObj.packagePrice) || (disc > 0 || extra > 0 ? netRent + disc - extra : netRent);
+                const paid = Number(bObj.amountPaid) || 0;
+                const balance = bObj.balanceDue !== undefined
+                  ? Number(bObj.balanceDue)
+                  : Math.max(0, netRent - paid);
 
                 return (
                   <div key={b.id} className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-3">
@@ -708,8 +841,19 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
 
                     <div className="grid grid-cols-3 gap-2 text-xs pt-2 border-t border-slate-100 bg-slate-50/60 p-2.5 rounded-xl">
                       <div>
-                        <span className="text-[10px] text-slate-400 uppercase font-semibold block">Total</span>
-                        <span className="font-mono font-bold text-slate-900">₹{totalRent.toLocaleString('en-IN')}</span>
+                        <span className="text-[10px] text-slate-400 uppercase font-semibold block">Net Rent</span>
+                        <div className="flex items-center gap-1 flex-wrap">
+                          {(disc > 0 || extra > 0) && grossRent !== netRent && (
+                            <span className="text-[10px] font-mono text-slate-400 line-through">₹{grossRent.toLocaleString('en-IN')}</span>
+                          )}
+                          <span className="font-mono font-bold text-slate-900">₹{netRent.toLocaleString('en-IN')}</span>
+                        </div>
+                        {disc > 0 && (
+                          <span className="text-[9.5px] text-emerald-700 font-semibold block">-₹{disc.toLocaleString('en-IN')} ({formatDiscountLabel(b)})</span>
+                        )}
+                        {extra > 0 && (
+                          <span className="text-[9.5px] text-amber-800 font-semibold block">+₹{extra.toLocaleString('en-IN')} ({extraReason})</span>
+                        )}
                       </div>
                       <div>
                         <span className="text-[10px] text-slate-400 uppercase font-semibold block">Paid</span>
@@ -717,8 +861,8 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
                       </div>
                       <div>
                         <span className="text-[10px] text-slate-400 uppercase font-semibold block">Balance</span>
-                        <span className={`font-mono font-bold ${balance > 0 ? 'text-amber-700' : 'text-slate-700'}`}>
-                          ₹{balance.toLocaleString('en-IN')}
+                        <span className={`font-mono font-bold ${balance > 0 ? 'text-amber-700' : 'text-emerald-700'}`}>
+                          {balance > 0 ? `₹${balance.toLocaleString('en-IN')}` : 'Settled'}
                         </span>
                       </div>
                     </div>
@@ -727,7 +871,7 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
                       {b.phone && (
                         <a
                           href={`https://wa.me/91${b.phone.replace(/\D/g, '').slice(-10)}?text=${encodeURIComponent(
-                            `Hello ${b.customerName || 'Sir/Madam'}, this is regarding your event booking request (${b.id}) at H H Events & Conventions.`
+                            getWhatsAppConfirmationMessage(b)
                           )}`}
                           target="_blank"
                           rel="noreferrer"
@@ -761,6 +905,15 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
                       >
                         {b.status === 'PENDING' ? 'Review' : 'Manage'}
                       </Button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteBooking(b.id)}
+                        disabled={deletingBookingId === b.id}
+                        className="p-1.5 sm:p-2 rounded-lg text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-colors cursor-pointer"
+                        title="Permanently Delete Booking from Database"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   </div>
                 );
@@ -784,9 +937,18 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {filteredBookings.map((b) => {
-                      const totalRent = b.totalEstimate || b.estimatedAmount || 30000;
-                      const paid = (b as any).amountPaid || 0;
-                      const balance = (b as any).balanceDue !== undefined ? (b as any).balanceDue : Math.max(0, totalRent - paid);
+                      const bObj = b as any;
+                      const netRent = bObj.totalAmount !== undefined
+                        ? Number(bObj.totalAmount)
+                        : (b.totalEstimate || b.estimatedAmount || 30000);
+                      const disc = Number(b.discountAmount) || 0;
+                      const extra = Number(bObj.extraCharge) || 0;
+                      const extraReason = bObj.extraChargeReason || 'Extra Charge';
+                      const grossRent = Number(bObj.originalAmount || bObj.packagePrice) || (disc > 0 || extra > 0 ? netRent + disc - extra : netRent);
+                      const paid = Number(bObj.amountPaid) || 0;
+                      const balance = bObj.balanceDue !== undefined
+                        ? Number(bObj.balanceDue)
+                        : Math.max(0, netRent - paid);
 
                       return (
                         <tr key={b.id} className="hover:bg-slate-50/70 transition-colors">
@@ -874,21 +1036,37 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
                           </td>
 
                           <td className="p-3.5 text-slate-900">
-                            <div className="font-mono font-bold">
-                              ₹{totalRent.toLocaleString('en-IN')}
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              {(disc > 0 || extra > 0) && grossRent !== netRent && (
+                                <span className="text-[11px] font-mono text-slate-400 line-through">
+                                  ₹{grossRent.toLocaleString('en-IN')}
+                                </span>
+                              )}
+                              <span className="font-mono font-bold text-slate-900">
+                                ₹{netRent.toLocaleString('en-IN')}
+                              </span>
                             </div>
-                            {b.couponCode && (
+                            {disc > 0 && (
                               <div className="text-[10px] text-emerald-700 font-semibold flex items-center gap-0.5 mt-0.5">
                                 <Tag className="w-2.5 h-2.5" />
-                                {b.couponCode} (-₹{(b.discountAmount || 0).toLocaleString('en-IN')})
+                                <span>{formatDiscountLabel(b)} (-₹{disc.toLocaleString('en-IN')})</span>
+                              </div>
+                            )}
+                            {extra > 0 && (
+                              <div className="text-[10px] text-amber-800 font-semibold flex items-center gap-0.5 mt-0.5">
+                                <span>+ ₹{extra.toLocaleString('en-IN')} ({extraReason})</span>
                               </div>
                             )}
                             <div className="text-[11px] text-emerald-700 font-medium">
                               Paid: ₹{paid.toLocaleString('en-IN')}
                             </div>
-                            {balance > 0 && (
-                              <div className="text-[10px] text-amber-700 font-mono">
+                            {balance > 0 ? (
+                              <div className="text-[10px] text-amber-700 font-mono font-bold">
                                 Due: ₹{balance.toLocaleString('en-IN')}
+                              </div>
+                            ) : (
+                              <div className="text-[10px] text-emerald-700 font-mono font-bold">
+                                Fully Settled
                               </div>
                             )}
                           </td>
@@ -903,12 +1081,12 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
                               {b.phone && (
                                 <a
                                   href={`https://wa.me/91${b.phone.replace(/\D/g, '').slice(-10)}?text=${encodeURIComponent(
-                                    `Hello ${b.customerName || 'Sir/Madam'}, this is regarding your event booking request (${b.id}) at H H Events & Conventions.`
+                                    getWhatsAppConfirmationMessage(b)
                                   )}`}
                                   target="_blank"
                                   rel="noreferrer"
                                   className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200 transition-colors"
-                                  title="Chat on WhatsApp"
+                                  title="Send Confirmation via WhatsApp"
                                 >
                                   <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
                                   <span>WhatsApp</span>
@@ -1016,40 +1194,69 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
               )}
 
               <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
-                <div className="flex justify-between items-center text-sm font-bold text-slate-900">
-                  <span>Grand Total Tariff:</span>
-                  <span className="font-mono text-base text-[#173D35]">
-                    ₹{((selectedBooking as any).totalAmount || selectedBooking.estimatedAmount || selectedBooking.totalEstimate || 0).toLocaleString('en-IN')}
-                  </span>
-                </div>
-                {selectedBooking.couponCode && (
-                  <div className="flex justify-between items-center text-xs text-emerald-800 bg-emerald-50 px-2.5 py-1.5 rounded-lg border border-emerald-200">
-                    <span className="flex items-center gap-1 font-semibold">
-                      <Tag className="w-3.5 h-3.5 text-emerald-600" />
-                      Discount ({selectedBooking.couponCode}):
-                    </span>
-                    <span className="font-mono font-bold text-emerald-700">
-                      -₹{(selectedBooking.discountAmount || 0).toLocaleString('en-IN')}
-                    </span>
-                  </div>
-                )}
                 {(() => {
                   const bObj = selectedBooking as any;
-                  const total = bObj.totalAmount || selectedBooking.totalEstimate || selectedBooking.estimatedAmount || 0;
-                  const paid = bObj.amountPaid !== undefined ? Number(bObj.amountPaid) : (selectedBooking.advancePaymentStatus === 'fully_paid' ? total : selectedBooking.advancePaymentStatus === 'advance_paid' ? Math.round(total * 0.25) : 0);
-                  const balance = bObj.balanceDue !== undefined ? Number(bObj.balanceDue) : Math.max(0, total - paid);
+                  const netRent = bObj.totalAmount !== undefined
+                    ? Number(bObj.totalAmount)
+                    : (bObj.totalEstimate || bObj.estimatedAmount || 0);
+                  const disc = Number(bObj.discountAmount) || 0;
+                  const extra = Number(bObj.extraCharge) || 0;
+                  const grossRent = Number(bObj.originalAmount || bObj.packagePrice) || (disc > 0 || extra > 0 ? netRent + disc - extra : netRent);
+                  const paid = bObj.amountPaid !== undefined
+                    ? Number(bObj.amountPaid)
+                    : (selectedBooking.advancePaymentStatus === 'fully_paid' ? netRent : selectedBooking.advancePaymentStatus === 'advance_paid' ? Math.round(netRent * 0.25) : 0);
+                  const balance = bObj.balanceDue !== undefined ? Number(bObj.balanceDue) : Math.max(0, netRent - paid);
+
                   return (
                     <>
+                      {(disc > 0 || extra > 0) && grossRent !== netRent && (
+                        <div className="flex justify-between items-center text-xs text-slate-500">
+                          <span>Original Agreed Tariff:</span>
+                          <span className="font-mono line-through">₹{grossRent.toLocaleString('en-IN')}</span>
+                        </div>
+                      )}
+
+                      {disc > 0 && (
+                        <div className="flex justify-between items-center text-xs text-emerald-800 bg-emerald-50 px-2.5 py-1.5 rounded-lg border border-emerald-200">
+                          <span className="flex items-center gap-1 font-semibold">
+                            <Tag className="w-3.5 h-3.5 text-emerald-600" />
+                            {formatDiscountLabel(selectedBooking)}:
+                          </span>
+                          <span className="font-mono font-bold text-emerald-700">
+                            -₹{disc.toLocaleString('en-IN')}
+                          </span>
+                        </div>
+                      )}
+
+                      {extra > 0 && (
+                        <div className="flex justify-between items-center text-xs text-amber-800 bg-amber-50 px-2.5 py-1.5 rounded-lg border border-amber-200">
+                          <span className="flex items-center gap-1 font-semibold">
+                            {formatExtraChargeLabel(selectedBooking)}:
+                          </span>
+                          <span className="font-mono font-bold text-amber-800">
+                            +₹{extra.toLocaleString('en-IN')}
+                          </span>
+                        </div>
+                      )}
+
+                      <div className="flex justify-between items-center text-sm font-bold text-slate-900 pt-1 border-t border-slate-200/60">
+                        <span>Net Payable Rent:</span>
+                        <span className="font-mono text-base text-[#173D35]">
+                          ₹{netRent.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+
                       <div className="flex justify-between items-center text-xs">
                         <span className="text-slate-600 font-semibold">Advance / Paid Amount:</span>
                         <span className="font-mono font-bold text-emerald-700">
-                          ₹{paid.toLocaleString('en-IN')} Paid ({selectedBooking.advancePaymentStatus === 'fully_paid' ? 'Fully Paid' : paid > 0 ? 'Advance Paid' : 'Unpaid'})
+                          ₹{paid.toLocaleString('en-IN')} ({selectedBooking.advancePaymentStatus === 'fully_paid' ? 'Fully Paid' : paid > 0 ? 'Advance Paid' : 'Unpaid'})
                         </span>
                       </div>
-                      <div className="flex justify-between items-center text-xs">
-                        <span className="text-slate-600 font-semibold">Outstanding Balance:</span>
-                        <span className="font-mono font-bold text-amber-800">
-                          ₹{balance.toLocaleString('en-IN')}
+
+                      <div className="flex justify-between items-center text-xs pt-1 border-t border-slate-200/60">
+                        <span className="text-slate-700 font-bold">Outstanding Balance Due:</span>
+                        <span className={`font-mono font-bold text-sm ${balance > 0 ? 'text-amber-800' : 'text-emerald-700'}`}>
+                          {balance > 0 ? `₹${balance.toLocaleString('en-IN')}` : 'Fully Settled (₹0)'}
                         </span>
                       </div>
                     </>
@@ -1088,14 +1295,35 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
                     variant="outline"
                     size="sm"
                     onClick={() => {
+                      const bObj = selectedBooking as any;
+                      const netRent = bObj.totalAmount !== undefined
+                        ? Number(bObj.totalAmount)
+                        : (bObj.totalEstimate || bObj.estimatedAmount || 0);
+                      const existingDisc = Number(bObj.discountAmount) || 0;
+                      const existingExtra = Number(bObj.extraCharge) || 0;
+                      const grossRent = Number(bObj.originalAmount || bObj.packagePrice) || (existingDisc > 0 || existingExtra > 0 ? netRent + existingDisc - existingExtra : netRent);
+
                       setDiscountBooking(selectedBooking);
                       setCustomDiscountType('fixed');
-                      setCustomDiscountVal(selectedBooking.discountAmount || 0);
-                      setCustomDiscountReason('');
+                      // If there is an existing discount, initialize with current net rent as base so manager can discount from current, or they can toggle to gross
+                      setDiscountBaseAmount(netRent > 0 ? netRent : grossRent);
+                      setDiscountBaseMode('current');
+                      setCustomDiscountVal(0);
+
+                      let rawDiscReason = (selectedBooking.discountReason || '').trim();
+                      if (!rawDiscReason && (selectedBooking.couponCode || '').startsWith('DIRECT-')) {
+                        rawDiscReason = (selectedBooking.couponCode || '').replace(/^DIRECT-/, '').trim();
+                      }
+                      if (rawDiscReason.toLowerCase() === 'special discount' || rawDiscReason.toLowerCase() === 'manager direct discount') {
+                        rawDiscReason = '';
+                      }
+                      setCustomDiscountReason(rawDiscReason);
+                      setCustomExtraCharge(existingExtra);
+                      setCustomExtraChargeReason(bObj.extraChargeReason || '');
                     }}
                     leftIcon={<Percent className="w-3.5 h-3.5 text-amber-600" />}
                   >
-                    Add Discount
+                    {selectedBooking.discountAmount ? 'Edit / Add Discount' : 'Add Discount'}
                   </Button>
 
                   <Button
@@ -1279,41 +1507,122 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
           <Dialog
             isOpen={!!discountBooking}
             onClose={() => setDiscountBooking(null)}
-            title={`Apply Direct Discount — ${discountBooking.id}`}
+            title={`Apply Direct Discount & Charges — ${discountBooking.id}`}
             maxWidth="md"
           >
             <form onSubmit={handleApplyDiscount} className="space-y-4 text-xs">
               {(() => {
                 const bObj = discountBooking as any;
-                const origTotal = bObj.totalEstimate || bObj.totalAmount || bObj.estimatedAmount || bObj.packagePrice || 0;
+                const netRent = bObj.totalAmount !== undefined
+                  ? Number(bObj.totalAmount)
+                  : (bObj.totalEstimate || bObj.estimatedAmount || 0);
+                const existingDisc = Number(bObj.discountAmount) || 0;
+                const existingExtra = Number(bObj.extraCharge) || 0;
+                const grossRent = Number(bObj.originalAmount || bObj.packagePrice) || (existingDisc > 0 || existingExtra > 0 ? netRent + existingDisc - existingExtra : netRent);
+                const paid = Number(bObj.amountPaid) || 0;
+
+                const effectiveBase = discountBaseAmount > 0 ? discountBaseAmount : (discountBaseMode === 'gross' ? grossRent : netRent);
+
                 let computedDiscount = 0;
                 if (customDiscountType === 'percentage') {
-                  computedDiscount = Math.round((origTotal * customDiscountVal) / 100);
+                  computedDiscount = Math.round((effectiveBase * customDiscountVal) / 100);
                 } else {
-                  computedDiscount = Math.min(origTotal, customDiscountVal);
+                  computedDiscount = Math.min(effectiveBase, customDiscountVal);
                 }
-                const netPayable = Math.max(0, origTotal - computedDiscount);
+                const extraAmount = Math.max(0, Number(customExtraCharge) || 0);
+                const newNetPayable = Math.max(0, effectiveBase - computedDiscount + extraAmount);
+                const newBalanceDue = Math.max(0, newNetPayable - paid);
+
                 return (
-                  <div className="p-3.5 rounded-xl bg-amber-50/50 border border-amber-200/60 space-y-2">
-                    <div className="flex justify-between items-center text-xs text-slate-700">
-                      <span>Original Booking Total:</span>
-                      <strong className="font-mono text-sm">₹{origTotal.toLocaleString('en-IN')}</strong>
-                    </div>
-                    {computedDiscount > 0 && (
-                      <div className="flex justify-between items-center text-xs text-emerald-700 font-bold">
-                        <span>Discount to Deduct:</span>
-                        <span className="font-mono">- ₹{computedDiscount.toLocaleString('en-IN')}</span>
+                  <div className="space-y-3">
+                    {/* Calculation Base Selector (if booking already had a discount) */}
+                    {grossRent !== netRent && (
+                      <div className="p-2.5 rounded-xl bg-slate-100 border border-slate-200">
+                        <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1.5">
+                          Calculate Discount From:
+                        </label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDiscountBaseMode('current');
+                              setDiscountBaseAmount(netRent);
+                            }}
+                            className={`px-3 py-2 rounded-lg text-left transition-all border cursor-pointer ${
+                              discountBaseMode === 'current'
+                                ? 'bg-[#173D35] text-white border-[#173D35] font-bold shadow-xs'
+                                : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+                            }`}
+                          >
+                            <span className="block text-[10px] opacity-80 uppercase">Current Net Rent</span>
+                            <span className="font-mono text-xs font-bold">₹{netRent.toLocaleString('en-IN')}</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDiscountBaseMode('gross');
+                              setDiscountBaseAmount(grossRent);
+                            }}
+                            className={`px-3 py-2 rounded-lg text-left transition-all border cursor-pointer ${
+                              discountBaseMode === 'gross'
+                                ? 'bg-[#173D35] text-white border-[#173D35] font-bold shadow-xs'
+                                : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+                            }`}
+                          >
+                            <span className="block text-[10px] opacity-80 uppercase">Original Tariff</span>
+                            <span className="font-mono text-xs font-bold">₹{grossRent.toLocaleString('en-IN')}</span>
+                          </button>
+                        </div>
                       </div>
                     )}
-                    <div className="flex justify-between items-center text-xs text-slate-900 font-bold pt-2 border-t border-amber-200">
-                      <span>New Net Payable Rent:</span>
-                      <span className="font-mono text-base text-amber-900">₹{netPayable.toLocaleString('en-IN')}</span>
+
+                    {/* Breakdown Card */}
+                    <div className="p-3.5 rounded-xl bg-amber-50/60 border border-amber-200 space-y-2">
+                      <div className="flex justify-between items-center text-xs text-slate-700">
+                        <span>Base Rent Amount:</span>
+                        <strong className="font-mono text-sm text-slate-900">₹{effectiveBase.toLocaleString('en-IN')}</strong>
+                      </div>
+                      {computedDiscount > 0 && (
+                        <div className="flex justify-between items-center text-xs text-emerald-700 font-bold">
+                          <span>
+                            {customDiscountReason.trim()
+                              ? `Special Discount (${customDiscountReason.trim()}):`
+                              : 'Special Discount to Deduct:'}
+                          </span>
+                          <span className="font-mono">- ₹{computedDiscount.toLocaleString('en-IN')}</span>
+                        </div>
+                      )}
+                      {extraAmount > 0 && (
+                        <div className="flex justify-between items-center text-xs text-amber-800 font-bold">
+                          <span>
+                            {customExtraChargeReason.trim()
+                              ? `Extra Charge (${customExtraChargeReason.trim()}):`
+                              : 'Extra Charge to Add:'}
+                          </span>
+                          <span className="font-mono">+ ₹{extraAmount.toLocaleString('en-IN')}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between items-center text-xs text-slate-900 font-bold pt-2 border-t border-amber-200">
+                        <span>New Net Payable Rent:</span>
+                        <span className="font-mono text-base text-amber-900">₹{newNetPayable.toLocaleString('en-IN')}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-[11px] text-slate-600 pt-1">
+                        <span>Already Paid to Date:</span>
+                        <span className="font-mono font-semibold text-emerald-700">₹{paid.toLocaleString('en-IN')}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-xs font-bold text-slate-900 pt-1 border-t border-amber-200/60">
+                        <span>New Balance Due:</span>
+                        <span className={`font-mono text-sm ${newBalanceDue > 0 ? 'text-amber-800' : 'text-emerald-700'}`}>
+                          {newBalanceDue > 0 ? `₹${newBalanceDue.toLocaleString('en-IN')}` : 'Fully Settled (₹0)'}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 );
               })()}
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-700 uppercase">Discount Type</label>
                   <select
@@ -1328,7 +1637,7 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
 
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-700 uppercase">
-                    {customDiscountType === 'percentage' ? 'Discount (%) *' : 'Discount Amount (₹) *'}
+                    {customDiscountType === 'percentage' ? 'Discount (%)' : 'Discount Amount (₹)'}
                   </label>
                   <input
                     type="number"
@@ -1338,20 +1647,51 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
                     onChange={(e) => setCustomDiscountVal(Number(e.target.value))}
                     placeholder={customDiscountType === 'percentage' ? 'e.g. 10' : 'e.g. 5000'}
                     className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500"
-                    required
                   />
                 </div>
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700 uppercase">Reason / Remarks</label>
+                <label className="text-xs font-bold text-slate-700 uppercase">
+                  Discount Note / Reason (Optional)
+                </label>
                 <input
                   type="text"
                   value={customDiscountReason}
                   onChange={(e) => setCustomDiscountReason(e.target.value)}
-                  placeholder="e.g. Special management waiver / festival promotion"
+                  placeholder="e.g. Festival offer / VIP waiver (defaults to 'Special Discount')"
                   className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs"
                 />
+              </div>
+
+              {/* Extra Charge Section */}
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700 uppercase">Extra Charge (₹)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={customExtraCharge || ''}
+                      onChange={(e) => setCustomExtraCharge(Number(e.target.value))}
+                      placeholder="e.g. 3000 (0 if none)"
+                      className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700 uppercase">
+                      Extra Charge Note / Reason (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={customExtraChargeReason}
+                      onChange={(e) => setCustomExtraChargeReason(e.target.value)}
+                      placeholder="e.g. Extra cleaning, late session (defaults to 'Extra Charge')"
+                      className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs"
+                    />
+                  </div>
+                </div>
               </div>
 
               <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
@@ -1365,7 +1705,7 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
                   disabled={isApplyingDiscount}
                   leftIcon={<Percent className="w-4 h-4" />}
                 >
-                  {isApplyingDiscount ? 'Applying...' : 'Apply & Save Discount'}
+                  {isApplyingDiscount ? 'Saving...' : 'Apply & Save Changes'}
                 </Button>
               </div>
             </form>
@@ -1520,7 +1860,8 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
                     ? Math.round((baseRent * createForm.discountValue) / 100)
                     : Math.min(baseRent, createForm.discountValue)
                   : 0;
-                const netRent = Math.max(0, baseRent - discAmount);
+                const extraAmount = Math.max(0, Number(createForm.extraCharge) || 0);
+                const netRent = Math.max(0, baseRent - discAmount + extraAmount);
                 const advance = Number(createForm.advancePaid) || 0;
                 const balanceDue = Math.max(0, netRent - advance);
 
@@ -1567,18 +1908,75 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
                       </div>
                     </div>
 
+                    {createForm.discountValue > 0 && (
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                          Discount Note / Reason (Optional)
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Festival offer, relative discount (defaults to 'Special Discount')"
+                          value={createForm.discountReason}
+                          onChange={(e) => setCreateForm({ ...createForm, discountReason: e.target.value })}
+                          className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#173D35]"
+                        />
+                      </div>
+                    )}
+
+                    {/* Extra Charge Section */}
+                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 mb-1">
+                            Extra Charge (₹)
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            placeholder="e.g. 3000 (0 if none)"
+                            value={createForm.extraCharge || ''}
+                            onChange={(e) => setCreateForm({ ...createForm, extraCharge: Number(e.target.value) })}
+                            className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#173D35] font-mono"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 mb-1">
+                            Extra Charge Reason (Optional)
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Extra cleaning, late session (defaults to 'Extra Charge')"
+                            value={createForm.extraChargeReason}
+                            onChange={(e) => setCreateForm({ ...createForm, extraChargeReason: e.target.value })}
+                            className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#173D35]"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
                     {/* Financial Summary Breakdown */}
                     <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5 text-xs">
                       <div className="flex justify-between items-center">
                         <span className="text-slate-500">Agreed Package Price:</span>
-                        <span className={`font-mono ${discAmount > 0 ? 'line-through text-slate-400' : 'font-bold text-slate-800'}`}>
+                        <span className={`font-mono ${(discAmount > 0 || extraAmount > 0) ? 'line-through text-slate-400' : 'font-bold text-slate-800'}`}>
                           ₹{baseRent.toLocaleString('en-IN')}
                         </span>
                       </div>
                       {discAmount > 0 && (
                         <div className="flex justify-between items-center text-emerald-700 font-semibold">
-                          <span>Special Discount ({createForm.discountType === 'percentage' ? `${createForm.discountValue}%` : 'Flat'}):</span>
+                          <span>
+                            {createForm.discountReason.trim()
+                              ? `Special Discount (${createForm.discountReason.trim()}):`
+                              : `Special Discount (${createForm.discountType === 'percentage' ? `${createForm.discountValue}%` : 'Flat'}):`}
+                          </span>
                           <span className="font-mono">- ₹{discAmount.toLocaleString('en-IN')}</span>
+                        </div>
+                      )}
+                      {extraAmount > 0 && (
+                        <div className="flex justify-between items-center text-amber-700 font-semibold">
+                          <span>{createForm.extraChargeReason.trim() ? `Extra Charge (${createForm.extraChargeReason.trim()}):` : 'Extra Charge:'}</span>
+                          <span className="font-mono">+ ₹{extraAmount.toLocaleString('en-IN')}</span>
                         </div>
                       )}
                       <div className="flex justify-between items-center pt-1 border-t border-slate-200 font-bold">

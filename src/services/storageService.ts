@@ -19,7 +19,11 @@ const TOKEN_KEY = 'hh_auth_token_v5';
 
 function getAuthHeader(): Record<string, string> {
   try {
-    const token = localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY);
+    const token =
+      localStorage.getItem(TOKEN_KEY) ||
+      sessionStorage.getItem(TOKEN_KEY) ||
+      localStorage.getItem('hh_admin_token') ||
+      sessionStorage.getItem('hh_admin_token');
     if (token) {
       return { Authorization: `Bearer ${token}` };
     }
@@ -57,7 +61,19 @@ export async function syncBookingsFromServer(): Promise<BookingRequest[]> {
           applicantEmail: b.email,
           eventDate: b.date,
           timeSlot: b.slot,
+          totalAmount: b.totalAmount,
           totalEstimate: b.totalAmount,
+          originalAmount: b.originalAmount,
+          packagePrice: b.packagePrice,
+          discountAmount: b.discountAmount,
+          discountType: b.discountType,
+          discountValue: b.discountValue,
+          discountReason: b.discountReason,
+          extraCharge: b.extraCharge,
+          extraChargeReason: b.extraChargeReason,
+          amountPaid: b.amountPaid,
+          balanceDue: b.balanceDue,
+          couponCode: b.couponCode,
           advancePaymentStatus: b.paymentStatus,
         }));
         try {
@@ -106,8 +122,11 @@ export async function saveBookingAsync(booking: BookingRequest): Promise<Booking
         status: booking.status || 'PENDING',
         paymentStatus: booking.advancePaymentStatus || 'unpaid',
         amountPaid: (booking as any).amountPaid || 0,
-        customDiscountAmount: (booking as any).customDiscountAmount,
-        customDiscountReason: (booking as any).customDiscountReason,
+        packagePrice: (booking as any).packagePrice,
+        customDiscountAmount: (booking as any).customDiscountAmount ?? booking.discountAmount,
+        customDiscountReason: (booking as any).customDiscountReason ?? booking.discountReason,
+        extraCharge: (booking as any).extraCharge,
+        extraChargeReason: (booking as any).extraChargeReason,
       }),
     });
 
@@ -118,7 +137,16 @@ export async function saveBookingAsync(booking: BookingRequest): Promise<Booking
           ...booking,
           id: data.booking.id,
           status: data.booking.status,
+          totalAmount: data.booking.totalAmount,
           totalEstimate: data.booking.totalAmount,
+          originalAmount: data.booking.originalAmount,
+          packagePrice: data.booking.packagePrice,
+          discountAmount: data.booking.discountAmount,
+          extraCharge: data.booking.extraCharge,
+          extraChargeReason: data.booking.extraChargeReason,
+          amountPaid: data.booking.amountPaid,
+          balanceDue: data.booking.balanceDue,
+          couponCode: data.booking.couponCode,
           advancePaymentStatus: data.booking.paymentStatus,
           submittedAt: data.booking.submittedAt,
           updatedAt: data.booking.updatedAt,
@@ -200,13 +228,14 @@ export function updateBooking(id: string, updates: Partial<BookingRequest>): boo
 }
 
 export async function deleteBookingAsync(id: string): Promise<boolean> {
+  const cleanId = (id || '').trim().toLowerCase();
   try {
-    const res = await fetch(`/api/bookings/${id}`, {
+    const res = await fetch(`/api/bookings/${encodeURIComponent(id)}`, {
       method: 'DELETE',
       headers: { ...getAuthHeader() },
     });
     if (res.ok) {
-      cachedBookings = cachedBookings.filter((b) => b.id !== id);
+      cachedBookings = cachedBookings.filter((b) => (b.id || '').trim().toLowerCase() !== cleanId);
       try {
         localStorage.setItem(BOOKINGS_KEY, JSON.stringify(cachedBookings));
       } catch {}
@@ -216,7 +245,7 @@ export async function deleteBookingAsync(id: string): Promise<boolean> {
     console.warn('Server delete error, fallback to cache:', err);
   }
 
-  cachedBookings = cachedBookings.filter((b) => b.id !== id);
+  cachedBookings = cachedBookings.filter((b) => (b.id || '').trim().toLowerCase() !== cleanId);
   try {
     localStorage.setItem(BOOKINGS_KEY, JSON.stringify(cachedBookings));
   } catch {}
@@ -224,8 +253,9 @@ export async function deleteBookingAsync(id: string): Promise<boolean> {
 }
 
 export function deleteBooking(id: string): boolean {
+  const cleanId = (id || '').trim().toLowerCase();
   deleteBookingAsync(id);
-  cachedBookings = cachedBookings.filter((b) => b.id !== id);
+  cachedBookings = cachedBookings.filter((b) => (b.id || '').trim().toLowerCase() !== cleanId);
   try {
     localStorage.setItem(BOOKINGS_KEY, JSON.stringify(cachedBookings));
     return true;

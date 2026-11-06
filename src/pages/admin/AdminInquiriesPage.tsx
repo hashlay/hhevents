@@ -40,7 +40,7 @@ export const AdminInquiriesPage: React.FC<AdminInquiriesPageProps> = ({ navigate
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const getAuthHeader = () => {
+  const getAuthHeader = (): Record<string, string> => {
     const activeToken =
       token ||
       localStorage.getItem('hh_auth_token_v5') ||
