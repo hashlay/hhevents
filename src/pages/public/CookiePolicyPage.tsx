@@ -21,7 +21,7 @@ export const CookiePolicyPage: React.FC<CookiePolicyPageProps> = ({ navigate }) 
               <Cookie className="w-3.5 h-3.5 text-[#C9AA72]" />
               Official Venue Legal Document
             </span>
-            <h1 className="text-3xl sm:text-5xl font-bold text-[#173D35] tracking-tight font-serif-heading">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-[#173D35] tracking-tight">
               Cookie &amp; Storage Policy
             </h1>
             <p className="text-sm sm:text-base text-[#4A4A4A] leading-relaxed max-w-2xl">

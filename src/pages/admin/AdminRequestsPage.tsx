@@ -1038,11 +1038,11 @@ Ph:9448151878`;
                           <td className="p-3.5 text-slate-900">
                             <div className="flex items-center gap-1.5 flex-wrap">
                               {(disc > 0 || extra > 0) && grossRent !== netRent && (
-                                <span className="text-[11px] font-mono text-slate-400 line-through">
+                                <span className="text-[11px] font-price text-slate-400 line-through">
                                   ₹{grossRent.toLocaleString('en-IN')}
                                 </span>
                               )}
-                              <span className="font-mono font-bold text-slate-900">
+                              <span className="font-price text-slate-900 text-xs">
                                 ₹{netRent.toLocaleString('en-IN')}
                               </span>
                             </div>
@@ -1057,15 +1057,15 @@ Ph:9448151878`;
                                 <span>+ ₹{extra.toLocaleString('en-IN')} ({extraReason})</span>
                               </div>
                             )}
-                            <div className="text-[11px] text-emerald-700 font-medium">
+                            <div className="text-[11px] text-emerald-700 font-price">
                               Paid: ₹{paid.toLocaleString('en-IN')}
                             </div>
                             {balance > 0 ? (
-                              <div className="text-[10px] text-amber-700 font-mono font-bold">
+                              <div className="text-[10px] text-amber-700 font-price">
                                 Due: ₹{balance.toLocaleString('en-IN')}
                               </div>
                             ) : (
-                              <div className="text-[10px] text-emerald-700 font-mono font-bold">
+                              <div className="text-[10px] text-emerald-700 font-semibold">
                                 Fully Settled
                               </div>
                             )}
@@ -1555,7 +1555,7 @@ Ph:9448151878`;
                             }`}
                           >
                             <span className="block text-[10px] opacity-80 uppercase">Current Net Rent</span>
-                            <span className="font-mono text-xs font-bold">₹{netRent.toLocaleString('en-IN')}</span>
+                            <span className="font-price text-xs">₹{netRent.toLocaleString('en-IN')}</span>
                           </button>
 
                           <button
@@ -1571,7 +1571,7 @@ Ph:9448151878`;
                             }`}
                           >
                             <span className="block text-[10px] opacity-80 uppercase">Original Tariff</span>
-                            <span className="font-mono text-xs font-bold">₹{grossRent.toLocaleString('en-IN')}</span>
+                            <span className="font-price text-xs">₹{grossRent.toLocaleString('en-IN')}</span>
                           </button>
                         </div>
                       </div>
@@ -1581,39 +1581,39 @@ Ph:9448151878`;
                     <div className="p-3.5 rounded-xl bg-amber-50/60 border border-amber-200 space-y-2">
                       <div className="flex justify-between items-center text-xs text-slate-700">
                         <span>Base Rent Amount:</span>
-                        <strong className="font-mono text-sm text-slate-900">₹{effectiveBase.toLocaleString('en-IN')}</strong>
+                        <strong className="font-price text-sm text-slate-900">₹{effectiveBase.toLocaleString('en-IN')}</strong>
                       </div>
                       {computedDiscount > 0 && (
-                        <div className="flex justify-between items-center text-xs text-emerald-700 font-bold">
+                        <div className="flex justify-between items-center text-xs text-emerald-700 font-semibold">
                           <span>
                             {customDiscountReason.trim()
                               ? `Special Discount (${customDiscountReason.trim()}):`
                               : 'Special Discount to Deduct:'}
                           </span>
-                          <span className="font-mono">- ₹{computedDiscount.toLocaleString('en-IN')}</span>
+                          <span className="font-price">- ₹{computedDiscount.toLocaleString('en-IN')}</span>
                         </div>
                       )}
                       {extraAmount > 0 && (
-                        <div className="flex justify-between items-center text-xs text-amber-800 font-bold">
+                        <div className="flex justify-between items-center text-xs text-amber-800 font-semibold">
                           <span>
                             {customExtraChargeReason.trim()
                               ? `Extra Charge (${customExtraChargeReason.trim()}):`
                               : 'Extra Charge to Add:'}
                           </span>
-                          <span className="font-mono">+ ₹{extraAmount.toLocaleString('en-IN')}</span>
+                          <span className="font-price">+ ₹{extraAmount.toLocaleString('en-IN')}</span>
                         </div>
                       )}
-                      <div className="flex justify-between items-center text-xs text-slate-900 font-bold pt-2 border-t border-amber-200">
+                      <div className="flex justify-between items-center text-xs text-slate-900 font-semibold pt-2 border-t border-amber-200">
                         <span>New Net Payable Rent:</span>
-                        <span className="font-mono text-base text-amber-900">₹{newNetPayable.toLocaleString('en-IN')}</span>
+                        <span className="font-price text-base text-amber-900">₹{newNetPayable.toLocaleString('en-IN')}</span>
                       </div>
                       <div className="flex justify-between items-center text-[11px] text-slate-600 pt-1">
                         <span>Already Paid to Date:</span>
-                        <span className="font-mono font-semibold text-emerald-700">₹{paid.toLocaleString('en-IN')}</span>
+                        <span className="font-price text-emerald-700">₹{paid.toLocaleString('en-IN')}</span>
                       </div>
-                      <div className="flex justify-between items-center text-xs font-bold text-slate-900 pt-1 border-t border-amber-200/60">
+                      <div className="flex justify-between items-center text-xs font-semibold text-slate-900 pt-1 border-t border-amber-200/60">
                         <span>New Balance Due:</span>
-                        <span className={`font-mono text-sm ${newBalanceDue > 0 ? 'text-amber-800' : 'text-emerald-700'}`}>
+                        <span className={`font-price text-sm ${newBalanceDue > 0 ? 'text-amber-800' : 'text-emerald-700'}`}>
                           {newBalanceDue > 0 ? `₹${newBalanceDue.toLocaleString('en-IN')}` : 'Fully Settled (₹0)'}
                         </span>
                       </div>
@@ -1959,7 +1959,7 @@ Ph:9448151878`;
                     <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5 text-xs">
                       <div className="flex justify-between items-center">
                         <span className="text-slate-500">Agreed Package Price:</span>
-                        <span className={`font-mono ${(discAmount > 0 || extraAmount > 0) ? 'line-through text-slate-400' : 'font-bold text-slate-800'}`}>
+                        <span className={`font-price ${(discAmount > 0 || extraAmount > 0) ? 'line-through text-slate-400' : 'text-slate-800'}`}>
                           ₹{baseRent.toLocaleString('en-IN')}
                         </span>
                       </div>
@@ -1970,24 +1970,24 @@ Ph:9448151878`;
                               ? `Special Discount (${createForm.discountReason.trim()}):`
                               : `Special Discount (${createForm.discountType === 'percentage' ? `${createForm.discountValue}%` : 'Flat'}):`}
                           </span>
-                          <span className="font-mono">- ₹{discAmount.toLocaleString('en-IN')}</span>
+                          <span className="font-price">- ₹{discAmount.toLocaleString('en-IN')}</span>
                         </div>
                       )}
                       {extraAmount > 0 && (
                         <div className="flex justify-between items-center text-amber-700 font-semibold">
                           <span>{createForm.extraChargeReason.trim() ? `Extra Charge (${createForm.extraChargeReason.trim()}):` : 'Extra Charge:'}</span>
-                          <span className="font-mono">+ ₹{extraAmount.toLocaleString('en-IN')}</span>
+                          <span className="font-price">+ ₹{extraAmount.toLocaleString('en-IN')}</span>
                         </div>
                       )}
-                      <div className="flex justify-between items-center pt-1 border-t border-slate-200 font-bold">
+                      <div className="flex justify-between items-center pt-1 border-t border-slate-200 font-semibold">
                         <span className="text-slate-900">Net Payable Rent:</span>
-                        <span className="text-slate-900 font-mono text-sm">₹{netRent.toLocaleString('en-IN')}</span>
+                        <span className="text-slate-900 font-price text-sm">₹{netRent.toLocaleString('en-IN')}</span>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">
                           Advance Token Paid Now (₹)
                         </label>
                         <input
@@ -1996,15 +1996,15 @@ Ph:9448151878`;
                           step="1000"
                           value={createForm.advancePaid}
                           onChange={(e) => setCreateForm({ ...createForm, advancePaid: Number(e.target.value) })}
-                          className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#173D35] font-mono text-emerald-700 font-bold"
+                          className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#173D35] font-price text-emerald-700"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">
                           Remaining Balance Due (₹)
                         </label>
-                        <div className="px-3 py-2 text-xs rounded-xl bg-slate-100 border border-slate-200 font-mono text-amber-800 font-bold">
+                        <div className="px-3 py-2 text-xs rounded-xl bg-slate-100 border border-slate-200 font-price text-amber-800">
                           ₹{balanceDue.toLocaleString('en-IN')}
                         </div>
                       </div>

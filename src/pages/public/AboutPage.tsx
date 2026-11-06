@@ -34,7 +34,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ navigate }) => {
               <Building2 className="w-3.5 h-3.5 text-[#C9AA72]" />
               About H H Events &amp; Conventions
             </span>
-            <h1 className="text-4xl sm:text-5xl font-bold text-[#252525] tracking-tight font-serif-heading">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-[#252525] tracking-tight">
               A Premier Venue for Celebrations &amp; Conventions
             </h1>
             <p className="text-base sm:text-lg text-[#4A4A4A] leading-relaxed">
@@ -51,7 +51,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ navigate }) => {
             <div className="inline-flex items-center gap-2 text-xs font-semibold text-[#173D35] bg-[#F5F1E8] px-3.5 py-1.5 rounded-full border border-[#E2DACB]">
               <Building2 className="w-3.5 h-3.5 text-[#C9AA72]" /> Venue Vision &amp; Architecture
             </div>
-            <h2 className="text-3xl sm:text-4xl font-bold text-[#252525] font-serif-heading">
+            <h2 className="text-xl sm:text-2xl lg:text-3xl font-semibold text-[#252525] tracking-tight">
               Designed For Unforgettable Celebrations
             </h2>
             <p className="text-[#4A4A4A] text-sm leading-relaxed">

@@ -476,7 +476,7 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
                       isPastDate
                         ? 'text-slate-400 font-normal'
                         : isSelected
-                        ? 'text-[#173D35] font-extrabold'
+                        ? 'text-[#173D35] font-bold'
                         : summary === 'unavailable'
                         ? 'text-rose-700'
                         : 'text-[#252525]'

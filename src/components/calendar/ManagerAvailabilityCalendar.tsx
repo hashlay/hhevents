@@ -228,7 +228,7 @@ export const ManagerAvailabilityCalendar: React.FC<ManagerAvailabilityCalendarPr
               onClick={() => setSelectedHall('both')}
               className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all text-center ${
                 selectedHall === 'both'
-                  ? 'bg-amber-500 text-slate-950 shadow-sm ring-2 ring-amber-600/30 font-black'
+                  ? 'bg-amber-500 text-slate-950 shadow-sm ring-2 ring-amber-600/30 font-bold'
                   : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
               }`}
             >
@@ -349,8 +349,8 @@ export const ManagerAvailabilityCalendar: React.FC<ManagerAvailabilityCalendarPr
                       className={`${
                         isSelected
                           ? isPastDate
-                            ? 'text-slate-800 font-black'
-                            : 'text-amber-950 font-black'
+                            ? 'text-slate-800 font-bold'
+                            : 'text-amber-950 font-bold'
                           : isPastDate
                           ? 'text-slate-400 font-normal'
                           : summary === 'unavailable'
@@ -505,7 +505,7 @@ export const ManagerAvailabilityCalendar: React.FC<ManagerAvailabilityCalendarPr
                 </div>
 
                 <span
-                  className={`text-xs px-2.5 py-1 rounded-full font-black uppercase tracking-wider shrink-0 ${
+                  className={`text-xs px-2.5 py-1 rounded-full font-semibold uppercase tracking-wider shrink-0 ${
                     isSelectedDatePast
                       ? 'bg-slate-200 text-slate-600'
                       : dayAvailable
@@ -563,7 +563,7 @@ export const ManagerAvailabilityCalendar: React.FC<ManagerAvailabilityCalendarPr
                 </div>
 
                 <span
-                  className={`text-xs px-2.5 py-1 rounded-full font-black uppercase tracking-wider shrink-0 ${
+                  className={`text-xs px-2.5 py-1 rounded-full font-semibold uppercase tracking-wider shrink-0 ${
                     isSelectedDatePast
                       ? 'bg-slate-200 text-slate-600'
                       : eveningAvailable

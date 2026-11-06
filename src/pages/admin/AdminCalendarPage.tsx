@@ -526,7 +526,7 @@ Ph:9448151878`;
             {/* Inspector Header */}
             <div className="pb-3 border-b border-slate-100 flex items-center justify-between">
               <div>
-                <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#C9AA72] block">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#C9AA72] block">
                   {getHallTitle(selectedHall)}
                 </span>
                 <h3 className="text-base font-bold text-slate-900 mt-0.5">{formattedSelectedDate}</h3>
@@ -1074,7 +1074,7 @@ Ph:9448151878`;
                     <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5 text-xs">
                       <div className="flex justify-between items-center">
                         <span className="text-slate-500">Agreed Package Price:</span>
-                        <span className={`font-mono ${(discAmount > 0 || extraAmount > 0) ? 'line-through text-slate-400' : 'font-bold text-slate-800'}`}>
+                        <span className={`font-price ${(discAmount > 0 || extraAmount > 0) ? 'line-through text-slate-400' : 'text-slate-800'}`}>
                           ₹{baseRent.toLocaleString('en-IN')}
                         </span>
                       </div>
@@ -1085,24 +1085,24 @@ Ph:9448151878`;
                               ? `Special Discount (${quickBookForm.discountReason.trim()}):`
                               : `Special Discount (${quickBookForm.discountType === 'percentage' ? `${quickBookForm.discountValue}%` : 'Flat'}):`}
                           </span>
-                          <span className="font-mono">- ₹{discAmount.toLocaleString('en-IN')}</span>
+                          <span className="font-price">- ₹{discAmount.toLocaleString('en-IN')}</span>
                         </div>
                       )}
                       {extraAmount > 0 && (
                         <div className="flex justify-between items-center text-amber-700 font-semibold">
                           <span>{quickBookForm.extraChargeReason.trim() ? `Extra Charge (${quickBookForm.extraChargeReason.trim()}):` : 'Extra Charge:'}</span>
-                          <span className="font-mono">+ ₹{extraAmount.toLocaleString('en-IN')}</span>
+                          <span className="font-price">+ ₹{extraAmount.toLocaleString('en-IN')}</span>
                         </div>
                       )}
                       <div className="flex justify-between items-center pt-1 border-t border-slate-200 font-bold">
                         <span className="text-slate-900">Net Payable Rent:</span>
-                        <span className="text-slate-900 font-mono text-sm">₹{netRent.toLocaleString('en-IN')}</span>
+                        <span className="text-slate-900 font-price text-sm">₹{netRent.toLocaleString('en-IN')}</span>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">
                           Advance Token Paid Now (₹)
                         </label>
                         <input
@@ -1111,14 +1111,14 @@ Ph:9448151878`;
                           step="1000"
                           value={quickBookForm.advancePaid}
                           onChange={(e) => setQuickBookForm({ ...quickBookForm, advancePaid: Number(e.target.value) })}
-                          className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#173D35] font-mono font-bold text-emerald-700"
+                          className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#173D35] font-price text-emerald-700"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">
                           Remaining Balance Due (₹)
                         </label>
-                        <div className="px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-100 font-mono font-bold text-amber-800">
+                        <div className="px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-100 font-price text-amber-800">
                           ₹{balanceDue.toLocaleString('en-IN')}
                         </div>
                       </div>

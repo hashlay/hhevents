@@ -379,7 +379,7 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
               <CalendarDays className="w-3.5 h-3.5 text-[#C9AA72]" />
               Official Reservation Desk
             </span>
-            <h1 className="text-3xl sm:text-4xl font-bold text-[#252525] tracking-tight font-serif-heading">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-[#252525] tracking-tight">
               Reserve H H Events &amp; Conventions
             </h1>
             <p className="text-sm sm:text-base text-[#4A4A4A]">
@@ -584,7 +584,7 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
                         </div>
 
                         <div className="text-right">
-                          <span className="text-lg font-black font-mono text-[#C9AA72]">
+                          <span className="text-lg font-semibold font-price text-[#C9AA72]">
                             ₹{pkg.rent.toLocaleString('en-IN')}
                           </span>
                         </div>
@@ -887,7 +887,7 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
                 <div className="space-y-1.5 text-xs">
                   <div className="flex justify-between py-1 border-b border-slate-200">
                     <span className="text-slate-500">Package Base Rent:</span>
-                    <strong className="text-slate-900 font-mono">₹{packagePrice.toLocaleString('en-IN')}</strong>
+                    <strong className="text-slate-900 font-price">₹{packagePrice.toLocaleString('en-IN')}</strong>
                   </div>
                   {appliedCoupon && (
                     <div className="flex justify-between py-1.5 border-b border-emerald-200 text-emerald-800 bg-emerald-50 px-2 rounded-lg">
@@ -895,7 +895,7 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
                         <Tag className="w-3.5 h-3.5 text-emerald-600" />
                         Discount ({appliedCoupon.code}):
                       </span>
-                      <strong className="font-mono font-bold text-emerald-700">
+                      <strong className="font-price text-emerald-700">
                         -₹{appliedCoupon.discountAmount.toLocaleString('en-IN')}
                       </strong>
                     </div>
@@ -903,16 +903,16 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
                   {appliedCoupon && (
                     <div className="flex justify-between py-1 border-b border-slate-200">
                       <span className="text-slate-500">Net Package Rent:</span>
-                      <strong className="text-slate-900 font-mono font-bold">₹{netRent.toLocaleString('en-IN')}</strong>
+                      <strong className="text-slate-900 font-price">₹{netRent.toLocaleString('en-IN')}</strong>
                     </div>
                   )}
                   <div className="flex justify-between py-1 border-b border-slate-200">
                     <span className="text-slate-500">25% Advance Token Required:</span>
-                    <strong className="text-amber-700 font-mono">₹{advanceRequired.toLocaleString('en-IN')}</strong>
+                    <strong className="text-amber-700 font-price">₹{advanceRequired.toLocaleString('en-IN')}</strong>
                   </div>
                   <div className="flex justify-between py-1 border-b border-slate-200">
                     <span className="text-slate-500">Balance on Agreement:</span>
-                    <strong className="text-slate-900 font-mono">₹{balanceDue.toLocaleString('en-IN')}</strong>
+                    <strong className="text-slate-900 font-price">₹{balanceDue.toLocaleString('en-IN')}</strong>
                   </div>
                   <div className="flex justify-between py-1">
                     <span className="text-slate-500">Payment Notice:</span>
@@ -1074,7 +1074,7 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
                 Official Booking Reference ID
               </span>
               <div className="flex items-center justify-center gap-3">
-                <span className="text-2xl font-black font-mono text-[#C9AA72] tracking-wider">
+                <span className="text-2xl font-bold font-mono text-[#C9AA72] tracking-wider">
                   {submittedBooking.id}
                 </span>
                 <button

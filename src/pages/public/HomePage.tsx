@@ -100,7 +100,7 @@ export const HomePage: React.FC<HomePageProps> = ({ navigate }) => {
               <span>Opposite Juma Masjid, Panemangalore, Bantwal</span>
             </div>
 
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-white leading-[1.15] font-serif-heading drop-shadow-sm">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight text-white leading-[1.2] drop-shadow-sm">
               A Beautiful Venue for Your Special Occasions
             </h1>
 
@@ -169,8 +169,8 @@ export const HomePage: React.FC<HomePageProps> = ({ navigate }) => {
             <span>Panemangalore, Bantwal</span>
           </div>
 
-          {/* Luxury Serif Headline */}
-          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-white leading-[1.18] font-serif-heading drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]">
+          {/* Luxury Modern Headline */}
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white leading-[1.25] drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]">
             A Beautiful Venue <br />
             for Your <br />
             <span className="text-[#C9AA72]">Special Occasions</span>
@@ -509,7 +509,7 @@ export const HomePage: React.FC<HomePageProps> = ({ navigate }) => {
                 </div>
 
                 <div className="py-2 border-y border-[#E2DACB]/60">
-                  <span className="text-2xl font-bold font-mono text-[#252525]">
+                  <span className="text-xl sm:text-2xl font-semibold font-price text-[#252525]">
                     {pkg.rent}
                   </span>
                   <span className="text-xs text-[#737373] block mt-0.5">

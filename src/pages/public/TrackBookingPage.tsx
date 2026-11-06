@@ -160,7 +160,7 @@ export const TrackBookingPage: React.FC<{ navigate: (path: string) => void }> = 
               <Search className="w-3.5 h-3.5 text-[#C9AA72]" />
               Reservation Tracker
             </span>
-            <h1 className="text-4xl sm:text-5xl font-bold text-[#252525] tracking-tight font-serif-heading">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-[#252525] tracking-tight">
               Track Reservation Status
             </h1>
             <p className="text-base sm:text-lg text-[#4A4A4A] leading-relaxed">
@@ -275,19 +275,19 @@ export const TrackBookingPage: React.FC<{ navigate: (path: string) => void }> = 
               <div className="p-5 rounded-2xl bg-[#FAF8F5] border border-[#E2DACB] grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
                 <div>
                   <span className="text-[#737373] block uppercase">Total Rent</span>
-                  <span className="text-xl font-bold text-[#252525]">
+                  <span className="text-lg sm:text-xl font-semibold font-price text-[#252525]">
                     ₹{(booking.totalAmount || booking.estimatedAmount || 0).toLocaleString('en-IN')}.00
                   </span>
                 </div>
                 <div>
                   <span className="text-[#737373] block uppercase">Advance Paid</span>
-                  <span className="text-xl font-bold text-emerald-700">
+                  <span className="text-lg sm:text-xl font-semibold font-price text-emerald-700">
                     ₹{(booking.amountPaid || 0).toLocaleString('en-IN')}.00
                   </span>
                 </div>
                 <div>
                   <span className="text-[#737373] block uppercase">Balance Due</span>
-                  <span className="text-xl font-bold text-amber-700">
+                  <span className="text-lg sm:text-xl font-semibold font-price text-amber-700">
                     ₹{(booking.balanceDue !== undefined ? booking.balanceDue : (booking.totalAmount || 0)).toLocaleString('en-IN')}.00
                   </span>
                 </div>

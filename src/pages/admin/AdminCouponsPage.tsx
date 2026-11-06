@@ -518,7 +518,7 @@ export const AdminCouponsPage: React.FC<{ navigate: (path: string) => void }> = 
                     <div className="bg-[#FAF8F5] border border-[#E2DACB] rounded-2xl p-3 flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Ticket className="w-5 h-5 text-[#C9AA72]" />
-                        <span className="text-base font-black tracking-widest text-[#0B1E19] font-mono select-all">
+                        <span className="text-base font-bold tracking-wider text-[#0B1E19] font-mono select-all">
                           {coupon.code}
                         </span>
                       </div>

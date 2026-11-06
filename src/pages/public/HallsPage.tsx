@@ -39,7 +39,7 @@ export const HallsPage: React.FC<HallsPageProps> = ({ navigate }) => {
               <Building2 className="w-3.5 h-3.5 text-[#C9AA72]" />
               Venue Architecture &amp; Capacities
             </span>
-            <h1 className="text-4xl sm:text-5xl font-bold text-[#252525] tracking-tight font-serif-heading">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-[#252525] tracking-tight">
               Our Halls: Hall 1 &amp; Hall 2
             </h1>
             <p className="text-base sm:text-lg text-[#4A4A4A] leading-relaxed">
@@ -215,7 +215,7 @@ export const HallsPage: React.FC<HallsPageProps> = ({ navigate }) => {
                 <Users className="w-3.5 h-3.5 text-[#C9AA72]" />
                 Grand Campus Reservation
               </span>
-              <h2 className="text-3xl sm:text-4xl font-bold text-[#252525] font-serif-heading">
+              <h2 className="text-xl sm:text-2xl lg:text-3xl font-semibold text-[#252525] tracking-tight">
                 {COMBINED_PACKAGE.name}
               </h2>
               <p className="text-sm sm:text-base text-[#4A4A4A] leading-relaxed">

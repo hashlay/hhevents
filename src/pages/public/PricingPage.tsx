@@ -74,7 +74,7 @@ export const PricingPage: React.FC<PricingPageProps> = ({ navigate }) => {
             <span className="text-xs uppercase font-bold tracking-widest text-[#173D35] bg-[#F5F1E8] px-3.5 py-1.5 rounded-full border border-[#E2DACB] inline-flex items-center gap-1.5">
               Official Tariff Schedule
             </span>
-            <h1 className="text-4xl sm:text-5xl font-bold text-[#252525] tracking-tight font-serif-heading">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-[#252525] tracking-tight">
               Hall Packages &amp; Tariff
             </h1>
             <p className="text-base sm:text-lg text-[#4A4A4A] leading-relaxed">
@@ -169,7 +169,7 @@ export const PricingPage: React.FC<PricingPageProps> = ({ navigate }) => {
                         Official Rent:
                       </span>
                       <div className="flex items-baseline gap-1 mt-0.5">
-                        <span className="text-2xl font-black text-[#C9AA72]">
+                        <span className="text-2xl font-semibold font-price text-[#C9AA72]">
                           ₹{pkg.rent.toLocaleString('en-IN')}
                         </span>
                       </div>

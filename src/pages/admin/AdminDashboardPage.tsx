@@ -326,10 +326,10 @@ Ph:9448151878`;
             className="p-5 rounded-2xl bg-white border-2 border-amber-200/80 hover:border-amber-400 transition-all shadow-xs cursor-pointer group flex items-start justify-between"
           >
             <div className="space-y-1">
-              <span className="text-xs font-bold uppercase tracking-wider text-amber-800">
+              <span className="text-xs font-semibold uppercase tracking-wider text-amber-800">
                 New Inquiries
               </span>
-              <div className="text-4xl font-extrabold text-amber-700 font-mono">
+              <div className="text-3xl sm:text-4xl font-semibold text-amber-700 font-heading tabular-nums">
                 {pendingBookings.length}
               </div>
               <p className="text-xs text-slate-500 font-medium pt-1">
@@ -347,10 +347,10 @@ Ph:9448151878`;
             className="p-5 rounded-2xl bg-white border-2 border-emerald-200/80 hover:border-emerald-400 transition-all shadow-xs cursor-pointer group flex items-start justify-between"
           >
             <div className="space-y-1">
-              <span className="text-xs font-bold uppercase tracking-wider text-emerald-800">
+              <span className="text-xs font-semibold uppercase tracking-wider text-emerald-800">
                 Confirmed Bookings
               </span>
-              <div className="text-4xl font-extrabold text-emerald-800 font-mono">
+              <div className="text-3xl sm:text-4xl font-semibold text-emerald-800 font-heading tabular-nums">
                 {approvedBookings.length}
               </div>
               <p className="text-xs text-slate-500 font-medium pt-1">
@@ -369,15 +369,15 @@ Ph:9448151878`;
             title="Click to view full payment history and multi-installment ledger"
           >
             <div className="space-y-1">
-              <span className="text-xs font-bold uppercase tracking-wider text-[#173D35] flex items-center gap-1.5">
+              <span className="text-xs font-semibold uppercase tracking-wider text-[#173D35] flex items-center gap-1.5">
                 Payments Received
                 <span className="text-[10px] font-normal text-slate-400 group-hover:text-amber-800 transition-colors">&bull; Click for full ledger</span>
               </span>
-              <div className="text-3xl font-extrabold text-[#173D35] font-mono">
+              <div className="text-2xl sm:text-3xl font-semibold text-[#173D35] font-price">
                 ₹{totalAdvancePaid.toLocaleString('en-IN')}
               </div>
               <p className="text-xs text-slate-500 font-medium pt-1">
-                Balance due: <strong className="text-amber-800 font-mono">₹{outstandingBalance.toLocaleString('en-IN')}</strong>
+                Balance due: <strong className="text-amber-800 font-price">₹{outstandingBalance.toLocaleString('en-IN')}</strong>
               </p>
             </div>
             <div className="w-12 h-12 rounded-xl bg-[#FAF8F5] group-hover:bg-[#F2ECE1] text-[#173D35] flex items-center justify-center shrink-0 border border-[#E2DACB] transition-colors">

@@ -28,7 +28,7 @@ export const AvailabilityPage: React.FC<AvailabilityPageProps> = ({ navigate }) 
               <CalendarDays className="w-3.5 h-3.5 text-[#C9AA72]" />
               Live Availability Schedule
             </span>
-            <h1 className="text-4xl sm:text-5xl font-bold text-[#252525] tracking-tight font-serif-heading">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-[#252525] tracking-tight">
               Hall Availability &amp; Booking Slots
             </h1>
             <p className="text-base sm:text-lg text-[#4A4A4A] leading-relaxed">

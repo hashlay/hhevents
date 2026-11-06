@@ -291,12 +291,12 @@ export const AdminPaymentsPage: React.FC<{ navigate: (path: string) => void }> =
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <div className="bg-white p-4 sm:p-5 rounded-2xl border border-[#E2DACB] shadow-2xs">
             <div className="flex items-center justify-between text-emerald-700 mb-2">
-              <span className="text-xs font-bold uppercase tracking-wider">Total Received</span>
+              <span className="text-xs font-semibold uppercase tracking-wider">Total Received</span>
               <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
                 <Receipt className="w-4 h-4" />
               </div>
             </div>
-            <div className="text-2xl sm:text-3xl font-extrabold text-emerald-800 font-mono">
+            <div className="text-2xl sm:text-3xl font-semibold text-emerald-800 font-price">
               ₹{totalCollected.toLocaleString('en-IN')}
             </div>
             <p className="text-[11px] text-slate-500 mt-1">
@@ -306,12 +306,12 @@ export const AdminPaymentsPage: React.FC<{ navigate: (path: string) => void }> =
 
           <div className="bg-white p-4 sm:p-5 rounded-2xl border border-[#E2DACB] shadow-2xs">
             <div className="flex items-center justify-between text-amber-800 mb-2">
-              <span className="text-xs font-bold uppercase tracking-wider">Outstanding Due</span>
+              <span className="text-xs font-semibold uppercase tracking-wider">Outstanding Due</span>
               <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center">
                 <AlertCircle className="w-4 h-4" />
               </div>
             </div>
-            <div className="text-2xl sm:text-3xl font-extrabold text-amber-800 font-mono">
+            <div className="text-2xl sm:text-3xl font-semibold text-amber-800 font-price">
               ₹{totalOutstanding.toLocaleString('en-IN')}
             </div>
             <p className="text-[11px] text-slate-500 mt-1">
@@ -321,12 +321,12 @@ export const AdminPaymentsPage: React.FC<{ navigate: (path: string) => void }> =
 
           <div className="bg-white p-4 sm:p-5 rounded-2xl border border-[#E2DACB] shadow-2xs">
             <div className="flex items-center justify-between text-slate-700 mb-2">
-              <span className="text-xs font-bold uppercase tracking-wider">Total Agreed Rent</span>
+              <span className="text-xs font-semibold uppercase tracking-wider">Total Agreed Rent</span>
               <div className="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center">
                 <TrendingUp className="w-4 h-4" />
               </div>
             </div>
-            <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 font-mono">
+            <div className="text-2xl sm:text-3xl font-semibold text-slate-900 font-price">
               ₹{totalAgreedRevenue.toLocaleString('en-IN')}
             </div>
             <p className="text-[11px] text-slate-500 mt-1">
@@ -336,12 +336,12 @@ export const AdminPaymentsPage: React.FC<{ navigate: (path: string) => void }> =
 
           <div className="bg-white p-4 sm:p-5 rounded-2xl border border-[#E2DACB] shadow-2xs">
             <div className="flex items-center justify-between text-blue-700 mb-2">
-              <span className="text-xs font-bold uppercase tracking-wider">Recorded Payments</span>
+              <span className="text-xs font-semibold uppercase tracking-wider">Recorded Payments</span>
               <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
                 <CreditCard className="w-4 h-4" />
               </div>
             </div>
-            <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 font-mono">
+            <div className="text-2xl sm:text-3xl font-semibold text-slate-900 font-heading tabular-nums">
               {totalTransactionsCount}
             </div>
             <p className="text-[11px] text-slate-500 mt-1">
@@ -542,7 +542,7 @@ export const AdminPaymentsPage: React.FC<{ navigate: (path: string) => void }> =
 
                           <td className="p-3.5 text-right whitespace-nowrap">
                             <span
-                              className={`font-mono font-bold text-sm ${
+                              className={`font-price text-sm ${
                                 tx.paymentType === 'refund' ? 'text-rose-700' : 'text-emerald-700'
                               }`}
                             >
@@ -552,15 +552,15 @@ export const AdminPaymentsPage: React.FC<{ navigate: (path: string) => void }> =
 
                           <td className="p-3.5 text-right whitespace-nowrap">
                             {tx.customerBalanceDue === 0 ? (
-                              <span className="text-emerald-700 font-bold text-xs inline-flex items-center gap-1">
+                              <span className="text-emerald-700 font-semibold text-xs inline-flex items-center gap-1">
                                 <CheckCircle2 className="w-3.5 h-3.5" /> Fully Paid
                               </span>
                             ) : (
-                              <span className="text-amber-700 font-mono text-xs font-semibold">
+                              <span className="text-amber-700 font-price text-xs">
                                 Due: ₹{tx.customerBalanceDue.toLocaleString('en-IN')}
                               </span>
                             )}
-                            <div className="text-[10px] text-slate-400 font-mono">
+                            <div className="text-[10px] text-slate-400 font-price">
                               Paid ₹{tx.totalCustomerPaid.toLocaleString('en-IN')} of ₹{tx.totalRent.toLocaleString('en-IN')}
                             </div>
                           </td>
