@@ -257,6 +257,7 @@ export interface BookingRecord {
   // Resource occupancy
   occupiedResources: string[]; // e.g. ['gents_hall', 'dining_1', 'kitchen']
   hallSelection: 'hall_1' | 'hall_2' | 'both';
+  hall?: 'hall_1' | 'hall_2' | 'both';
   acOption: 'ac' | 'non_ac';
   date: string; // YYYY-MM-DD
   slot: 'day' | 'evening'; // 'day' (10 AM - 3 PM), 'evening' (6 PM - 10 PM)

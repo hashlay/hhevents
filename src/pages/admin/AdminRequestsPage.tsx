@@ -23,6 +23,9 @@ import {
   Tag,
   Trash2,
   Percent,
+  Edit2,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { AdminLayout } from '../../components/layout/AdminLayout';
 import { Card } from '../../components/ui/Card';
@@ -33,6 +36,7 @@ import { EmptyState } from '../../components/ui/EmptyState';
 import { InvoiceModal } from '../../components/ui/InvoiceModal';
 import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../context/AuthContext';
+import { syncAvailabilityFromServer } from '../../services/availabilityManager';
 import {
   fetchBookingsAsync,
   updateBookingStatusAsync,
@@ -200,6 +204,120 @@ Ph:9448151878`;
     advancePaid: 15000,
     notes: 'Wedding / Nikah (Main Ceremony)',
   });
+
+  // Edit Date, Session Slot & Package State (Inside Manage / Dossier Modal)
+  const [isEditingSchedule, setIsEditingSchedule] = useState(false);
+  const [isSavingSchedule, setIsSavingSchedule] = useState(false);
+  const [editScheduleForm, setEditScheduleForm] = useState({
+    date: '',
+    slot: 'day' as 'day' | 'evening',
+    packageId: '',
+    reason: '',
+  });
+
+  const startEditingSchedule = (booking: BookingRequest) => {
+    const rawSlot = (booking.slot || (booking as any).timeSlot || 'day').toLowerCase();
+    const currentSlot: 'day' | 'evening' = rawSlot === 'evening' ? 'evening' : 'day';
+    const currentDate = booking.date || booking.eventDate || '';
+
+    let currentPkgId = booking.packageId || '';
+    if (!currentPkgId) {
+      const match = packageOptions.find(
+        (p) => p.name.toLowerCase() === (booking.packageName || '').toLowerCase()
+      );
+      if (match) currentPkgId = match.id;
+      else if (booking.hall === 'both') currentPkgId = 'full-ac-hall';
+      else currentPkgId = 'single-ac-hall-1';
+    }
+
+    setEditScheduleForm({
+      date: currentDate,
+      slot: currentSlot,
+      packageId: currentPkgId,
+      reason: '',
+    });
+    setIsEditingSchedule(true);
+  };
+
+  const handleSaveScheduleUpdate = async () => {
+    if (!selectedBooking) return;
+    if (!editScheduleForm.date) {
+      showToast('Please select a valid event date.', 'error');
+      return;
+    }
+
+    const selectedPkg = packageOptions.find((p) => p.id === editScheduleForm.packageId);
+    const targetHall = selectedPkg ? selectedPkg.hall : (selectedBooking.hall || 'hall_1');
+    const targetPkgName = selectedPkg ? selectedPkg.name : (selectedBooking.packageName || '');
+    const targetRent = selectedPkg ? selectedPkg.rent : ((selectedBooking as any).packagePrice || 30000);
+    const targetAc = selectedPkg?.name.toLowerCase().includes('non ac') || selectedPkg?.name.toLowerCase().includes('non-ac') ? 'non_ac' : 'ac';
+
+    setIsSavingSchedule(true);
+    try {
+      const res = await fetch(`/api/bookings/${selectedBooking.id}/reschedule`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${getAuthToken()}`,
+          'x-admin-token': getAuthToken(),
+        },
+        body: JSON.stringify({
+          date: editScheduleForm.date,
+          slot: editScheduleForm.slot,
+          packageId: selectedPkg ? selectedPkg.id : selectedBooking.packageId,
+          packageName: targetPkgName,
+          hallSelection: targetHall,
+          acOption: targetAc,
+          packagePrice: targetRent,
+          reason: editScheduleForm.reason || 'Manager schedule update',
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        showToast(data.error || 'Failed to update schedule. Space might be already occupied.', 'error');
+        setIsSavingSchedule(false);
+        return;
+      }
+
+      showToast(`Reservation ${selectedBooking.id} successfully updated to ${editScheduleForm.date} (${editScheduleForm.slot.toUpperCase()} SESSION).`, 'success');
+
+      // Immediately sync availability cache for public & admin calendars
+      await syncAvailabilityFromServer();
+
+      // Reload bookings list
+      await loadBookings();
+
+      // Update currently open dossier modal in place
+      if (data.booking) {
+        setSelectedBooking((prev) => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            ...data.booking,
+            date: data.booking.date,
+            eventDate: data.booking.date,
+            slot: data.booking.slot,
+            timeSlot: data.booking.slot,
+            packageId: data.booking.packageId,
+            packageName: data.booking.packageName,
+            hall: data.booking.hallSelection || data.booking.hall,
+            acOption: data.booking.acOption,
+            totalAmount: data.booking.totalAmount,
+            packagePrice: data.booking.packagePrice,
+            originalAmount: data.booking.originalAmount,
+            balanceDue: data.booking.balanceDue,
+          };
+        });
+      }
+
+      setIsEditingSchedule(false);
+    } catch (err: any) {
+      showToast(err?.message || 'Error updating schedule on server', 'error');
+    } finally {
+      setIsSavingSchedule(false);
+    }
+  };
 
   // Fetch latest packages from server if configured
   useEffect(() => {
@@ -1135,7 +1253,10 @@ Ph:9448151878`;
         {selectedBooking && (
           <Dialog
             isOpen={!!selectedBooking}
-            onClose={() => setSelectedBooking(null)}
+            onClose={() => {
+              setSelectedBooking(null);
+              setIsEditingSchedule(false);
+            }}
             title={`Application Dossier — ${selectedBooking.id}`}
             maxWidth="lg"
           >
@@ -1160,15 +1281,223 @@ Ph:9448151878`;
                   {selectedBooking.email && <p className="text-slate-600">Email: {selectedBooking.email}</p>}
                 </div>
 
-                <div className="p-3.5 bg-white rounded-lg border border-slate-200 space-y-1.5">
-                  <h4 className="font-bold uppercase text-[10px] tracking-wider text-slate-400">
-                    Reservation Schedule
-                  </h4>
-                  <p>Date: <strong>{selectedBooking.date || selectedBooking.eventDate}</strong></p>
-                  <p>Session: <strong className="uppercase">{selectedBooking.slot || selectedBooking.timeSlot} Session</strong></p>
-                  <p>Attendees: <strong>{selectedBooking.expectedAttendees || 0} Guests</strong></p>
+                <div className="p-3.5 bg-white rounded-lg border border-slate-200 space-y-1.5 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between pb-1 border-b border-slate-100">
+                      <h4 className="font-bold uppercase text-[10px] tracking-wider text-slate-400">
+                        Reservation Schedule
+                      </h4>
+                      {!isEditingSchedule && (
+                        <button
+                          type="button"
+                          onClick={() => startEditingSchedule(selectedBooking)}
+                          className="inline-flex items-center gap-1 text-[11px] font-bold text-[#173D35] hover:text-[#C9AA72] bg-amber-50 hover:bg-amber-100 px-2 py-0.5 rounded-md border border-amber-200 transition-colors cursor-pointer"
+                          title="Edit Date, Session Slot & Package"
+                        >
+                          <Edit2 className="w-3 h-3 text-[#C9AA72]" />
+                          <span>Edit</span>
+                        </button>
+                      )}
+                    </div>
+                    <p className="mt-1.5">Date: <strong>{selectedBooking.date || selectedBooking.eventDate}</strong></p>
+                    <p>Session: <strong className="uppercase">{selectedBooking.slot || (selectedBooking as any).timeSlot} Session</strong></p>
+                    <p>Attendees: <strong>{selectedBooking.expectedAttendees || 0} Guests</strong></p>
+                  </div>
                 </div>
               </div>
+
+              {/* Dedicated Reschedule & Package Editor */}
+              {isEditingSchedule && (
+                <div className="p-4 rounded-xl bg-gradient-to-br from-amber-50/80 via-white to-amber-50/40 border-2 border-amber-300 shadow-sm space-y-3.5 animate-in fade-in zoom-in-95 duration-150">
+                  <div className="flex items-center justify-between pb-2 border-b border-amber-200">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-[#173D35]" />
+                      <span className="font-bold text-sm text-slate-900">
+                        Edit Reservation Date, Session Slot &amp; Package
+                      </span>
+                    </div>
+                    <span className="text-[10px] uppercase font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full">
+                      Live Calendar Sync
+                    </span>
+                  </div>
+
+                  <p className="text-[11px] text-slate-600">
+                    Updating the date or session will immediately release the old date on the public and admin calendar and block the new date.
+                  </p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* 1. Date Picker */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-800 mb-1">
+                        Event Date *
+                      </label>
+                      <input
+                        type="date"
+                        required
+                        value={editScheduleForm.date}
+                        onChange={(e) =>
+                          setEditScheduleForm({ ...editScheduleForm, date: e.target.value })
+                        }
+                        className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#173D35] font-mono font-bold bg-white"
+                      />
+                      {editScheduleForm.date && (
+                        <div className="text-[10.5px] text-slate-500 font-mono mt-1 flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-slate-400" />
+                          <span>
+                            {new Date(`${editScheduleForm.date}T00:00:00`).toLocaleDateString('en-IN', {
+                              weekday: 'long',
+                              day: '2-digit',
+                              month: 'short',
+                              year: 'numeric',
+                            })}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* 2. Session Slot Toggle (Morning / Day vs Evening) */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-800 mb-1">
+                        Session Slot *
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setEditScheduleForm({ ...editScheduleForm, slot: 'day' })}
+                          className={`px-2.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 border cursor-pointer ${
+                            editScheduleForm.slot === 'day'
+                              ? 'bg-[#173D35] text-white border-[#173D35] shadow-xs'
+                              : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+                          }`}
+                        >
+                          <Sun className={`w-3.5 h-3.5 ${editScheduleForm.slot === 'day' ? 'text-[#C9AA72]' : 'text-amber-500'}`} />
+                          <span>Day Session (10AM–3PM)</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setEditScheduleForm({ ...editScheduleForm, slot: 'evening' })}
+                          className={`px-2.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 border cursor-pointer ${
+                            editScheduleForm.slot === 'evening'
+                              ? 'bg-[#173D35] text-white border-[#173D35] shadow-xs'
+                              : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+                          }`}
+                        >
+                          <Moon className={`w-3.5 h-3.5 ${editScheduleForm.slot === 'evening' ? 'text-[#C9AA72]' : 'text-indigo-400'}`} />
+                          <span>Evening (6PM–10PM)</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 3. Package Selection */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-800 mb-1">
+                      Package &amp; Spaces *
+                    </label>
+                    <select
+                      value={editScheduleForm.packageId}
+                      onChange={(e) =>
+                        setEditScheduleForm({ ...editScheduleForm, packageId: e.target.value })
+                      }
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#173D35] bg-white font-medium text-slate-800"
+                    >
+                      {packageOptions.map((pkg) => (
+                        <option key={pkg.id} value={pkg.id}>
+                          {pkg.label}
+                        </option>
+                      ))}
+                    </select>
+
+                    {(() => {
+                      const selPkg = packageOptions.find((p) => p.id === editScheduleForm.packageId);
+                      return selPkg ? (
+                        <div className="flex items-center justify-between text-[11px] text-slate-600 mt-1 px-1">
+                          <span>
+                            Space: <strong>{selPkg.hall === 'both' ? 'Combined Campus (Full Hall)' : selPkg.hall === 'hall_2' ? 'Hall 2 (Ladies Wing)' : 'Hall 1 (Gents Wing)'}</strong>
+                          </span>
+                          <span>
+                            Tariff: <strong className="text-emerald-700 font-mono font-bold">₹{selPkg.rent.toLocaleString('en-IN')}</strong>
+                          </span>
+                        </div>
+                      ) : null;
+                    })()}
+                  </div>
+
+                  {/* 4. Optional Reason / Note */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Reason for Reschedule / Change (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Host requested postponement to weekend / shifted from evening to day session"
+                      value={editScheduleForm.reason}
+                      onChange={(e) =>
+                        setEditScheduleForm({ ...editScheduleForm, reason: e.target.value })
+                      }
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#173D35] bg-white"
+                    />
+                  </div>
+
+                  {/* Schedule Change Comparison Pill */}
+                  {(() => {
+                    const selPkg = packageOptions.find((p) => p.id === editScheduleForm.packageId);
+                    const isDateChanged = editScheduleForm.date !== (selectedBooking.date || selectedBooking.eventDate);
+                    const isSlotChanged = editScheduleForm.slot !== ((selectedBooking.slot || (selectedBooking as any).timeSlot || 'day').toLowerCase());
+                    const isPkgChanged = selPkg && selPkg.name !== selectedBooking.packageName && selPkg.id !== selectedBooking.packageId;
+
+                    return (
+                      <div className="p-2.5 rounded-lg bg-amber-100/70 border border-amber-200 text-[11px] text-amber-900 space-y-1">
+                        <div className="font-bold flex items-center gap-1.5">
+                          <AlertCircle className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                          <span>Summary of Changes to Apply:</span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 pl-5">
+                          <span className={isDateChanged ? 'font-bold text-amber-950 underline' : 'text-slate-600'}>
+                            Date: {selectedBooking.date || selectedBooking.eventDate} → {editScheduleForm.date}
+                          </span>
+                          <span>&bull;</span>
+                          <span className={isSlotChanged ? 'font-bold text-amber-950 underline' : 'text-slate-600'}>
+                            Session: {((selectedBooking.slot || (selectedBooking as any).timeSlot || 'day') as string).toUpperCase()} → {editScheduleForm.slot.toUpperCase()}
+                          </span>
+                          {isPkgChanged && selPkg && (
+                            <>
+                              <span>&bull;</span>
+                              <span className="font-bold text-amber-950 underline">
+                                Package: {selectedBooking.packageName} → {selPkg.name} (₹{selPkg.rent.toLocaleString('en-IN')})
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Editor Buttons */}
+                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-amber-200">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsEditingSchedule(false)}
+                      disabled={isSavingSchedule}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="gold"
+                      size="sm"
+                      onClick={handleSaveScheduleUpdate}
+                      isLoading={isSavingSchedule}
+                      leftIcon={<Check className="w-3.5 h-3.5" />}
+                    >
+                      Save &amp; Update Booking
+                    </Button>
+                  </div>
+                </div>
+              )}
 
               {selectedBooking.additionalInfo && (
                 <div className="p-3 bg-amber-50/60 rounded-lg border border-amber-200 text-amber-900">
@@ -1250,6 +1579,21 @@ Ph:9448151878`;
 
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-3 border-t border-slate-200">
                 <div className="flex items-center gap-2 flex-wrap">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (isEditingSchedule) {
+                        setIsEditingSchedule(false);
+                      } else {
+                        startEditingSchedule(selectedBooking);
+                      }
+                    }}
+                    leftIcon={<Calendar className="w-3.5 h-3.5 text-[#173D35]" />}
+                  >
+                    {isEditingSchedule ? 'Close Schedule Editor' : 'Edit Date / Slot / Package'}
+                  </Button>
+
                   <Button
                     variant="outline"
                     size="sm"

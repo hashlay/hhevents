@@ -1117,39 +1117,119 @@ apiRouter.patch("/bookings/:id/status", requireAdminAuth, async (req, res) => {
 });
 apiRouter.patch("/bookings/:id/reschedule", requireAdminAuth, async (req, res) => {
   const { id } = req.params;
-  const { date, slot, reason } = req.body;
-  if (!date || !slot) {
-    return res.status(400).json({ error: "New date and session slot are required." });
-  }
+  const cleanId = (id || "").trim().toLowerCase();
+  const {
+    date,
+    slot,
+    packageId,
+    packageName,
+    hallSelection,
+    acOption,
+    packagePrice,
+    reason
+  } = req.body;
   const db = await getDb();
-  const booking = db.bookings.find((b) => b.id === id);
+  const booking = db.bookings.find((b) => (b.id || "").trim().toLowerCase() === cleanId);
   if (!booking) {
     return res.status(404).json({ error: "Booking reference not found" });
   }
+  const targetDate = (date || booking.date || "").trim();
+  const targetSlot = (slot || booking.slot || "day").trim().toLowerCase();
+  if (!targetDate || !targetSlot) {
+    return res.status(400).json({ error: "New date and session slot are required." });
+  }
   const admin = req.adminSession;
-  const conflict = checkResourceConflict(db, date, slot, booking.occupiedResources, booking.id);
+  let targetPackageId = packageId || booking.packageId;
+  let targetPackageName = packageName || booking.packageName;
+  let targetHall = hallSelection || booking.hallSelection || booking.hall || "hall_1";
+  let targetAc = acOption || booking.acOption || "ac";
+  let matchedPkg = null;
+  if (packageId) {
+    matchedPkg = (db.packages || []).find((p) => p.id === packageId);
+    if (matchedPkg) {
+      targetPackageId = matchedPkg.id;
+      targetPackageName = matchedPkg.name || matchedPkg.displayName || targetPackageName;
+      if (!hallSelection) {
+        const reqRes = Array.isArray(matchedPkg.requiredResources) ? matchedPkg.requiredResources : [];
+        if (reqRes.includes("gents_hall") && reqRes.includes("ladies_hall")) {
+          targetHall = "both";
+        } else if (reqRes.includes("ladies_hall") && !reqRes.includes("gents_hall")) {
+          targetHall = "hall_2";
+        } else {
+          targetHall = "hall_1";
+        }
+      }
+      if (!acOption && matchedPkg.acType) {
+        targetAc = matchedPkg.acType.toLowerCase().includes("non") ? "non_ac" : "ac";
+      }
+    }
+  }
+  const targetResources = resolveRequiredResources(targetPackageId, targetHall, db.packages);
+  const conflict = checkResourceConflict(db, targetDate, targetSlot, targetResources, booking.id, true);
   if (!conflict.available) {
     return res.status(409).json({
-      error: `Cannot reschedule: Space conflict on ${date} (${slot}). ${conflict.conflictReason}`,
+      error: `Cannot update reservation: Space conflict on ${targetDate} (${targetSlot.toUpperCase()} SESSION). ${conflict.conflictReason}`,
       conflictingResources: conflict.conflictingResources
     });
   }
   const oldDate = booking.date;
   const oldSlot = booking.slot;
-  booking.date = date;
-  booking.slot = slot;
+  const oldPkg = booking.packageName;
+  booking.date = targetDate;
+  booking.slot = targetSlot;
+  booking.occupiedResources = targetResources;
+  booking.hallSelection = targetHall;
+  booking.hall = targetHall;
+  booking.acOption = targetAc;
+  if (targetPackageId) {
+    booking.packageId = targetPackageId;
+    booking.packageName = targetPackageName;
+  }
+  const newPkgPrice = packagePrice !== void 0 && Number(packagePrice) >= 0 ? Number(packagePrice) : matchedPkg ? matchedPkg.rent : booking.packagePrice || booking.originalAmount;
+  if (newPkgPrice !== void 0 && newPkgPrice !== null) {
+    booking.packagePrice = newPkgPrice;
+    booking.originalAmount = newPkgPrice;
+    const disc = Number(booking.discountAmount) || 0;
+    const extra = Number(booking.extraCharge) || 0;
+    const netRent = Math.max(0, newPkgPrice - disc + extra);
+    booking.totalAmount = netRent;
+    booking.totalEstimate = netRent;
+    const paid = Number(booking.amountPaid) || 0;
+    booking.balanceDue = Math.max(0, netRent - paid);
+    if (booking.balanceDue === 0 && paid > 0) {
+      booking.paymentStatus = "fully_paid";
+    } else if (paid > 0) {
+      booking.paymentStatus = "advance_paid";
+    }
+  }
   booking.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
   booking.adminRemarks = `${booking.adminRemarks || ""}
-Rescheduled from ${oldDate} (${oldSlot}) to ${date} (${slot}) by ${admin.email}. Reason: ${reason || "Customer request"}`.trim();
+[${(/* @__PURE__ */ new Date()).toLocaleDateString("en-IN")}] Rescheduled/Updated by ${admin.email}: ${oldDate} (${oldSlot}) -> ${targetDate} (${targetSlot})${oldPkg !== targetPackageName ? `, Package: ${oldPkg} -> ${targetPackageName}` : ""}. Reason: ${reason || "Customer request"}`.trim();
+  if (db.availabilityBlackouts && Array.isArray(db.availabilityBlackouts)) {
+    db.availabilityBlackouts = db.availabilityBlackouts.filter(
+      (blk) => !(blk.reason && blk.reason.includes(booking.id))
+    );
+  }
   await persistDb();
   await logAudit(
     "BOOKING_RESCHEDULED",
     admin.email,
     "booking",
     id,
-    `Rescheduled from ${oldDate} (${oldSlot}) to ${date} (${slot}). Reason: ${reason || "None"}`
+    `Rescheduled/Updated to ${targetDate} (${targetSlot}), ${targetPackageName}. Reason: ${reason || "None"}`
   );
   res.json({ success: true, booking });
+});
+apiRouter.patch("/bookings/:id/edit", requireAdminAuth, async (req, res) => {
+  const { id } = req.params;
+  const cleanId = (id || "").trim().toLowerCase();
+  const db = await getDb();
+  const booking = db.bookings.find((b) => (b.id || "").trim().toLowerCase() === cleanId);
+  if (!booking) {
+    return res.status(404).json({ error: "Booking reference not found" });
+  }
+  req.url = `/bookings/${id}/reschedule`;
+  return apiRouter.handle(req, res);
 });
 apiRouter.post("/bookings/:id/cancel", requireAdminAuth, async (req, res) => {
   const { id } = req.params;
