@@ -1096,7 +1096,7 @@ Ph:9448151878`;
                       <th className="p-2.5 whitespace-nowrap">Event Date &amp; Slot</th>
                       <th className="p-2.5 whitespace-nowrap">Financials</th>
                       <th className="p-2.5 text-center whitespace-nowrap">Status</th>
-                      <th className="p-2.5 text-right whitespace-nowrap sticky right-0 bg-slate-50 z-20 shadow-[-4px_0_8px_rgba(0,0,0,0.06)]">Actions</th>
+                      <th className="p-2.5 text-right whitespace-nowrap">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -1222,7 +1222,7 @@ Ph:9448151878`;
                             <BookingStatusBadge status={b.status} />
                           </td>
 
-                          <td className="p-2.5 text-right align-middle whitespace-nowrap sticky right-0 bg-white group-hover:bg-slate-50 z-10 shadow-[-4px_0_8px_rgba(0,0,0,0.06)]">
+                          <td className="p-2.5 text-right align-middle whitespace-nowrap">
                             <div className="flex items-center justify-end gap-1.5">
                               {/* 1. Direct WhatsApp Contact & Event Order Share */}
                               {b.phone && (
