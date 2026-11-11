@@ -22,6 +22,7 @@ import { Button } from '../../components/ui/Button';
 import { VENUE_INFO } from '../../services/hallData';
 import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../context/AuthContext';
+import { DEFAULT_AUTHORIZED_SIGNATURE } from '../../services/defaultSignature';
 
 interface AdminSettingsPageProps {
   navigate: (path: string) => void;
@@ -40,7 +41,7 @@ export const AdminSettingsPage: React.FC<AdminSettingsPageProps> = ({ navigate }
   const [eveningSlotHours, setEveningSlotHours] = useState(VENUE_INFO.eveningSlotHours);
   const [paymentNotice, setPaymentNotice] = useState(VENUE_INFO.paymentNotice);
   const [address, setAddress] = useState(VENUE_INFO.address);
-  const [signatorySignature, setSignatorySignature] = useState<string>('');
+  const [signatorySignature, setSignatorySignature] = useState<string>(DEFAULT_AUTHORIZED_SIGNATURE);
   const [signatoryName, setSignatoryName] = useState<string>('Authorized Signatory');
   const [isSaving, setIsSaving] = useState(false);
 
@@ -68,7 +69,11 @@ export const AdminSettingsPage: React.FC<AdminSettingsPageProps> = ({ navigate }
           if (data.eveningSlotHours) setEveningSlotHours(data.eveningSlotHours);
           if (data.paymentNotice) setPaymentNotice(data.paymentNotice);
           if (data.address) setAddress(data.address);
-          if (data.signatorySignature) setSignatorySignature(data.signatorySignature);
+          if (data.signatorySignature !== undefined && data.signatorySignature !== null) {
+            setSignatorySignature(data.signatorySignature);
+          } else {
+            setSignatorySignature(DEFAULT_AUTHORIZED_SIGNATURE);
+          }
           if (data.signatoryName) setSignatoryName(data.signatoryName);
           localStorage.setItem(SETTINGS_KEY, JSON.stringify(data));
         }
@@ -86,7 +91,11 @@ export const AdminSettingsPage: React.FC<AdminSettingsPageProps> = ({ navigate }
             if (parsed.eveningSlotHours) setEveningSlotHours(parsed.eveningSlotHours);
             if (parsed.paymentNotice) setPaymentNotice(parsed.paymentNotice);
             if (parsed.address) setAddress(parsed.address);
-            if (parsed.signatorySignature) setSignatorySignature(parsed.signatorySignature);
+            if (parsed.signatorySignature !== undefined && parsed.signatorySignature !== null) {
+              setSignatorySignature(parsed.signatorySignature);
+            } else {
+              setSignatorySignature(DEFAULT_AUTHORIZED_SIGNATURE);
+            }
             if (parsed.signatoryName) setSignatoryName(parsed.signatoryName);
           }
         } catch (e) {
@@ -432,7 +441,7 @@ export const AdminSettingsPage: React.FC<AdminSettingsPageProps> = ({ navigate }
                       <img
                         src={signatorySignature}
                         alt="Authorized Signatory"
-                        className="max-h-14 max-w-[180px] object-contain"
+                        className="max-h-14 max-w-[180px] object-contain mix-blend-multiply"
                       />
                     ) : (
                       <span className="text-[10.5px] text-slate-400 italic">

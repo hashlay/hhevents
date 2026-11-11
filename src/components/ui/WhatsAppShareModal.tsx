@@ -15,6 +15,8 @@ import { Button } from './Button';
 import { BookingRequest } from '../../types';
 import { EventOrderReceipt } from './EventOrderReceipt';
 import { useToast } from '../../context/ToastContext';
+import { buildEventOrderCaption } from '../../services/eventOrderShare';
+import { DEFAULT_AUTHORIZED_SIGNATURE } from '../../services/defaultSignature';
 
 interface WhatsAppShareModalProps {
   isOpen: boolean;
@@ -38,7 +40,7 @@ export const WhatsAppShareModal: React.FC<WhatsAppShareModalProps> = ({
   const [hasCopiedImage, setHasCopiedImage] = useState(false);
   const [hasCopiedText, setHasCopiedText] = useState(false);
   const [canNativeShare, setCanNativeShare] = useState(false);
-  const [signatureUrl, setSignatureUrl] = useState<string>('');
+  const [signatureUrl, setSignatureUrl] = useState<string>(DEFAULT_AUTHORIZED_SIGNATURE);
   const [signatoryDesignation, setSignatoryDesignation] = useState<string>('Authorized Signatory');
 
   useEffect(() => {
@@ -55,7 +57,9 @@ export const WhatsAppShareModal: React.FC<WhatsAppShareModalProps> = ({
       const local = localStorage.getItem('hh_events_local_settings_v4');
       if (local) {
         const parsed = JSON.parse(local);
-        if (parsed.signatorySignature) setSignatureUrl(parsed.signatorySignature);
+        if (parsed.signatorySignature !== undefined && parsed.signatorySignature !== null) {
+          setSignatureUrl(parsed.signatorySignature);
+        }
         if (parsed.signatoryName) setSignatoryDesignation(parsed.signatoryName);
       }
     } catch {}
@@ -63,7 +67,9 @@ export const WhatsAppShareModal: React.FC<WhatsAppShareModalProps> = ({
     fetch('/api/settings')
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (data?.signatorySignature) setSignatureUrl(data.signatorySignature);
+        if (data?.signatorySignature !== undefined && data?.signatorySignature !== null) {
+          setSignatureUrl(data.signatorySignature);
+        }
         if (data?.signatoryName) setSignatoryDesignation(data.signatoryName);
       })
       .catch(() => {});
@@ -98,32 +104,7 @@ export const WhatsAppShareModal: React.FC<WhatsAppShareModalProps> = ({
 
   const getWhatsAppMessageText = () => {
     if (!booking) return '';
-    const bObj = booking as any;
-    const hostName = booking.customerName || bObj.applicantName || 'Sir/Madam';
-    const paid = Number(bObj.amountPaid) || 0;
-    const { shortDate, dayOfWeek, sessionName } = getEventDateInfo();
-
-    const origin = typeof window !== 'undefined' && window.location.origin
-      ? window.location.origin
-      : 'https://hhevents.vercel.app';
-    const orderLink = `${origin}/order/${booking.id}`;
-
-    return `Hello ${hostName}, this is regarding your event booking request (${booking.id}) at H H Events & Conventions.
-
-Your Hall Booking Is Confirmed
-
-Event Date : ${shortDate} ${dayOfWeek} ${sessionName} 
-
-Advance Recieved ${paid > 0 ? paid.toFixed(2) : '0.00'} 
-
-📄 Official Event Order (Invoice):
-${orderLink}
-
-Regards,
-H H Events & Conventions 
-Opposite Juma Masjid, Akkarangadi,
-Panemangalore, Bantwal-574231
-Ph:9448151878`;
+    return buildEventOrderCaption(booking);
   };
 
   // Generate Image and handle automatic clipboard + download + WhatsApp launch

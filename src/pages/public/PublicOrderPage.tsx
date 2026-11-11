@@ -15,6 +15,7 @@ import { BookingRequest } from '../../types';
 import { Button } from '../../components/ui/Button';
 import { useToast } from '../../context/ToastContext';
 import { downloadReceiptAsJpg, shareEventOrderDirectly } from '../../services/eventOrderShare';
+import { DEFAULT_AUTHORIZED_SIGNATURE } from '../../services/defaultSignature';
 
 interface PublicOrderPageProps {
   navigate: (path: string) => void;
@@ -40,7 +41,7 @@ export const PublicOrderPage: React.FC<PublicOrderPageProps> = ({ navigate }) =>
   const [booking, setBooking] = useState<BookingRequest | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [signatureUrl, setSignatureUrl] = useState<string>('');
+  const [signatureUrl, setSignatureUrl] = useState<string>(DEFAULT_AUTHORIZED_SIGNATURE);
   const [signatoryDesignation, setSignatoryDesignation] = useState<string>('Authorized Signatory');
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [isSharingWhatsApp, setIsSharingWhatsApp] = useState(false);
@@ -50,7 +51,9 @@ export const PublicOrderPage: React.FC<PublicOrderPageProps> = ({ navigate }) =>
     fetch('/api/settings')
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (data?.signatorySignature) setSignatureUrl(data.signatorySignature);
+        if (data?.signatorySignature !== undefined && data?.signatorySignature !== null) {
+          setSignatureUrl(data.signatorySignature);
+        }
         if (data?.signatoryName) setSignatoryDesignation(data.signatoryName);
       })
       .catch(() => {});
@@ -110,16 +113,19 @@ export const PublicOrderPage: React.FC<PublicOrderPageProps> = ({ navigate }) =>
     fetchOrder();
   }, [bookingId]);
 
+  const isCompleted = (booking?.status || '').toUpperCase() === 'COMPLETED';
+  const docLabel = isCompleted ? 'Bill' : 'Event Order';
+
   const handleDownloadImage = async () => {
     if (!receiptRef.current || !booking) return;
     setIsGeneratingImage(true);
     try {
       const ok = await downloadReceiptAsJpg(
         receiptRef.current,
-        `HH-Event-Order-${booking.id}.jpg`
+        isCompleted ? `HH-Bill-${booking.id}.jpg` : `HH-Event-Order-${booking.id}.jpg`
       );
       if (ok) {
-        showToast('Event Order JPG downloaded successfully!', 'success');
+        showToast(`${docLabel} JPG downloaded successfully!`, 'success');
       } else {
         showToast('Download could not complete. You can use Print / Save PDF instead.', 'info');
       }
@@ -174,7 +180,7 @@ export const PublicOrderPage: React.FC<PublicOrderPageProps> = ({ navigate }) =>
               leftIcon={<Download className="w-3.5 h-3.5 text-[#0082a6]" />}
               className="text-xs font-semibold cursor-pointer"
             >
-              {isGeneratingImage ? 'Downloading...' : 'Download Event Order (JPG)'}
+              {isGeneratingImage ? 'Downloading...' : `Download ${docLabel} (JPG)`}
             </Button>
 
             <Button

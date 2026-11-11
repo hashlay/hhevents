@@ -5,6 +5,15 @@ import { BookingRequest } from '../types';
  * Builds the official WhatsApp caption for the confirmed Event Order.
  */
 export function buildEventOrderCaption(booking: BookingRequest): string {
+  const isCompleted = (booking.status || '').toUpperCase() === 'COMPLETED';
+
+  // For COMPLETED bookings, the caption is strictly the official Bill caption:
+  if (isCompleted) {
+    return `Thanks for doing business with us.
+Regards,
+H H Events & Conventions`;
+  }
+
   const bObj = booking as any;
   const hostName = booking.customerName || bObj.applicantName || 'Sir/Madam';
   const paid = Number(bObj.amountPaid) || 0;
@@ -190,8 +199,10 @@ export async function shareEventOrderDirectly({
     return;
   }
 
+  const isCompleted = (booking.status || '').toUpperCase() === 'COMPLETED';
   const caption = buildEventOrderCaption(booking);
-  const filename = `HH-Event-Order-${booking.id}.jpg`;
+  const filename = isCompleted ? `HH-Bill-${booking.id}.jpg` : `HH-Event-Order-${booking.id}.jpg`;
+  const docTypeLabel = isCompleted ? 'Bill' : 'Event Order';
 
   let jpgBlob: Blob | null = null;
   let pngBlob: Blob | null = null;
@@ -216,10 +227,10 @@ export async function shareEventOrderDirectly({
       try {
         await navigator.share({
           files: [jpgFile],
-          title: `HH Events - Event Order (${booking.id})`,
+          title: `HH Events - ${docTypeLabel} (${booking.id})`,
           text: caption,
         });
-        showToast?.('Event Order JPG shared to WhatsApp!', 'success');
+        showToast?.(`${docTypeLabel} JPG shared to WhatsApp!`, 'success');
         return;
       } catch (err: any) {
         if (err?.name === 'AbortError') {
@@ -237,7 +248,7 @@ export async function shareEventOrderDirectly({
   // 1. Copy the rendered image directly to OS clipboard as image/png.
   // 2. Automatically download the high-res JPG to the device.
   // 3. Open the customer's direct WhatsApp chat with the confirmed caption prefilled.
-  // 4. In WhatsApp Web, pressing Ctrl+V immediately pastes & attaches the copied Event Order image!
+  // 4. In WhatsApp Web, pressing Ctrl+V immediately pastes & attaches the copied Event Order / Bill image!
 
   let copiedToClipboard = false;
 
@@ -273,12 +284,12 @@ export async function shareEventOrderDirectly({
 
   if (copiedToClipboard) {
     showToast?.(
-      'Event Order JPG copied to clipboard & downloaded! In WhatsApp, press Ctrl+V to attach image and send.',
+      `${docTypeLabel} JPG copied to clipboard & downloaded! In WhatsApp, press Ctrl+V to attach image and send.`,
       'success'
     );
   } else {
     showToast?.(
-      'Event Order JPG downloaded! Opening customer WhatsApp chat...',
+      `${docTypeLabel} JPG downloaded! Opening customer WhatsApp chat...`,
       'success'
     );
   }

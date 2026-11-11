@@ -445,6 +445,8 @@ function getInitialDatabase(): DatabaseSchema {
       gstNumber: '',
       panNumber: '',
       termsAndConditions: 'Standard venue guidelines apply. Advance deposit is required to confirm the reservation.',
+      signatorySignature: '/authorized-signatory.png',
+      signatoryName: 'Authorized Signatory',
       updatedAt: new Date().toISOString(),
     },
     coupons: [],

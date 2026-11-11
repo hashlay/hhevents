@@ -37,6 +37,7 @@ import { InvoiceModal } from '../../components/ui/InvoiceModal';
 import { WhatsAppShareModal } from '../../components/ui/WhatsAppShareModal';
 import { EventOrderReceipt } from '../../components/ui/EventOrderReceipt';
 import { shareEventOrderDirectly } from '../../services/eventOrderShare';
+import { DEFAULT_AUTHORIZED_SIGNATURE } from '../../services/defaultSignature';
 import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../context/AuthContext';
 import { syncAvailabilityFromServer } from '../../services/availabilityManager';
@@ -84,7 +85,7 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
   const [directShareBooking, setDirectShareBooking] = useState<BookingRequest | null>(null);
   const [sharingBookingId, setSharingBookingId] = useState<string | null>(null);
   const directReceiptRef = React.useRef<HTMLDivElement>(null);
-  const [signatureUrl, setSignatureUrl] = useState<string>('');
+  const [signatureUrl, setSignatureUrl] = useState<string>(DEFAULT_AUTHORIZED_SIGNATURE);
   const [signatoryDesignation, setSignatoryDesignation] = useState<string>('Authorized Signatory');
 
   useEffect(() => {
@@ -92,7 +93,9 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
     fetch('/api/settings')
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (data?.signatorySignature) setSignatureUrl(data.signatorySignature);
+        if (data?.signatorySignature !== undefined && data?.signatorySignature !== null) {
+          setSignatureUrl(data.signatorySignature);
+        }
         if (data?.signatoryName) setSignatoryDesignation(data.signatoryName);
       })
       .catch(() => {});
@@ -1707,6 +1710,37 @@ Ph:9448151878`;
                   >
                     Delete Booking
                   </Button>
+
+                  {/* Complete Event Action Button */}
+                  {(selectedBooking.status || '').toUpperCase() === 'COMPLETED' ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled
+                      className="bg-emerald-50 text-emerald-800 border-emerald-300 cursor-not-allowed font-bold"
+                      leftIcon={<Check className="w-3.5 h-3.5 text-emerald-600" />}
+                    >
+                      Completed ✓
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() =>
+                        handleStatusChange(
+                          selectedBooking.id,
+                          'COMPLETED',
+                          'Event marked as completed by management.'
+                        )
+                      }
+                      isLoading={isProcessing}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold cursor-pointer shadow-xs transition-colors"
+                      leftIcon={<Check className="w-3.5 h-3.5 text-white" />}
+                    >
+                      Complete Event
+                    </Button>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-2 justify-end">
@@ -1750,6 +1784,36 @@ Ph:9448151878`;
                       }}
                     >
                       Confirm Booking
+                    </Button>
+                  )}
+
+                  {(selectedBooking.status || '').toUpperCase() === 'CONFIRMED' && (
+                    <Button
+                      variant="gold"
+                      size="sm"
+                      onClick={() =>
+                        handleStatusChange(
+                          selectedBooking.id,
+                          'COMPLETED',
+                          'Event marked as completed by management.'
+                        )
+                      }
+                      isLoading={isProcessing}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold cursor-pointer shadow-xs"
+                      leftIcon={<Check className="w-3.5 h-3.5 text-white" />}
+                    >
+                      Complete Event
+                    </Button>
+                  )}
+
+                  {(selectedBooking.status || '').toUpperCase() === 'COMPLETED' && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled
+                      className="bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed font-medium"
+                    >
+                      Completed ✓
                     </Button>
                   )}
                 </div>

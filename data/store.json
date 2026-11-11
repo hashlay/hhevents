@@ -2339,7 +2339,9 @@
     "gstNumber": "",
     "panNumber": "",
     "termsAndConditions": "Standard venue guidelines apply. Advance deposit is required to confirm the reservation.",
-    "updatedAt": "2026-10-17T16:27:58.317Z"
+    "updatedAt": "2026-10-17T16:27:58.317Z",
+    "signatorySignature": "/authorized-signatory.png",
+    "signatoryName": "Authorized Signatory"
   },
   "lastUpdated": "2026-11-06T13:26:40.735Z",
   "coupons": [

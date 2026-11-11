@@ -54,6 +54,7 @@ import { BookingRequest } from '../../types';
 import { WhatsAppShareModal } from '../../components/ui/WhatsAppShareModal';
 import { EventOrderReceipt } from '../../components/ui/EventOrderReceipt';
 import { shareEventOrderDirectly } from '../../services/eventOrderShare';
+import { DEFAULT_AUTHORIZED_SIGNATURE } from '../../services/defaultSignature';
 import {
   RESERVATION_PACKAGE_OPTIONS,
   ReservationPackageOption,
@@ -122,14 +123,16 @@ export const AdminCalendarPage: React.FC<AdminCalendarPageProps> = ({ navigate }
   // Direct WhatsApp sharing without popup
   const [directShareBooking, setDirectShareBooking] = useState<BookingRequest | null>(null);
   const directReceiptRef = React.useRef<HTMLDivElement>(null);
-  const [signatureUrl, setSignatureUrl] = useState<string>('');
+  const [signatureUrl, setSignatureUrl] = useState<string>(DEFAULT_AUTHORIZED_SIGNATURE);
   const [signatoryDesignation, setSignatoryDesignation] = useState<string>('Authorized Signatory');
 
   useEffect(() => {
     fetch('/api/settings')
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (data?.signatorySignature) setSignatureUrl(data.signatorySignature);
+        if (data?.signatorySignature !== undefined && data?.signatorySignature !== null) {
+          setSignatureUrl(data.signatorySignature);
+        }
         if (data?.signatoryName) setSignatoryDesignation(data.signatoryName);
       })
       .catch(() => {});

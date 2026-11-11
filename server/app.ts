@@ -1142,6 +1142,12 @@ apiRouter.patch("/bookings/:id/discount", requireAdminAuth, async (req: Request,
 // ==========================================
 apiRouter.get("/settings", async (req: Request, res: Response) => {
   const db = await getDb();
+  if (db.settings.signatorySignature === undefined) {
+    db.settings.signatorySignature = '/authorized-signatory.png';
+  }
+  if (!db.settings.signatoryName) {
+    db.settings.signatoryName = 'Authorized Signatory';
+  }
   res.json(db.settings);
 });
 

@@ -247,6 +247,8 @@ function getInitialDatabase() {
       gstNumber: "",
       panNumber: "",
       termsAndConditions: "Standard venue guidelines apply. Advance deposit is required to confirm the reservation.",
+      signatorySignature: "/authorized-signatory.png",
+      signatoryName: "Authorized Signatory",
       updatedAt: (/* @__PURE__ */ new Date()).toISOString()
     },
     coupons: [],
@@ -1567,6 +1569,12 @@ Special Discount applied: \u20B9${discountAmount.toLocaleString("en-IN")} (${cle
 });
 apiRouter.get("/settings", async (req, res) => {
   const db = await getDb();
+  if (db.settings.signatorySignature === void 0) {
+    db.settings.signatorySignature = "/authorized-signatory.png";
+  }
+  if (!db.settings.signatoryName) {
+    db.settings.signatoryName = "Authorized Signatory";
+  }
   res.json(db.settings);
 });
 apiRouter.put("/settings", requireAdminAuth, async (req, res) => {

@@ -7,6 +7,7 @@ import { VENUE_INFO } from '../../services/hallData';
 import { useToast } from '../../context/ToastContext';
 import { EventOrderReceipt } from './EventOrderReceipt';
 import { downloadReceiptAsJpg, shareEventOrderDirectly } from '../../services/eventOrderShare';
+import { DEFAULT_AUTHORIZED_SIGNATURE } from '../../services/defaultSignature';
 
 interface InvoiceModalProps {
   isOpen: boolean;
@@ -77,7 +78,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
   const { showToast } = useToast();
   const receiptRef = useRef<HTMLDivElement>(null);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
-  const [signatureUrl, setSignatureUrl] = useState<string>('');
+  const [signatureUrl, setSignatureUrl] = useState<string>(DEFAULT_AUTHORIZED_SIGNATURE);
   const [signatoryDesignation, setSignatoryDesignation] = useState<string>('Authorized Signatory');
 
   useEffect(() => {
@@ -86,7 +87,9 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
       const local = localStorage.getItem('hh_events_local_settings_v4');
       if (local) {
         const parsed = JSON.parse(local);
-        if (parsed.signatorySignature) setSignatureUrl(parsed.signatorySignature);
+        if (parsed.signatorySignature !== undefined && parsed.signatorySignature !== null) {
+          setSignatureUrl(parsed.signatorySignature);
+        }
         if (parsed.signatoryName) setSignatoryDesignation(parsed.signatoryName);
       }
     } catch {}
@@ -94,7 +97,9 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
     fetch('/api/settings')
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (data?.signatorySignature) setSignatureUrl(data.signatorySignature);
+        if (data?.signatorySignature !== undefined && data?.signatorySignature !== null) {
+          setSignatureUrl(data.signatorySignature);
+        }
         if (data?.signatoryName) setSignatoryDesignation(data.signatoryName);
       })
       .catch(() => {});
@@ -208,16 +213,23 @@ Ph:9448151878`;
     window.print();
   };
 
+  const isCompleted = (booking.status || '').toUpperCase() === 'COMPLETED';
+  const docTitle = isCompleted ? 'Official Bill / Invoice' : 'Event Order Invoice';
+  const downloadFileName = isCompleted ? `HH-Bill-${orderNo}.jpg` : `HH-Event-Order-${orderNo}.jpg`;
+
   const handleDownloadImage = async () => {
     if (!receiptRef.current) return;
     setIsGeneratingImage(true);
     try {
       const ok = await downloadReceiptAsJpg(
         receiptRef.current,
-        `HH-Event-Order-${orderNo}.jpg`
+        downloadFileName
       );
       if (ok) {
-        showToast('Event Order JPG downloaded successfully!', 'success');
+        showToast(
+          isCompleted ? 'Bill JPG downloaded successfully!' : 'Event Order JPG downloaded successfully!',
+          'success'
+        );
       } else {
         showToast('Download could not complete. You can use Print / Save PDF instead.', 'info');
       }
@@ -242,7 +254,7 @@ Ph:9448151878`;
   };
 
   return (
-    <Dialog isOpen={isOpen} onClose={onClose} title="Event Order Invoice" maxWidth="2xl">
+    <Dialog isOpen={isOpen} onClose={onClose} title={docTitle} maxWidth="2xl">
       <div className="space-y-4 text-slate-900">
         <EventOrderReceipt
           booking={booking}

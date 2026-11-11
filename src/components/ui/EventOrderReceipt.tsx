@@ -1,5 +1,6 @@
 import React from 'react';
 import { BookingRequest } from '../../types';
+import { DEFAULT_AUTHORIZED_SIGNATURE } from '../../services/defaultSignature';
 
 export interface EventOrderReceiptProps {
   booking: BookingRequest;
@@ -8,6 +9,7 @@ export interface EventOrderReceiptProps {
   signatoryDesignation?: string;
   containerRef?: React.RefObject<HTMLDivElement | null>;
   className?: string;
+  mode?: 'auto' | 'event_order' | 'bill';
 }
 
 // Pure number to Indian English words converter (Crores, Lakhs, Thousands, Hundreds)
@@ -70,32 +72,48 @@ export const EventOrderReceipt: React.FC<EventOrderReceiptProps> = ({
   signatoryDesignation = 'Authorized Signatory',
   containerRef,
   className = '',
+  mode = 'auto',
 }) => {
   if (!booking) return null;
 
+  // Mode resolution:
+  // When booking status is COMPLETED, document renders in official "Bill" format (matching Image 3 template).
+  // Otherwise, it renders as the confirmed "Event Order".
+  const isCompleted = (booking.status || '').toUpperCase() === 'COMPLETED';
+  const isBillMode = mode === 'bill' || (mode !== 'event_order' && isCompleted);
+
+  // Default signature resolution
+  const activeSignature =
+    signatureUrl !== undefined ? signatureUrl : DEFAULT_AUTHORIZED_SIGNATURE;
+
   // Financial calculations
-  const totalAmount = (booking as any).totalAmount !== undefined
-    ? Number((booking as any).totalAmount)
-    : (booking.totalEstimate || booking.estimatedAmount || 20000);
+  const totalAmount =
+    (booking as any).totalAmount !== undefined
+      ? Number((booking as any).totalAmount)
+      : (booking.totalEstimate || booking.estimatedAmount || 20000);
   const discountAmount = Number(booking.discountAmount) || 0;
   const extraCharge = Number(booking.extraCharge) || 0;
-  const baseRent = Number(booking.originalAmount || booking.packagePrice) || (totalAmount + discountAmount - extraCharge);
+  const baseRent =
+    Number(booking.originalAmount || booking.packagePrice) ||
+    (totalAmount + discountAmount - extraCharge);
   const netHallAmount = Math.max(0, baseRent - discountAmount);
 
-  const amountPaid = (booking as any).amountPaid !== undefined
-    ? Number((booking as any).amountPaid)
-    : (booking.advancePaymentStatus === 'fully_paid'
+  const amountPaid =
+    (booking as any).amountPaid !== undefined
+      ? Number((booking as any).amountPaid)
+      : booking.advancePaymentStatus === 'fully_paid'
       ? totalAmount
       : booking.advancePaymentStatus === 'advance_paid'
       ? Math.round(totalAmount * 0.25)
-      : 0);
-  const balanceDue = (booking as any).balanceDue !== undefined
-    ? Number((booking as any).balanceDue)
-    : Math.max(0, totalAmount - amountPaid);
+      : 0;
+  const balanceDue =
+    (booking as any).balanceDue !== undefined
+      ? Number((booking as any).balanceDue)
+      : Math.max(0, totalAmount - amountPaid);
 
   // Clean Order/Receipt reference number
   const rawIdNum = booking.id.replace(/\D/g, '');
-  const orderNo = receiptNumber || rawIdNum.slice(-3) || rawIdNum.slice(-6) || '194';
+  const orderNo = receiptNumber || rawIdNum.slice(-4) || rawIdNum.slice(-6) || '2026-0004';
 
   // Dates and session calculations
   const evDateRaw = booking.date || (booking as any).eventDate || '';
@@ -117,20 +135,24 @@ export const EventOrderReceipt: React.FC<EventOrderReceiptProps> = ({
     }
   }
 
+  // Today's date in DD/MM/YYYY for bill header
+  const today = new Date();
+  const todaySlashFormatted = `${String(today.getDate()).padStart(2, '0')}/${String(
+    today.getMonth() + 1
+  ).padStart(2, '0')}/${today.getFullYear()}`;
+
   const bookedDateRaw = booking.submittedAt || new Date().toISOString();
-  let bookedDateFormatted = new Date().toLocaleDateString('en-IN', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  }).replace(/\//g, '-');
+  let bookedDateFormatted = todaySlashFormatted.replace(/\//g, '-');
   if (bookedDateRaw) {
     const d = new Date(bookedDateRaw);
     if (!isNaN(d.getTime())) {
-      bookedDateFormatted = d.toLocaleDateString('en-IN', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-      }).replace(/\//g, '-');
+      bookedDateFormatted = d
+        .toLocaleDateString('en-IN', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+        })
+        .replace(/\//g, '-');
     }
   }
 
@@ -146,8 +168,8 @@ export const EventOrderReceipt: React.FC<EventOrderReceiptProps> = ({
 
   // Extra charge label
   const extraChargeLabel = booking.extraChargeReason?.trim()
-    ? `Extra Charge — ${booking.extraChargeReason.trim()}`
-    : 'Extra Charge';
+    ? `AC Charges if needed: ${booking.extraChargeReason.trim()}`
+    : 'AC Charges if needed';
 
   return (
     <div
@@ -168,19 +190,19 @@ export const EventOrderReceipt: React.FC<EventOrderReceiptProps> = ({
         </p>
       </div>
 
-      {/* Subheading: Event Order */}
+      {/* Subheading: "Bill" (Completed) or "Event Order" (Confirmed) */}
       <div className="py-2.5 text-center">
         <h2 className="text-base sm:text-lg font-bold text-[#0082a6] tracking-wide uppercase">
-          Event Order
+          {isBillMode ? 'Bill' : 'Event Order'}
         </h2>
       </div>
 
-      {/* Order From & Order Details Box */}
+      {/* Top Header Box (Bill To / Order From & Invoice Details / Order Details) */}
       <div className="border border-[#0082a6] text-xs">
         {/* Header Strip */}
         <div className="grid grid-cols-2 bg-[#0082a6] text-white font-bold py-1 px-3 text-[11.5px]">
-          <div>Order From</div>
-          <div className="text-right">Order Details</div>
+          <div>{isBillMode ? 'Bill To' : 'Order From'}</div>
+          <div className="text-right">{isBillMode ? 'Invoice Details' : 'Order Details'}</div>
         </div>
 
         {/* Content Details */}
@@ -189,6 +211,11 @@ export const EventOrderReceipt: React.FC<EventOrderReceiptProps> = ({
             <div className="font-bold text-sm text-slate-900">
               {evDateShortHeader} {booking.customerName}
             </div>
+            {isBillMode && ((booking as any).address || (booking as any).place) && (
+              <div className="text-xs text-slate-700 mt-0.5">
+                {(booking as any).address || (booking as any).place}
+              </div>
+            )}
             <div className="text-xs mt-1 text-slate-800">
               Contact No. : <strong className="font-mono text-slate-900">{booking.phone}</strong>
             </div>
@@ -198,99 +225,196 @@ export const EventOrderReceipt: React.FC<EventOrderReceiptProps> = ({
           </div>
 
           <div className="text-left sm:text-right space-y-0.5 text-xs">
-            <div>Order No. : <strong className="font-mono text-slate-900">{orderNo}</strong></div>
-            <div>Date : <span className="font-mono text-slate-800">{bookedDateFormatted}</span></div>
-            <div>Due Date : <span className="font-mono text-slate-800">{evDateFormatted}</span></div>
-            <div>Event day: <strong className="text-slate-900">{dayOfWeek} {sessionName}</strong></div>
-            <div>Event Date: <span className="font-mono text-slate-800">{evDateSlashFormatted}</span></div>
+            {isBillMode ? (
+              <>
+                <div>
+                  Invoice No. : <strong className="font-mono text-slate-900">{orderNo}</strong>
+                </div>
+                <div>
+                  Date : <span className="font-mono text-slate-800">{todaySlashFormatted}</span>
+                </div>
+                <div>
+                  Event day: <strong className="text-slate-900">{dayOfWeek}</strong>
+                </div>
+                <div>
+                  Event Date: <span className="font-mono text-slate-800">{evDateSlashFormatted}</span>
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  Order No. : <strong className="font-mono text-slate-900">{orderNo}</strong>
+                </div>
+                <div>
+                  Date : <span className="font-mono text-slate-800">{bookedDateFormatted}</span>
+                </div>
+                <div>
+                  Due Date : <span className="font-mono text-slate-800">{evDateFormatted}</span>
+                </div>
+                <div>
+                  Event day: <strong className="text-slate-900">{dayOfWeek} {sessionName}</strong>
+                </div>
+                <div>
+                  Event Date: <span className="font-mono text-slate-800">{evDateSlashFormatted}</span>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>
 
       {/* Itemized Table */}
-      <div className="border border-[#0082a6] border-t-0 text-xs overflow-x-auto">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-[#0082a6] text-white text-[11px] font-bold">
-              <th className="py-1 px-2 border-r border-[#0082a6]/40 text-center w-8">#</th>
-              <th className="py-1 px-3 border-r border-[#0082a6]/40">Item name</th>
-              <th className="py-1 px-2 border-r border-[#0082a6]/40 text-center w-16">Quantity</th>
-              <th className="py-1 px-3 border-r border-[#0082a6]/40 text-right w-24">Price/ Unit</th>
-              <th className="py-1 px-3 border-r border-[#0082a6]/40 text-right w-32">Discount</th>
-              <th className="py-1 px-3 text-right w-24">Amount</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-200 text-slate-800 font-medium">
-            <tr className="hover:bg-slate-50/50">
-              <td className="py-2 px-2 border-r border-slate-200 text-center font-mono">1</td>
-              <td className="py-2 px-3 border-r border-slate-200 font-bold text-slate-900">
-                {booking.packageName || 'Single Hall + Single Dining Hall'}
-              </td>
-              <td className="py-2 px-2 border-r border-slate-200 text-center font-mono">1</td>
-              <td className="py-2 px-3 border-r border-slate-200 text-right font-mono">
-                ₹ {baseRent.toFixed(2)}
-              </td>
-              <td className="py-2 px-3 border-r border-slate-200 text-right font-mono text-emerald-800 font-semibold">
-                {discountAmount > 0 ? (
-                  <span>₹ {discountAmount.toFixed(2)} {discountPercentageStr}</span>
-                ) : (
-                  '₹ 0.00'
-                )}
-              </td>
-              <td className="py-2 px-3 text-right font-mono font-bold text-slate-900">
-                ₹ {netHallAmount.toFixed(2)}
-              </td>
-            </tr>
-
-            {extraCharge > 0 && (
+      {isBillMode ? (
+        /* Bill Table format matching Image 3 */
+        <div className="border border-[#0082a6] border-t-0 text-xs overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-[#0082a6] text-white text-[11px] font-bold">
+                <th className="py-1 px-2 border-r border-[#0082a6]/40 text-center w-8">#</th>
+                <th className="py-1 px-3 border-r border-[#0082a6]/40">Item name</th>
+                <th className="py-1 px-2 border-r border-[#0082a6]/40 text-center w-16">Quantity</th>
+                <th className="py-1 px-3 border-r border-[#0082a6]/40 text-right w-28">Price/ Unit</th>
+                <th className="py-1 px-3 text-right w-28">Amount</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200 text-slate-800 font-medium">
               <tr className="hover:bg-slate-50/50">
-                <td className="py-2 px-2 border-r border-slate-200 text-center font-mono">2</td>
+                <td className="py-2 px-2 border-r border-slate-200 text-center font-mono">1</td>
                 <td className="py-2 px-3 border-r border-slate-200 font-bold text-slate-900">
-                  {extraChargeLabel}
+                  {booking.packageName || 'Day Session Hall 1 AC'}
                 </td>
                 <td className="py-2 px-2 border-r border-slate-200 text-center font-mono">1</td>
                 <td className="py-2 px-3 border-r border-slate-200 text-right font-mono">
-                  ₹ {extraCharge.toFixed(2)}
-                </td>
-                <td className="py-2 px-3 border-r border-slate-200 text-right font-mono">
-                  -
+                  {baseRent.toLocaleString('en-IN', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
                 </td>
                 <td className="py-2 px-3 text-right font-mono font-bold text-slate-900">
-                  ₹ {extraCharge.toFixed(2)}
+                  {netHallAmount.toLocaleString('en-IN', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
                 </td>
               </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
 
-      {/* Lower Grid (Left: Words, Description, Terms | Right: Amounts) */}
+              {extraCharge > 0 && (
+                <tr className="hover:bg-slate-50/50">
+                  <td className="py-2 px-2 border-r border-slate-200 text-center font-mono">2</td>
+                  <td className="py-2 px-3 border-r border-slate-200 font-bold text-slate-900">
+                    {extraChargeLabel}
+                  </td>
+                  <td className="py-2 px-2 border-r border-slate-200 text-center font-mono">1</td>
+                  <td className="py-2 px-3 border-r border-slate-200 text-right font-mono">
+                    {extraCharge.toLocaleString('en-IN', {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </td>
+                  <td className="py-2 px-3 text-right font-mono font-bold text-slate-900">
+                    {extraCharge.toLocaleString('en-IN', {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        /* Event Order Table format with Discount column */
+        <div className="border border-[#0082a6] border-t-0 text-xs overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-[#0082a6] text-white text-[11px] font-bold">
+                <th className="py-1 px-2 border-r border-[#0082a6]/40 text-center w-8">#</th>
+                <th className="py-1 px-3 border-r border-[#0082a6]/40">Item name</th>
+                <th className="py-1 px-2 border-r border-[#0082a6]/40 text-center w-16">Quantity</th>
+                <th className="py-1 px-3 border-r border-[#0082a6]/40 text-right w-24">Price/ Unit</th>
+                <th className="py-1 px-3 border-r border-[#0082a6]/40 text-right w-32">Discount</th>
+                <th className="py-1 px-3 text-right w-24">Amount</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200 text-slate-800 font-medium">
+              <tr className="hover:bg-slate-50/50">
+                <td className="py-2 px-2 border-r border-slate-200 text-center font-mono">1</td>
+                <td className="py-2 px-3 border-r border-slate-200 font-bold text-slate-900">
+                  {booking.packageName || 'Single Hall + Single Dining Hall'}
+                </td>
+                <td className="py-2 px-2 border-r border-slate-200 text-center font-mono">1</td>
+                <td className="py-2 px-3 border-r border-slate-200 text-right font-mono">
+                  ₹ {baseRent.toFixed(2)}
+                </td>
+                <td className="py-2 px-3 border-r border-slate-200 text-right font-mono text-emerald-800 font-semibold">
+                  {discountAmount > 0 ? (
+                    <span>
+                      ₹ {discountAmount.toFixed(2)} {discountPercentageStr}
+                    </span>
+                  ) : (
+                    '₹ 0.00'
+                  )}
+                </td>
+                <td className="py-2 px-3 text-right font-mono font-bold text-slate-900">
+                  ₹ {netHallAmount.toFixed(2)}
+                </td>
+              </tr>
+
+              {extraCharge > 0 && (
+                <tr className="hover:bg-slate-50/50">
+                  <td className="py-2 px-2 border-r border-slate-200 text-center font-mono">2</td>
+                  <td className="py-2 px-3 border-r border-slate-200 font-bold text-slate-900">
+                    {extraChargeLabel}
+                  </td>
+                  <td className="py-2 px-2 border-r border-slate-200 text-center font-mono">1</td>
+                  <td className="py-2 px-3 border-r border-slate-200 text-right font-mono">
+                    ₹ {extraCharge.toFixed(2)}
+                  </td>
+                  <td className="py-2 px-3 border-r border-slate-200 text-right font-mono">-</td>
+                  <td className="py-2 px-3 text-right font-mono font-bold text-slate-900">
+                    ₹ {extraCharge.toFixed(2)}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Lower Grid (Left: Words & Terms | Right: Amounts & Signatory) */}
       <div className="grid grid-cols-1 md:grid-cols-12 border border-[#0082a6] border-t-0 text-xs">
         {/* Left Column (7 cols) */}
         <div className="md:col-span-7 border-b md:border-b-0 md:border-r border-[#0082a6] flex flex-col justify-between">
           <div>
-            {/* Order Amount In Words */}
+            {/* Amount In Words */}
             <div className="bg-[#0082a6] text-white font-bold py-1 px-3 text-[11px]">
-              Order Amount In Words
+              {isBillMode ? 'Invoice Amount In Words' : 'Order Amount In Words'}
             </div>
             <div className="p-2.5 text-xs text-slate-800 font-medium">
               {numberToWordsIndian(totalAmount)}
             </div>
 
-            {/* Description */}
-            <div className="bg-[#0082a6] text-white font-bold py-1 px-3 text-[11px]">
-              Description
-            </div>
-            <div className="p-2.5 text-xs text-slate-800 font-medium">
-              {evDateShortHeader} {dayOfWeek} {sessionName}
-              {(booking as any).notes && (booking as any).notes !== `${dayOfWeek} ${sessionName}` && (
-                <span className="block text-slate-600 mt-0.5">{(booking as any).notes}</span>
-              )}
-            </div>
+            {/* Description (Event Order mode) */}
+            {!isBillMode && (
+              <>
+                <div className="bg-[#0082a6] text-white font-bold py-1 px-3 text-[11px]">
+                  Description
+                </div>
+                <div className="p-2.5 text-xs text-slate-800 font-medium">
+                  {evDateShortHeader} {dayOfWeek} {sessionName}
+                  {(booking as any).notes &&
+                    (booking as any).notes !== `${dayOfWeek} ${sessionName}` && (
+                      <span className="block text-slate-600 mt-0.5">
+                        {(booking as any).notes}
+                      </span>
+                    )}
+                </div>
+              </>
+            )}
 
             {/* Terms and Conditions */}
             <div className="bg-[#0082a6] text-white font-bold py-1 px-3 text-[11px]">
-              Terms and Conditions
+              Terms and Conditions :
             </div>
             <div className="p-2.5 text-[11px] leading-relaxed text-slate-800 space-y-1.5">
               <p>
@@ -301,8 +425,15 @@ export const EventOrderReceipt: React.FC<EventOrderReceiptProps> = ({
                 Evening - 6:00 PM To 10:00PM ಸಂಜೆ 6:00 ರಿಂದ ರಾತ್ರಿ 10:00 ರವರೆಗೆ
               </p>
               <p>
-                <strong>2) Advance Amount is non refundable. ಮುಂಗಡ ಮೊತ್ತವನ್ನು ಮರುಪಾವತಿಸಲಾಗುವುದಿಲ್ಲ.</strong>
+                <strong>
+                  2) Advance Amount is non refundable. ಮುಂಗಡ ಮೊತ್ತವನ್ನು ಮರುಪಾವತಿಸಲಾಗುವುದಿಲ್ಲ.
+                </strong>
               </p>
+              {isBillMode && (
+                <p>
+                  <strong>3) Decoration done by the party.</strong>
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -313,34 +444,95 @@ export const EventOrderReceipt: React.FC<EventOrderReceiptProps> = ({
             <div className="bg-[#0082a6] text-white font-bold py-1 px-3 text-[11px]">
               Amounts
             </div>
-            <table className="w-full text-xs">
-              <tbody className="divide-y divide-slate-200">
-                <tr>
-                  <td className="py-1.5 px-3 text-slate-700">Sub Total</td>
-                  <td className="py-1.5 px-3 text-right font-mono font-medium text-slate-900">
-                    ₹ {totalAmount.toFixed(2)}
-                  </td>
-                </tr>
-                <tr className="bg-slate-50/70 font-bold">
-                  <td className="py-2 px-3 text-slate-900">Total</td>
-                  <td className="py-2 px-3 text-right font-mono text-slate-900 text-sm">
-                    ₹ {totalAmount.toFixed(2)}
-                  </td>
-                </tr>
-                <tr>
-                  <td className="py-1.5 px-3 text-slate-700">Advance</td>
-                  <td className="py-1.5 px-3 text-right font-mono font-medium text-emerald-700">
-                    ₹ {amountPaid.toFixed(2)}
-                  </td>
-                </tr>
-                <tr className="font-bold">
-                  <td className="py-2 px-3 text-slate-900">Balance</td>
-                  <td className="py-2 px-3 text-right font-mono text-slate-900 text-sm">
-                    ₹ {balanceDue.toFixed(2)}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+            {isBillMode ? (
+              /* Bill Amounts Breakdown */
+              <table className="w-full text-xs">
+                <tbody className="divide-y divide-slate-200">
+                  <tr>
+                    <td className="py-1.5 px-3 text-slate-700">Sub Total</td>
+                    <td className="py-1.5 px-3 text-right font-mono font-medium text-slate-900">
+                      ₹{' '}
+                      {baseRent.toLocaleString('en-IN', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </td>
+                  </tr>
+                  {extraCharge > 0 && (
+                    <tr>
+                      <td className="py-1.5 px-3 text-slate-700">{extraChargeLabel}</td>
+                      <td className="py-1.5 px-3 text-right font-mono font-medium text-slate-900">
+                        ₹{' '}
+                        {extraCharge.toLocaleString('en-IN', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </td>
+                    </tr>
+                  )}
+                  <tr className="bg-slate-50/70 font-bold">
+                    <td className="py-2 px-3 text-slate-900">Total</td>
+                    <td className="py-2 px-3 text-right font-mono text-slate-900 text-sm">
+                      ₹{' '}
+                      {totalAmount.toLocaleString('en-IN', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="py-1.5 px-3 text-slate-700">Received</td>
+                    <td className="py-1.5 px-3 text-right font-mono font-medium text-emerald-700">
+                      ₹{' '}
+                      {amountPaid.toLocaleString('en-IN', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </td>
+                  </tr>
+                  <tr className="font-bold">
+                    <td className="py-2 px-3 text-slate-900">Balance</td>
+                    <td className="py-2 px-3 text-right font-mono text-slate-900 text-sm">
+                      ₹{' '}
+                      {balanceDue.toLocaleString('en-IN', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            ) : (
+              /* Event Order Amounts Breakdown */
+              <table className="w-full text-xs">
+                <tbody className="divide-y divide-slate-200">
+                  <tr>
+                    <td className="py-1.5 px-3 text-slate-700">Sub Total</td>
+                    <td className="py-1.5 px-3 text-right font-mono font-medium text-slate-900">
+                      ₹ {totalAmount.toFixed(2)}
+                    </td>
+                  </tr>
+                  <tr className="bg-slate-50/70 font-bold">
+                    <td className="py-2 px-3 text-slate-900">Total</td>
+                    <td className="py-2 px-3 text-right font-mono text-slate-900 text-sm">
+                      ₹ {totalAmount.toFixed(2)}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="py-1.5 px-3 text-slate-700">Advance</td>
+                    <td className="py-1.5 px-3 text-right font-mono font-medium text-emerald-700">
+                      ₹ {amountPaid.toFixed(2)}
+                    </td>
+                  </tr>
+                  <tr className="font-bold">
+                    <td className="py-2 px-3 text-slate-900">Balance</td>
+                    <td className="py-2 px-3 text-right font-mono text-slate-900 text-sm">
+                      ₹ {balanceDue.toFixed(2)}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            )}
           </div>
 
           {/* Authorized Signatory Block (Bottom-Right) */}
@@ -350,12 +542,12 @@ export const EventOrderReceipt: React.FC<EventOrderReceiptProps> = ({
             </div>
 
             <div className="h-16 flex items-center justify-center sm:justify-end my-1">
-              {signatureUrl ? (
+              {activeSignature ? (
                 <img
-                  src={signatureUrl}
+                  src={activeSignature}
                   crossOrigin="anonymous"
                   alt="Authorized Signatory"
-                  className="max-h-14 max-w-[170px] object-contain"
+                  className="max-h-14 max-w-[170px] object-contain mix-blend-multiply"
                 />
               ) : (
                 <div className="w-36 h-12 border border-slate-300 border-dashed rounded flex items-center justify-center text-[10px] text-slate-400 italic">
@@ -373,4 +565,3 @@ export const EventOrderReceipt: React.FC<EventOrderReceiptProps> = ({
     </div>
   );
 };
-
