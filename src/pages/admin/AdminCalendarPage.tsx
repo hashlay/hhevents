@@ -137,17 +137,17 @@ export const AdminCalendarPage: React.FC<AdminCalendarPageProps> = ({ navigate }
 
   const handleDirectWhatsAppShare = async (b: BookingRequest) => {
     setDirectShareBooking(b);
-    setTimeout(async () => {
-      try {
-        await shareEventOrderDirectly({
-          booking: b,
-          element: directReceiptRef.current,
-          showToast,
-        });
-      } finally {
-        setDirectShareBooking(null);
-      }
-    }, 100);
+    // Allow React to mount the booking receipt into DOM
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    try {
+      await shareEventOrderDirectly({
+        booking: b,
+        element: directReceiptRef.current,
+        showToast,
+      });
+    } finally {
+      setDirectShareBooking(null);
+    }
   };
 
   // Block Slot with Details Modal State
@@ -1658,11 +1658,11 @@ Ph:9448151878`;
         <div
           style={{
             position: 'fixed',
-            left: -9999,
-            top: -9999,
+            left: -99999,
+            top: 0,
             width: 820,
-            zIndex: -100,
-            opacity: 0,
+            zIndex: -99999,
+            visibility: 'visible',
             pointerEvents: 'none',
           }}
         >

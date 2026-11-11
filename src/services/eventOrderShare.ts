@@ -8,6 +8,10 @@ export function buildEventOrderCaption(booking: BookingRequest): string {
   const bObj = booking as any;
   const hostName = booking.customerName || bObj.applicantName || 'Sir/Madam';
   const paid = Number(bObj.amountPaid) || 0;
+  const total = Number(bObj.totalAmount) || Number(booking.totalEstimate) || 0;
+  const balance = Number(bObj.balanceDue) !== undefined && !isNaN(Number(bObj.balanceDue))
+    ? Number(bObj.balanceDue)
+    : Math.max(0, total - paid);
 
   // Event Date formatting
   const evDateRaw = booking.date || bObj.eventDate || '';
@@ -34,29 +38,41 @@ export function buildEventOrderCaption(booking: BookingRequest): string {
       : 'https://hhevents.vercel.app';
   const orderLink = `${origin}/order/${booking.id}`;
 
-  return `Hello ${hostName}, this is regarding your event booking request (${booking.id}) at H H Events & Conventions.
+  return `Dear Customer (${hostName}),
 
-Your Hall Booking Is Confirmed
+Your event booking has been confirmed.
 
-Event Date : ${shortDate} ${dayOfWeek} ${sessionName} 
+Please find your Event Order attached for your reference.
 
-Advance Recieved ${paid > 0 ? paid.toFixed(2) : '0.00'} 
+📋 Booking Ref: ${booking.id}
+📅 Event Date: ${shortDate} ${dayOfWeek} (${sessionName} Session)
+💰 Advance Received: ₹${paid > 0 ? Number(paid).toLocaleString('en-IN') : '0.00'}
+💳 Balance Due: ₹${balance > 0 ? Number(balance).toLocaleString('en-IN') : '0.00'}
 
-📄 Official Event Order (Invoice):
+📄 View Order Online:
 ${orderLink}
 
 Regards,
-H H Events & Conventions 
-Opposite Juma Masjid, Akkarangadi,
-Panemangalore, Bantwal-574231
-Ph:9448151878`;
+H H Events & Conventions
+Opposite Juma Masjid, Akkarangadi, Panemangalore, Bantwal-574231
+Ph: 9448151878`;
 }
 
 /**
- * Renders an HTMLElement to a JPG Blob with high resolution and robust cross-origin handling.
+ * Renders an HTMLElement to both JPG and PNG Blobs with high resolution and cross-origin handling.
+ * - JPG Blob is used for standard file download and Web Share API file attachment.
+ * - PNG Blob is used for HTML5 Clipboard API (browsers only accept image/png for clipboard write).
  */
-export async function renderElementToJpgBlob(element: HTMLElement): Promise<Blob | null> {
+export async function renderElementToBlobs(element: HTMLElement): Promise<{
+  jpgBlob: Blob | null;
+  pngBlob: Blob | null;
+}> {
   try {
+    // If element is freshly mounted or offscreen, wait briefly for layout
+    if (element.clientHeight === 0) {
+      await new Promise((r) => setTimeout(r, 150));
+    }
+
     const canvas = await html2canvas(element, {
       scale: 2,
       useCORS: true,
@@ -64,7 +80,12 @@ export async function renderElementToJpgBlob(element: HTMLElement): Promise<Blob
       backgroundColor: '#ffffff',
       logging: false,
       imageTimeout: 15000,
-      onclone: (clonedDoc) => {
+      onclone: (clonedDoc, clonedElement) => {
+        if (clonedElement) {
+          clonedElement.style.opacity = '1';
+          clonedElement.style.visibility = 'visible';
+          clonedElement.style.display = 'block';
+        }
         const imgs = clonedDoc.getElementsByTagName('img');
         for (let i = 0; i < imgs.length; i++) {
           imgs[i].setAttribute('crossOrigin', 'anonymous');
@@ -72,13 +93,27 @@ export async function renderElementToJpgBlob(element: HTMLElement): Promise<Blob
       },
     });
 
-    return await new Promise<Blob | null>((resolve) => {
+    const jpgBlob = await new Promise<Blob | null>((resolve) => {
       canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 0.95);
     });
+
+    const pngBlob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob((blob) => resolve(blob), 'image/png');
+    });
+
+    return { jpgBlob, pngBlob };
   } catch (err) {
-    console.warn('html2canvas rendering warning:', err);
-    return null;
+    console.warn('html2canvas rendering error:', err);
+    return { jpgBlob: null, pngBlob: null };
   }
+}
+
+/**
+ * Backward-compatible helper for single JPG Blob rendering.
+ */
+export async function renderElementToJpgBlob(element: HTMLElement): Promise<Blob | null> {
+  const { jpgBlob } = await renderElementToBlobs(element);
+  return jpgBlob;
 }
 
 /**
@@ -89,8 +124,8 @@ export async function downloadReceiptAsJpg(
   filename: string = 'HH-Event-Order.jpg'
 ): Promise<boolean> {
   try {
-    const blob = await renderElementToJpgBlob(element);
-    if (!blob) {
+    const { jpgBlob } = await renderElementToBlobs(element);
+    if (!jpgBlob) {
       // Fallback: try direct dataURL
       const canvas = await html2canvas(element, {
         scale: 2,
@@ -109,7 +144,7 @@ export async function downloadReceiptAsJpg(
       return true;
     }
 
-    const url = URL.createObjectURL(blob);
+    const url = URL.createObjectURL(jpgBlob);
     const link = document.createElement('a');
     link.download = filename.endsWith('.jpg') ? filename : `${filename}.jpg`;
     link.href = url;
@@ -125,12 +160,17 @@ export async function downloadReceiptAsJpg(
 }
 
 /**
- * Direct WhatsApp sharing:
- * 1. Generates the JPG image of the Event Order.
- * 2. Uses Web Share API with file attachment if supported.
- * 3. Copies JPG directly to system clipboard for instant Ctrl+V into WhatsApp Web.
- * 4. Triggers automatic download of the JPG file to the device.
- * 5. Directly launches WhatsApp chat with the customer's phone and confirmed caption.
+ * Direct WhatsApp Event Order Image Sharing:
+ *
+ * 1. Generates the Event Order as an actual JPG image file and caption.
+ * 2. Preferred Option A (Mobile & Supported Browsers):
+ *    Uses Web Share API with files: [imageFile], passing both the real JPG file
+ *    and the caption together to WhatsApp in one tap.
+ * 3. Option B (Desktop / WhatsApp Web fallback):
+ *    Copies the image to the OS clipboard (as image/png, browser standard),
+ *    triggers an automatic JPG download to the computer, and launches the
+ *    customer's WhatsApp chat with the caption. The user simply hits Ctrl+V
+ *    in WhatsApp Web to attach the copied image and press Send!
  */
 export async function shareEventOrderDirectly({
   booking,
@@ -153,63 +193,93 @@ export async function shareEventOrderDirectly({
   const caption = buildEventOrderCaption(booking);
   const filename = `HH-Event-Order-${booking.id}.jpg`;
 
-  let fileSharedNatively = false;
+  let jpgBlob: Blob | null = null;
+  let pngBlob: Blob | null = null;
 
   if (element) {
-    const blob = await renderElementToJpgBlob(element);
+    const blobs = await renderElementToBlobs(element);
+    jpgBlob = blobs.jpgBlob;
+    pngBlob = blobs.pngBlob;
+  }
 
-    if (blob) {
-      const jpgFile = new File([blob], filename, { type: 'image/jpeg' });
+  // OPTION A: Web Share API with File
+  // Native mobile browsers (Android Chrome, iOS Safari) and supported Windows desktop devices
+  // allow sharing the real JPG file attachment directly into WhatsApp with the caption.
+  if (jpgBlob) {
+    const jpgFile = new File([jpgBlob], filename, { type: 'image/jpeg' });
 
-      // 1. Try Web Share API with file attachment (Mobile / modern tablet / supported desktop)
-      if (navigator.canShare && navigator.canShare({ files: [jpgFile] })) {
-        try {
-          await navigator.share({
-            files: [jpgFile],
-            title: `HH Events - Event Order (${booking.id})`,
-            text: caption,
-          });
-          fileSharedNatively = true;
-          showToast?.('Event Order shared directly to WhatsApp!', 'success');
+    if (
+      typeof navigator !== 'undefined' &&
+      typeof navigator.canShare === 'function' &&
+      navigator.canShare({ files: [jpgFile] })
+    ) {
+      try {
+        await navigator.share({
+          files: [jpgFile],
+          title: `HH Events - Event Order (${booking.id})`,
+          text: caption,
+        });
+        showToast?.('Event Order JPG shared to WhatsApp!', 'success');
+        return;
+      } catch (err: any) {
+        if (err?.name === 'AbortError') {
+          // User closed share picker without selecting
           return;
-        } catch {
-          // If native share was dismissed, proceed with browser clipboard + direct URL
         }
-      }
-
-      if (!fileSharedNatively) {
-        // 2. Copy JPG directly to clipboard for effortless Ctrl+V in WhatsApp Web
-        try {
-          if (navigator.clipboard && window.ClipboardItem) {
-            await navigator.clipboard.write([
-              new window.ClipboardItem({ 'image/jpeg': blob }),
-            ]);
-          }
-        } catch {}
-
-        // 3. Automatically download the JPG so the admin has the file ready on their computer
-        try {
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.download = filename;
-          link.href = url;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          setTimeout(() => URL.revokeObjectURL(url), 10000);
-        } catch {}
+        console.warn('Web Share API aborted or failed, using desktop fallback:', err);
       }
     }
   }
 
-  // 4. Open WhatsApp directly to customer's phone with prefilled confirmed caption
-  if (!fileSharedNatively) {
-    const whatsappUrl = `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(caption)}`;
-    window.open(whatsappUrl, '_blank');
+  // OPTION B: Desktop / WhatsApp Web Workflow
+  // Browsers cannot programmatically inject files into WhatsApp Web URLs (wa.me only supports ?text=).
+  // We execute the closest, highest-reliability direct attachment workflow:
+  // 1. Copy the rendered image directly to OS clipboard as image/png.
+  // 2. Automatically download the high-res JPG to the device.
+  // 3. Open the customer's direct WhatsApp chat with the confirmed caption prefilled.
+  // 4. In WhatsApp Web, pressing Ctrl+V immediately pastes & attaches the copied Event Order image!
+
+  let copiedToClipboard = false;
+
+  if (pngBlob && typeof navigator !== 'undefined' && navigator.clipboard && window.ClipboardItem) {
+    try {
+      await navigator.clipboard.write([
+        new window.ClipboardItem({ 'image/png': pngBlob }),
+      ]);
+      copiedToClipboard = true;
+    } catch (clipErr) {
+      console.warn('Clipboard write error:', clipErr);
+    }
+  }
+
+  if (jpgBlob) {
+    try {
+      const url = URL.createObjectURL(jpgBlob);
+      const link = document.createElement('a');
+      link.download = filename;
+      link.href = url;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+    } catch (dlErr) {
+      console.warn('Auto download error:', dlErr);
+    }
+  }
+
+  // Open WhatsApp chat directly to the customer's number
+  const whatsappUrl = `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(caption)}`;
+  window.open(whatsappUrl, '_blank');
+
+  if (copiedToClipboard) {
     showToast?.(
-      'Event Order JPG downloaded & copied! Opening WhatsApp chat...',
+      'Event Order JPG copied to clipboard & downloaded! In WhatsApp, press Ctrl+V to attach image and send.',
+      'success'
+    );
+  } else {
+    showToast?.(
+      'Event Order JPG downloaded! Opening customer WhatsApp chat...',
       'success'
     );
   }
 }
-

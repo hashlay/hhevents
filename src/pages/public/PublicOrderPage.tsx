@@ -14,7 +14,7 @@ import { EventOrderReceipt } from '../../components/ui/EventOrderReceipt';
 import { BookingRequest } from '../../types';
 import { Button } from '../../components/ui/Button';
 import { useToast } from '../../context/ToastContext';
-import { downloadReceiptAsJpg } from '../../services/eventOrderShare';
+import { downloadReceiptAsJpg, shareEventOrderDirectly } from '../../services/eventOrderShare';
 
 interface PublicOrderPageProps {
   navigate: (path: string) => void;
@@ -43,6 +43,7 @@ export const PublicOrderPage: React.FC<PublicOrderPageProps> = ({ navigate }) =>
   const [signatureUrl, setSignatureUrl] = useState<string>('');
   const [signatoryDesignation, setSignatoryDesignation] = useState<string>('Authorized Signatory');
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [isSharingWhatsApp, setIsSharingWhatsApp] = useState(false);
 
   useEffect(() => {
     // Load venue signature settings
@@ -129,6 +130,22 @@ export const PublicOrderPage: React.FC<PublicOrderPageProps> = ({ navigate }) =>
     }
   };
 
+  const handleShareWhatsApp = async () => {
+    if (!receiptRef.current || !booking) return;
+    setIsSharingWhatsApp(true);
+    try {
+      await shareEventOrderDirectly({
+        booking,
+        element: receiptRef.current,
+        showToast,
+      });
+    } catch (err: any) {
+      showToast('Could not share Event Order via WhatsApp.', 'error');
+    } finally {
+      setIsSharingWhatsApp(false);
+    }
+  };
+
   const handlePrint = () => {
     window.print();
   };
@@ -152,12 +169,24 @@ export const PublicOrderPage: React.FC<PublicOrderPageProps> = ({ navigate }) =>
               type="button"
               variant="outline"
               size="sm"
-              disabled={isGeneratingImage || !booking}
+              disabled={isGeneratingImage || isSharingWhatsApp || !booking}
               onClick={handleDownloadImage}
               leftIcon={<Download className="w-3.5 h-3.5 text-[#0082a6]" />}
               className="text-xs font-semibold cursor-pointer"
             >
               {isGeneratingImage ? 'Downloading...' : 'Download Event Order (JPG)'}
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={isSharingWhatsApp || isGeneratingImage || !booking}
+              onClick={handleShareWhatsApp}
+              leftIcon={<MessageSquare className="w-3.5 h-3.5 text-emerald-600" />}
+              className="text-xs font-semibold cursor-pointer border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
+            >
+              {isSharingWhatsApp ? 'Sharing...' : 'Share on WhatsApp'}
             </Button>
 
             <Button
