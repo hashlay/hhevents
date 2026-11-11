@@ -11,6 +11,7 @@ import {
   Info,
   AlertCircle,
   Sparkles,
+  Lock,
 } from 'lucide-react';
 import {
   HallTarget,
@@ -197,15 +198,19 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
   const isSelectedDatePast = selectedDate < todayStr;
 
   // Status for selected date & active hall (combining manager blockouts AND customer reservations)
-  const daySlotAvailable =
-    !isSelectedDatePast &&
-    isSlotAvailable(activeHall, selectedDate, 'day') &&
-    !isSlotOccupiedByBooking(activeHall, selectedDate, 'day');
+  const isDayBooked = isSlotOccupiedByBooking(activeHall, selectedDate, 'day');
+  const isDayBlocked =
+    !isDayBooked &&
+    (isSlotBlockedByManager(activeHall, selectedDate, 'day') ||
+      !isSlotAvailable(activeHall, selectedDate, 'day'));
+  const daySlotAvailable = !isSelectedDatePast && !isDayBooked && !isDayBlocked;
 
-  const eveningSlotAvailable =
-    !isSelectedDatePast &&
-    isSlotAvailable(activeHall, selectedDate, 'evening') &&
-    !isSlotOccupiedByBooking(activeHall, selectedDate, 'evening');
+  const isEveBooked = isSlotOccupiedByBooking(activeHall, selectedDate, 'evening');
+  const isEveBlocked =
+    !isEveBooked &&
+    (isSlotBlockedByManager(activeHall, selectedDate, 'evening') ||
+      !isSlotAvailable(activeHall, selectedDate, 'evening'));
+  const eveningSlotAvailable = !isSelectedDatePast && !isEveBooked && !isEveBlocked;
 
   const selectedDateObj = new Date(selectedDate + 'T00:00:00');
   const readableDate = isNaN(selectedDateObj.getTime())
@@ -654,6 +659,8 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
                 className={`p-5 rounded-2xl border transition-all flex flex-col justify-between ${
                   daySlotAvailable
                     ? 'bg-white border-emerald-300 text-[#252525] shadow-sm hover:shadow-md'
+                    : isDayBlocked
+                    ? 'bg-blue-50/60 border-blue-300 text-[#252525] shadow-xs'
                     : 'bg-white/70 border-rose-200 text-[#737373]'
                 }`}
               >
@@ -675,12 +682,18 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
                       className={`inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wider shrink-0 ${
                         daySlotAvailable
                           ? 'bg-emerald-50 border border-emerald-300 text-emerald-800'
+                          : isDayBlocked
+                          ? 'bg-blue-100 border border-blue-300 text-blue-800'
                           : 'bg-rose-50 border border-rose-200 text-rose-700'
                       }`}
                     >
                       {daySlotAvailable ? (
                         <>
                           <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Available
+                        </>
+                      ) : isDayBlocked ? (
+                        <>
+                          <Lock className="w-3.5 h-3.5 text-blue-600" /> Blocked
                         </>
                       ) : (
                         <>
@@ -690,14 +703,22 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
                     </span>
                   </div>
 
-                  <p className="text-xs text-[#4A4A4A] leading-relaxed">
-                    Designed for wedding ceremonies, muhurtham rituals, nikah celebrations, and community lunch feasts.
+                  <p className={`text-xs leading-relaxed ${isDayBlocked ? 'text-blue-900/80 font-medium' : 'text-[#4A4A4A]'}`}>
+                    {isDayBlocked
+                      ? 'Slot held or blocked by venue management (maintenance/hold). Unavailable for online reservations.'
+                      : 'Designed for wedding ceremonies, muhurtham rituals, nikah celebrations, and community lunch feasts.'}
                   </p>
                 </div>
 
-                <div className="pt-4 mt-4 border-t border-[#E2DACB] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <span className="text-xs text-[#737373]">
-                    {daySlotAvailable ? 'Instant reservation open' : 'Already reserved on this date'}
+                <div className={`pt-4 mt-4 border-t flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                  isDayBlocked ? 'border-blue-200' : 'border-[#E2DACB]'
+                }`}>
+                  <span className={`text-xs ${isDayBlocked ? 'text-blue-700 font-semibold' : 'text-[#737373]'}`}>
+                    {daySlotAvailable
+                      ? 'Instant reservation open'
+                      : isDayBlocked
+                      ? 'Unavailable until freed by management'
+                      : 'Already reserved on this date'}
                   </span>
                   {daySlotAvailable ? (
                     <Button
@@ -709,6 +730,10 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
                     >
                       Book Day Session
                     </Button>
+                  ) : isDayBlocked ? (
+                    <span className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-700 bg-blue-100 border border-blue-300 px-3 py-1.5 rounded-xl">
+                      <Lock className="w-3 h-3 text-blue-600" /> Slot Blocked
+                    </span>
                   ) : (
                     <span className="text-xs font-semibold text-rose-600">
                       Slot Occupied
@@ -722,6 +747,8 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
                 className={`p-5 rounded-2xl border transition-all flex flex-col justify-between ${
                   eveningSlotAvailable
                     ? 'bg-white border-emerald-300 text-[#252525] shadow-sm hover:shadow-md'
+                    : isEveBlocked
+                    ? 'bg-blue-50/60 border-blue-300 text-[#252525] shadow-xs'
                     : 'bg-white/70 border-rose-200 text-[#737373]'
                 }`}
               >
@@ -743,12 +770,18 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
                       className={`inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wider shrink-0 ${
                         eveningSlotAvailable
                           ? 'bg-emerald-50 border border-emerald-300 text-emerald-800'
+                          : isEveBlocked
+                          ? 'bg-blue-100 border border-blue-300 text-blue-800'
                           : 'bg-rose-50 border border-rose-200 text-rose-700'
                       }`}
                     >
                       {eveningSlotAvailable ? (
                         <>
                           <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Available
+                        </>
+                      ) : isEveBlocked ? (
+                        <>
+                          <Lock className="w-3.5 h-3.5 text-blue-600" /> Blocked
                         </>
                       ) : (
                         <>
@@ -758,14 +791,22 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
                     </span>
                   </div>
 
-                  <p className="text-xs text-[#4A4A4A] leading-relaxed">
-                    Designed for grand wedding receptions, walima banquets, evening dinners, and musical cultural galas.
+                  <p className={`text-xs leading-relaxed ${isEveBlocked ? 'text-blue-900/80 font-medium' : 'text-[#4A4A4A]'}`}>
+                    {isEveBlocked
+                      ? 'Slot held or blocked by venue management (maintenance/hold). Unavailable for online reservations.'
+                      : 'Designed for grand wedding receptions, walima banquets, evening dinners, and musical cultural galas.'}
                   </p>
                 </div>
 
-                <div className="pt-4 mt-4 border-t border-[#E2DACB] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <span className="text-xs text-[#737373]">
-                    {eveningSlotAvailable ? 'Instant reservation open' : 'Already reserved on this date'}
+                <div className={`pt-4 mt-4 border-t flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                  isEveBlocked ? 'border-blue-200' : 'border-[#E2DACB]'
+                }`}>
+                  <span className={`text-xs ${isEveBlocked ? 'text-blue-700 font-semibold' : 'text-[#737373]'}`}>
+                    {eveningSlotAvailable
+                      ? 'Instant reservation open'
+                      : isEveBlocked
+                      ? 'Unavailable until freed by management'
+                      : 'Already reserved on this date'}
                   </span>
                   {eveningSlotAvailable ? (
                     <Button
@@ -777,6 +818,10 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
                     >
                       Book Evening Session
                     </Button>
+                  ) : isEveBlocked ? (
+                    <span className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-700 bg-blue-100 border border-blue-300 px-3 py-1.5 rounded-xl">
+                      <Lock className="w-3 h-3 text-blue-600" /> Slot Blocked
+                    </span>
                   ) : (
                     <span className="text-xs font-semibold text-rose-600">
                       Slot Occupied

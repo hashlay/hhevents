@@ -1053,15 +1053,41 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
               </div>
             )}
 
-            {/* Conflict Warning */}
+            {/* Conflict / Blocked Warning */}
             {conflictReason && (
-              <div className="p-4 sm:p-5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+              <div
+                className={`p-4 sm:p-5 rounded-2xl flex items-start gap-3 border ${
+                  conflictReason.toLowerCase().includes('blocked')
+                    ? 'bg-blue-50/90 border-blue-300 text-blue-900 shadow-2xs'
+                    : 'bg-rose-50 border border-rose-200 text-rose-800'
+                }`}
+              >
+                <AlertCircle
+                  className={`w-5 h-5 shrink-0 mt-0.5 ${
+                    conflictReason.toLowerCase().includes('blocked') ? 'text-blue-600' : 'text-rose-600'
+                  }`}
+                />
                 <div>
-                  <strong className="font-bold text-sm block">Selected Slot is Occupied / Unavailable</strong>
-                  <p className="text-xs text-rose-700 mt-0.5">{conflictReason}</p>
-                  <p className="text-xs text-rose-600 font-semibold mt-1">
-                    Please click an open (green) date from the calendar above, or switch session slots.
+                  <strong className="font-bold text-sm block">
+                    {conflictReason.toLowerCase().includes('blocked')
+                      ? 'Slot Blocked by Venue Management'
+                      : 'Selected Slot is Occupied / Unavailable'}
+                  </strong>
+                  <p
+                    className={`text-xs mt-0.5 ${
+                      conflictReason.toLowerCase().includes('blocked') ? 'text-blue-800' : 'text-rose-700'
+                    }`}
+                  >
+                    {conflictReason}
+                  </p>
+                  <p
+                    className={`text-xs font-semibold mt-1 ${
+                      conflictReason.toLowerCase().includes('blocked') ? 'text-blue-700' : 'text-rose-600'
+                    }`}
+                  >
+                    {conflictReason.toLowerCase().includes('blocked')
+                      ? 'This date and session slot is currently held or blocked. Please select another open (green) date from the calendar.'
+                      : 'Please click an open (green) date from the calendar above, or switch session slots.'}
                   </p>
                 </div>
               </div>
