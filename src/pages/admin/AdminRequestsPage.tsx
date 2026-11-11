@@ -34,6 +34,7 @@ import { Dialog } from '../../components/ui/Dialog';
 import { BookingStatusBadge, TimeSlotBadge } from '../../components/ui/Badge';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { InvoiceModal } from '../../components/ui/InvoiceModal';
+import { WhatsAppShareModal } from '../../components/ui/WhatsAppShareModal';
 import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../context/AuthContext';
 import { syncAvailabilityFromServer } from '../../services/availabilityManager';
@@ -75,6 +76,7 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
 
   // Invoice & Receipt Modal
   const [invoiceBooking, setInvoiceBooking] = useState<BookingRequest | null>(null);
+  const [whatsAppBooking, setWhatsAppBooking] = useState<BookingRequest | null>(null);
 
   // Payment Recording Modal
   const [payingBooking, setPayingBooking] = useState<BookingRequest | null>(null);
@@ -154,6 +156,11 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
     const sessionSlot = (b.slot || bObj.timeSlot || 'day').toLowerCase();
     const sessionName = sessionSlot === 'evening' ? 'Night' : 'Day';
 
+    const origin = typeof window !== 'undefined' && window.location.origin
+      ? window.location.origin
+      : 'https://hhevents.vercel.app';
+    const orderUrl = `${origin}/order/${b.id}`;
+
     return `Hello ${hostName}, this is regarding your event booking request (${b.id}) at H H Events & Conventions.
 
 Your Hall Booking Is Confirmed
@@ -161,6 +168,9 @@ Your Hall Booking Is Confirmed
 Event Date : ${evDateShort} ${dayOfWeek} ${sessionName} 
 
 Advance Recieved ${paid > 0 ? paid.toFixed(2) : '0.00'} 
+
+📄 Official Event Order (Invoice):
+${orderUrl}
 
 Regards,
 H H Events & Conventions 
@@ -987,17 +997,15 @@ Ph:9448151878`;
 
                     <div className="flex items-center justify-end gap-1.5 pt-2 border-t border-slate-100 flex-wrap">
                       {b.phone && (
-                        <a
-                          href={`https://wa.me/91${b.phone.replace(/\D/g, '').slice(-10)}?text=${encodeURIComponent(
-                            getWhatsAppConfirmationMessage(b)
-                          )}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="p-1.5 sm:p-2 rounded-lg bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200 text-xs font-semibold flex items-center gap-1"
+                        <button
+                          type="button"
+                          onClick={() => setWhatsAppBooking(b)}
+                          className="p-1.5 sm:p-2 rounded-lg bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200 text-xs font-semibold flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
+                          title="Share Event Order via WhatsApp"
                         >
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                           <span>WhatsApp</span>
-                        </a>
+                        </button>
                       )}
                       {b.phone && (
                         <a
@@ -1178,20 +1186,17 @@ Ph:9448151878`;
 
                           <td className="p-3 text-right align-middle whitespace-nowrap">
                             <div className="flex items-center justify-end gap-1.5">
-                              {/* 1. Direct WhatsApp Contact */}
+                              {/* 1. Direct WhatsApp Contact & Event Order Share */}
                               {b.phone && (
-                                <a
-                                  href={`https://wa.me/91${b.phone.replace(/\D/g, '').slice(-10)}?text=${encodeURIComponent(
-                                    getWhatsAppConfirmationMessage(b)
-                                  )}`}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200 transition-colors shrink-0 cursor-pointer"
-                                  title="Send Confirmation via WhatsApp"
+                                <button
+                                  type="button"
+                                  onClick={() => setWhatsAppBooking(b)}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200 transition-colors shrink-0 cursor-pointer shadow-2xs"
+                                  title="Share Event Order via WhatsApp"
                                 >
-                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                                   <span>WhatsApp</span>
-                                </a>
+                                </button>
                               )}
 
                               {/* 2. Direct Phone Call */}
@@ -2424,6 +2429,15 @@ Ph:9448151878`;
             isOpen={!!invoiceBooking}
             onClose={() => setInvoiceBooking(null)}
             booking={invoiceBooking}
+          />
+        )}
+
+        {/* WhatsApp Event Order Share Modal */}
+        {whatsAppBooking && (
+          <WhatsAppShareModal
+            isOpen={!!whatsAppBooking}
+            onClose={() => setWhatsAppBooking(null)}
+            booking={whatsAppBooking}
           />
         )}
       </div>

@@ -23,6 +23,7 @@ import { BookingStatusBadge } from '../../components/ui/Badge';
 import { getBookings, checkSlotAvailability } from '../../services/storageService';
 import { useToast } from '../../context/ToastContext';
 import { BookingRequest } from '../../types';
+import { WhatsAppShareModal } from '../../components/ui/WhatsAppShareModal';
 
 interface AdminDashboardPageProps {
   navigate: (path: string) => void;
@@ -32,6 +33,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ navigate
   const { showToast } = useToast();
   const [bookings, setBookings] = useState<BookingRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [whatsAppBooking, setWhatsAppBooking] = useState<BookingRequest | null>(null);
 
   const loadData = async () => {
     setIsLoading(true);
@@ -87,6 +89,11 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ navigate
     const sessionSlot = (b.slot || bObj.timeSlot || 'day').toLowerCase();
     const sessionName = sessionSlot === 'evening' ? 'Night' : 'Day';
 
+    const origin = typeof window !== 'undefined' && window.location.origin
+      ? window.location.origin
+      : 'https://hhevents.vercel.app';
+    const orderUrl = `${origin}/order/${b.id}`;
+
     return `Hello ${hostName}, this is regarding your event booking request (${b.id}) at H H Events & Conventions.
 
 Your Hall Booking Is Confirmed
@@ -94,6 +101,9 @@ Your Hall Booking Is Confirmed
 Event Date : ${evDateShort} ${dayOfWeek} ${sessionName} 
 
 Advance Recieved ${paid > 0 ? paid.toFixed(2) : '0.00'} 
+
+📄 Official Event Order (Invoice):
+${orderUrl}
 
 Regards,
 H H Events & Conventions 
@@ -820,17 +830,15 @@ Ph:9448151878`;
 
                 <div className="flex items-center gap-2 shrink-0 flex-wrap">
                   {b.phone && (
-                    <a
-                      href={`https://wa.me/91${b.phone.replace(/\D/g, '').slice(-10)}?text=${encodeURIComponent(
-                        getWhatsAppConfirmationMessage(b)
-                      )}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200 transition-colors"
+                    <button
+                      type="button"
+                      onClick={() => setWhatsAppBooking(b)}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200 transition-colors cursor-pointer shadow-2xs"
+                      title="Share Event Order via WhatsApp"
                     >
-                      <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                       <span>WhatsApp</span>
-                    </a>
+                    </button>
                   )}
 
                   {b.phone && (
@@ -1014,6 +1022,15 @@ Ph:9448151878`;
             </div>
           </div>
         </Dialog>
+
+        {/* WhatsApp Event Order Share Modal */}
+        {whatsAppBooking && (
+          <WhatsAppShareModal
+            isOpen={!!whatsAppBooking}
+            onClose={() => setWhatsAppBooking(null)}
+            booking={whatsAppBooking}
+          />
+        )}
       </div>
     </AdminLayout>
   );

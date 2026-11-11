@@ -1047,19 +1047,20 @@ apiRouter.post("/bookings", async (req, res) => {
 });
 apiRouter.get("/bookings/track", async (req, res) => {
   const { id, phone } = req.query;
-  if (!id || !phone) {
-    return res.status(400).json({ error: "Booking reference and mobile phone number are required." });
+  if (!id) {
+    return res.status(400).json({ error: "Booking reference is required." });
   }
   const cleanId = String(id).trim().toUpperCase();
-  const cleanPhone = String(phone).replace(/\D/g, "");
+  const cleanPhone = phone ? String(phone).replace(/\D/g, "") : "";
   const db = await getDb();
   const found = db.bookings.find((b) => {
-    const bId = b.id.toUpperCase();
-    const bPhone = b.phone.replace(/\D/g, "");
+    const bId = (b.id || "").toUpperCase();
+    if (!cleanPhone) return bId === cleanId;
+    const bPhone = (b.phone || "").replace(/\D/g, "");
     return bId === cleanId && (bPhone.endsWith(cleanPhone) || cleanPhone.endsWith(bPhone));
   });
   if (!found) {
-    return res.status(404).json({ error: "No booking found matching this reference and mobile number." });
+    return res.status(404).json({ error: "No booking found matching this reference." });
   }
   res.json({
     id: found.id,
@@ -1077,6 +1078,51 @@ apiRouter.get("/bookings/track", async (req, res) => {
     submittedAt: found.submittedAt,
     adminRemarks: found.adminRemarks
   });
+});
+apiRouter.get("/orders/:id", async (req, res) => {
+  const { id } = req.params;
+  const cleanId = (id || "").trim().toUpperCase();
+  const db = await getDb();
+  const found = db.bookings.find((b) => (b.id || "").trim().toUpperCase() === cleanId);
+  if (!found) {
+    return res.status(404).json({ error: "Event Order not found." });
+  }
+  res.json({
+    booking: {
+      id: found.id,
+      customerName: found.customerName,
+      phone: found.phone,
+      email: found.email,
+      packageId: found.packageId,
+      packageName: found.packageName,
+      packagePrice: found.packagePrice,
+      originalAmount: found.originalAmount,
+      discountAmount: found.discountAmount,
+      discountReason: found.discountReason,
+      extraCharge: found.extraCharge,
+      extraChargeReason: found.extraChargeReason,
+      couponCode: found.couponCode,
+      occupiedResources: found.occupiedResources,
+      hallSelection: found.hallSelection || found.hall,
+      acOption: found.acOption,
+      date: found.date,
+      slot: found.slot,
+      status: found.status,
+      totalAmount: found.totalAmount,
+      totalEstimate: found.totalEstimate,
+      advanceRequired: found.advanceRequired,
+      amountPaid: found.amountPaid,
+      balanceDue: found.balanceDue,
+      paymentStatus: found.paymentStatus,
+      submittedAt: found.submittedAt,
+      additionalInfo: found.additionalInfo
+    }
+  });
+});
+apiRouter.get("/bookings/public/:id", async (req, res) => {
+  const { id } = req.params;
+  req.url = `/orders/${id}`;
+  return apiRouter.handle(req, res);
 });
 apiRouter.get("/bookings", requireAdminAuth, async (req, res) => {
   const db = await getDb(true);

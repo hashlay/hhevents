@@ -24,6 +24,7 @@ import { PrivacyPolicyPage } from './pages/public/PrivacyPolicyPage';
 import { TermsPage } from './pages/public/TermsPage';
 import { RefundPolicyPage } from './pages/public/RefundPolicyPage';
 import { CookiePolicyPage } from './pages/public/CookiePolicyPage';
+import { PublicOrderPage } from './pages/public/PublicOrderPage';
 
 // Admin Pages
 import { AdminLoginPage } from './pages/admin/AdminLoginPage';
@@ -101,6 +102,10 @@ const AppContent: React.FC = () => {
   };
 
   const renderPublicRoute = () => {
+    if (currentPath.startsWith('/order') || currentPath.startsWith('/receipt')) {
+      return <PublicOrderPage navigate={navigate} />;
+    }
+
     switch (currentPath) {
       case '/':
         return <HomePage navigate={navigate} />;
