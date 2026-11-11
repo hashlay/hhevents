@@ -52,6 +52,8 @@ import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../context/AuthContext';
 import { BookingRequest } from '../../types';
 import { WhatsAppShareModal } from '../../components/ui/WhatsAppShareModal';
+import { EventOrderReceipt } from '../../components/ui/EventOrderReceipt';
+import { shareEventOrderDirectly } from '../../services/eventOrderShare';
 import {
   RESERVATION_PACKAGE_OPTIONS,
   ReservationPackageOption,
@@ -116,6 +118,37 @@ export const AdminCalendarPage: React.FC<AdminCalendarPageProps> = ({ navigate }
   });
 
   const [whatsAppBooking, setWhatsAppBooking] = useState<BookingRequest | null>(null);
+
+  // Direct WhatsApp sharing without popup
+  const [directShareBooking, setDirectShareBooking] = useState<BookingRequest | null>(null);
+  const directReceiptRef = React.useRef<HTMLDivElement>(null);
+  const [signatureUrl, setSignatureUrl] = useState<string>('');
+  const [signatoryDesignation, setSignatoryDesignation] = useState<string>('Authorized Signatory');
+
+  useEffect(() => {
+    fetch('/api/settings')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.signatorySignature) setSignatureUrl(data.signatorySignature);
+        if (data?.signatoryName) setSignatoryDesignation(data.signatoryName);
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleDirectWhatsAppShare = async (b: BookingRequest) => {
+    setDirectShareBooking(b);
+    setTimeout(async () => {
+      try {
+        await shareEventOrderDirectly({
+          booking: b,
+          element: directReceiptRef.current,
+          showToast,
+        });
+      } finally {
+        setDirectShareBooking(null);
+      }
+    }, 100);
+  };
 
   // Block Slot with Details Modal State
   const [isBlockModalOpen, setIsBlockModalOpen] = useState(false);
@@ -712,9 +745,9 @@ Ph:9448151878`;
                             <>
                               <button
                                 type="button"
-                                onClick={() => setWhatsAppBooking(dayBooking)}
+                                onClick={() => handleDirectWhatsAppShare(dayBooking)}
                                 className="p-1.5 rounded-md bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 cursor-pointer shadow-2xs"
-                                title="Share Event Order via WhatsApp"
+                                title="Direct Share Event Order via WhatsApp"
                               >
                                 <MessageSquare className="w-3.5 h-3.5" />
                               </button>
@@ -897,9 +930,9 @@ Ph:9448151878`;
                             <>
                               <button
                                 type="button"
-                                onClick={() => setWhatsAppBooking(eveningBooking)}
+                                onClick={() => handleDirectWhatsAppShare(eveningBooking)}
                                 className="p-1.5 rounded-md bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 cursor-pointer shadow-2xs"
-                                title="Share Event Order via WhatsApp"
+                                title="Direct Share Event Order via WhatsApp"
                               >
                                 <MessageSquare className="w-3.5 h-3.5" />
                               </button>
@@ -1594,6 +1627,29 @@ Ph:9448151878`;
           onClose={() => setWhatsAppBooking(null)}
           booking={whatsAppBooking}
         />
+      )}
+
+      {/* Hidden offscreen container for direct Event Order JPG generation */}
+      {directShareBooking && (
+        <div
+          style={{
+            position: 'fixed',
+            left: -9999,
+            top: -9999,
+            width: 820,
+            zIndex: -100,
+            opacity: 0,
+            pointerEvents: 'none',
+          }}
+        >
+          <div ref={directReceiptRef} className="bg-white p-4">
+            <EventOrderReceipt
+              booking={directShareBooking}
+              signatureUrl={signatureUrl}
+              signatoryDesignation={signatoryDesignation}
+            />
+          </div>
+        </div>
       )}
     </AdminLayout>
   );

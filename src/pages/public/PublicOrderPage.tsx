@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import html2canvas from 'html2canvas';
 import {
   Printer,
   Download,
@@ -15,6 +14,7 @@ import { EventOrderReceipt } from '../../components/ui/EventOrderReceipt';
 import { BookingRequest } from '../../types';
 import { Button } from '../../components/ui/Button';
 import { useToast } from '../../context/ToastContext';
+import { downloadReceiptAsJpg } from '../../services/eventOrderShare';
 
 interface PublicOrderPageProps {
   navigate: (path: string) => void;
@@ -113,19 +113,17 @@ export const PublicOrderPage: React.FC<PublicOrderPageProps> = ({ navigate }) =>
     if (!receiptRef.current || !booking) return;
     setIsGeneratingImage(true);
     try {
-      const canvas = await html2canvas(receiptRef.current, {
-        scale: 2.5,
-        useCORS: true,
-        backgroundColor: '#ffffff',
-        logging: false,
-      });
-      const link = document.createElement('a');
-      link.download = `HH-Event-Order-${booking.id}.png`;
-      link.href = canvas.toDataURL('image/png');
-      link.click();
-      showToast('Event Order image downloaded successfully!', 'success');
+      const ok = await downloadReceiptAsJpg(
+        receiptRef.current,
+        `HH-Event-Order-${booking.id}.jpg`
+      );
+      if (ok) {
+        showToast('Event Order JPG downloaded successfully!', 'success');
+      } else {
+        showToast('Download could not complete. You can use Print / Save PDF instead.', 'info');
+      }
     } catch {
-      showToast('Download failed. You can use Print / Save PDF instead.', 'error');
+      showToast('Download could not complete. You can use Print / Save PDF instead.', 'info');
     } finally {
       setIsGeneratingImage(false);
     }
@@ -157,9 +155,9 @@ export const PublicOrderPage: React.FC<PublicOrderPageProps> = ({ navigate }) =>
               disabled={isGeneratingImage || !booking}
               onClick={handleDownloadImage}
               leftIcon={<Download className="w-3.5 h-3.5 text-[#0082a6]" />}
-              className="text-xs font-semibold"
+              className="text-xs font-semibold cursor-pointer"
             >
-              Download Event Order (PNG)
+              {isGeneratingImage ? 'Downloading...' : 'Download Event Order (JPG)'}
             </Button>
 
             <Button

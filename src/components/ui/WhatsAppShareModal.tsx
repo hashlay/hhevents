@@ -141,15 +141,17 @@ Ph:9448151878`;
         }
 
         const canvas = await html2canvas(receiptContainerRef.current, {
-          scale: 2.2,
+          scale: 2,
           useCORS: true,
+          allowTaint: true,
           backgroundColor: '#ffffff',
           logging: false,
+          imageTimeout: 15000,
         });
 
         if (!isMounted) return;
 
-        const dataUrl = canvas.toDataURL('image/png');
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
         setImageUrl(dataUrl);
 
         canvas.toBlob(async (blob) => {
@@ -158,7 +160,7 @@ Ph:9448151878`;
 
           // Check if Web Share API supports file sharing
           try {
-            const testFile = new File([blob], `HH-Event-Order-${booking.id}.png`, { type: 'image/png' });
+            const testFile = new File([blob], `HH-Event-Order-${booking.id}.jpg`, { type: 'image/jpeg' });
             if (navigator.canShare && navigator.canShare({ files: [testFile] })) {
               setCanNativeShare(true);
             }
@@ -169,7 +171,7 @@ Ph:9448151878`;
           try {
             if (navigator.clipboard && window.ClipboardItem) {
               await navigator.clipboard.write([
-                new window.ClipboardItem({ 'image/png': blob }),
+                new window.ClipboardItem({ 'image/jpeg': blob }),
               ]);
               copied = true;
               setHasCopiedImage(true);
@@ -178,10 +180,14 @@ Ph:9448151878`;
 
           // 2. Automatically download image file as backup
           try {
+            const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
-            link.download = `HH-Event-Order-${booking.id}.png`;
-            link.href = dataUrl;
+            link.download = `HH-Event-Order-${booking.id}.jpg`;
+            link.href = url;
+            document.body.appendChild(link);
             link.click();
+            document.body.removeChild(link);
+            setTimeout(() => URL.revokeObjectURL(url), 10000);
           } catch {}
 
           // 3. Open WhatsApp Web chat with prefilled message
@@ -240,10 +246,12 @@ Ph:9448151878`;
   const handleDownloadImage = () => {
     if (!imageUrl || !booking) return;
     const link = document.createElement('a');
-    link.download = `HH-Event-Order-${booking.id}.png`;
+    link.download = `HH-Event-Order-${booking.id}.jpg`;
     link.href = imageUrl;
+    document.body.appendChild(link);
     link.click();
-    showToast('Event Order image downloaded.', 'success');
+    document.body.removeChild(link);
+    showToast('Event Order JPG downloaded successfully.', 'success');
   };
 
   const handleOpenWhatsApp = () => {

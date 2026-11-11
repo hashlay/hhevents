@@ -35,6 +35,8 @@ import { BookingStatusBadge, TimeSlotBadge } from '../../components/ui/Badge';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { InvoiceModal } from '../../components/ui/InvoiceModal';
 import { WhatsAppShareModal } from '../../components/ui/WhatsAppShareModal';
+import { EventOrderReceipt } from '../../components/ui/EventOrderReceipt';
+import { shareEventOrderDirectly } from '../../services/eventOrderShare';
 import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../context/AuthContext';
 import { syncAvailabilityFromServer } from '../../services/availabilityManager';
@@ -77,6 +79,41 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
   // Invoice & Receipt Modal
   const [invoiceBooking, setInvoiceBooking] = useState<BookingRequest | null>(null);
   const [whatsAppBooking, setWhatsAppBooking] = useState<BookingRequest | null>(null);
+
+  // Direct WhatsApp Sharing without popup
+  const [directShareBooking, setDirectShareBooking] = useState<BookingRequest | null>(null);
+  const [sharingBookingId, setSharingBookingId] = useState<string | null>(null);
+  const directReceiptRef = React.useRef<HTMLDivElement>(null);
+  const [signatureUrl, setSignatureUrl] = useState<string>('');
+  const [signatoryDesignation, setSignatoryDesignation] = useState<string>('Authorized Signatory');
+
+  useEffect(() => {
+    // Load venue signature settings
+    fetch('/api/settings')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.signatorySignature) setSignatureUrl(data.signatorySignature);
+        if (data?.signatoryName) setSignatoryDesignation(data.signatoryName);
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleDirectWhatsAppShare = async (b: BookingRequest) => {
+    setSharingBookingId(b.id);
+    setDirectShareBooking(b);
+    setTimeout(async () => {
+      try {
+        await shareEventOrderDirectly({
+          booking: b,
+          element: directReceiptRef.current,
+          showToast,
+        });
+      } finally {
+        setSharingBookingId(null);
+        setDirectShareBooking(null);
+      }
+    }, 100);
+  };
 
   // Payment Recording Modal
   const [payingBooking, setPayingBooking] = useState<BookingRequest | null>(null);
@@ -999,12 +1036,13 @@ Ph:9448151878`;
                       {b.phone && (
                         <button
                           type="button"
-                          onClick={() => setWhatsAppBooking(b)}
+                          onClick={() => handleDirectWhatsAppShare(b)}
+                          disabled={sharingBookingId === b.id}
                           className="p-1.5 sm:p-2 rounded-lg bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200 text-xs font-semibold flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
-                          title="Share Event Order via WhatsApp"
+                          title="Direct Share Event Order via WhatsApp"
                         >
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                          <span>WhatsApp</span>
+                          <span>{sharingBookingId === b.id ? 'Sending...' : 'WhatsApp'}</span>
                         </button>
                       )}
                       {b.phone && (
@@ -1052,13 +1090,13 @@ Ph:9448151878`;
                 <table className="w-full text-xs text-left">
                   <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase text-[10px]">
                     <tr>
-                      <th className="p-3 whitespace-nowrap">Reference</th>
-                      <th className="p-3">Applicant / Host</th>
-                      <th className="p-3">Package &amp; Spaces</th>
-                      <th className="p-3 whitespace-nowrap">Event Date &amp; Slot</th>
-                      <th className="p-3 whitespace-nowrap">Financials</th>
-                      <th className="p-3 text-center whitespace-nowrap">Status</th>
-                      <th className="p-3 text-right whitespace-nowrap">Actions</th>
+                      <th className="p-2.5 whitespace-nowrap">Reference</th>
+                      <th className="p-2.5">Applicant / Host</th>
+                      <th className="p-2.5">Package &amp; Spaces</th>
+                      <th className="p-2.5 whitespace-nowrap">Event Date &amp; Slot</th>
+                      <th className="p-2.5 whitespace-nowrap">Financials</th>
+                      <th className="p-2.5 text-center whitespace-nowrap">Status</th>
+                      <th className="p-2.5 text-right whitespace-nowrap sticky right-0 bg-slate-50 z-20 shadow-[-4px_0_8px_rgba(0,0,0,0.06)]">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -1077,8 +1115,8 @@ Ph:9448151878`;
                         : Math.max(0, netRent - paid);
 
                       return (
-                        <tr key={b.id} className="hover:bg-slate-50/70 transition-colors">
-                          <td className="p-3 align-middle whitespace-nowrap">
+                        <tr key={b.id} className="group hover:bg-slate-50/70 transition-colors">
+                          <td className="p-2.5 align-middle whitespace-nowrap">
                             <div className="font-mono font-bold text-[#173D35] text-xs">
                               {b.id}
                             </div>
@@ -1108,7 +1146,7 @@ Ph:9448151878`;
                             )}
                           </td>
 
-                          <td className="p-3 align-middle">
+                          <td className="p-2.5 align-middle">
                             <strong className="block text-slate-900 font-medium">
                               {b.customerName || b.applicantName}
                             </strong>
@@ -1117,7 +1155,7 @@ Ph:9448151878`;
                             </span>
                           </td>
 
-                          <td className="p-3 align-middle text-slate-700">
+                          <td className="p-2.5 align-middle text-slate-700">
                             <strong className="block font-medium">
                               {b.packageName || (b.hall === 'both' ? 'Full Combined Hall' : 'Single Hall')}
                             </strong>
@@ -1126,7 +1164,7 @@ Ph:9448151878`;
                             </span>
                           </td>
 
-                          <td className="p-3 text-slate-700 whitespace-nowrap align-middle">
+                          <td className="p-2.5 text-slate-700 whitespace-nowrap align-middle">
                             {(() => {
                               const evDate = b.date || b.eventDate || '';
                               const isToday = evDate === todayStr;
@@ -1162,7 +1200,7 @@ Ph:9448151878`;
                             })()}
                           </td>
 
-                          <td className="p-3 text-slate-900 whitespace-nowrap align-middle">
+                          <td className="p-2.5 text-slate-900 whitespace-nowrap align-middle">
                             <div className="flex items-center gap-1.5 text-xs font-price">
                               <span className="font-semibold text-slate-900">
                                 ₹{netRent.toLocaleString('en-IN')}
@@ -1180,22 +1218,23 @@ Ph:9448151878`;
                             </div>
                           </td>
 
-                          <td className="p-3 text-center align-middle whitespace-nowrap">
+                          <td className="p-2.5 text-center align-middle whitespace-nowrap">
                             <BookingStatusBadge status={b.status} />
                           </td>
 
-                          <td className="p-3 text-right align-middle whitespace-nowrap">
+                          <td className="p-2.5 text-right align-middle whitespace-nowrap sticky right-0 bg-white group-hover:bg-slate-50 z-10 shadow-[-4px_0_8px_rgba(0,0,0,0.06)]">
                             <div className="flex items-center justify-end gap-1.5">
                               {/* 1. Direct WhatsApp Contact & Event Order Share */}
                               {b.phone && (
                                 <button
                                   type="button"
-                                  onClick={() => setWhatsAppBooking(b)}
+                                  onClick={() => handleDirectWhatsAppShare(b)}
+                                  disabled={sharingBookingId === b.id}
                                   className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200 transition-colors shrink-0 cursor-pointer shadow-2xs"
-                                  title="Share Event Order via WhatsApp"
+                                  title="Direct Share Event Order via WhatsApp"
                                 >
                                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                                  <span>WhatsApp</span>
+                                  <span>{sharingBookingId === b.id ? 'Sending...' : 'WhatsApp'}</span>
                                 </button>
                               )}
 
@@ -2439,6 +2478,29 @@ Ph:9448151878`;
             onClose={() => setWhatsAppBooking(null)}
             booking={whatsAppBooking}
           />
+        )}
+
+        {/* Hidden offscreen container for direct Event Order JPG generation without popup */}
+        {directShareBooking && (
+          <div
+            style={{
+              position: 'fixed',
+              left: -9999,
+              top: -9999,
+              width: 820,
+              zIndex: -100,
+              opacity: 0,
+              pointerEvents: 'none',
+            }}
+          >
+            <div ref={directReceiptRef} className="bg-white p-4">
+              <EventOrderReceipt
+                booking={directShareBooking}
+                signatureUrl={signatureUrl}
+                signatoryDesignation={signatoryDesignation}
+              />
+            </div>
+          </div>
         )}
       </div>
     </AdminLayout>

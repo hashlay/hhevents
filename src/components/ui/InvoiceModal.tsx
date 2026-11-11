@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Printer, Download, MessageSquare, Check, Copy } from 'lucide-react';
-import html2canvas from 'html2canvas';
 import { Dialog } from './Dialog';
 import { Button } from './Button';
 import { BookingRequest } from '../../types';
 import { VENUE_INFO } from '../../services/hallData';
 import { useToast } from '../../context/ToastContext';
 import { EventOrderReceipt } from './EventOrderReceipt';
+import { downloadReceiptAsJpg, shareEventOrderDirectly } from '../../services/eventOrderShare';
 
 interface InvoiceModalProps {
   isOpen: boolean;
@@ -212,66 +212,30 @@ Ph:9448151878`;
     if (!receiptRef.current) return;
     setIsGeneratingImage(true);
     try {
-      const canvas = await html2canvas(receiptRef.current, {
-        scale: 2.5,
-        useCORS: true,
-        backgroundColor: '#ffffff',
-        logging: false,
-      });
-      const link = document.createElement('a');
-      link.download = `HH-Event-Order-${orderNo}.png`;
-      link.href = canvas.toDataURL('image/png');
-      link.click();
-      showToast('Event Order image downloaded successfully!', 'success');
+      const ok = await downloadReceiptAsJpg(
+        receiptRef.current,
+        `HH-Event-Order-${orderNo}.jpg`
+      );
+      if (ok) {
+        showToast('Event Order JPG downloaded successfully!', 'success');
+      } else {
+        showToast('Download could not complete. You can use Print / Save PDF instead.', 'info');
+      }
     } catch {
-      showToast('Failed to generate image. Please use Print / Save PDF instead.', 'error');
+      showToast('Download could not complete. You can use Print / Save PDF instead.', 'info');
     } finally {
       setIsGeneratingImage(false);
     }
   };
 
   const handleShareWhatsApp = async () => {
-    const cleanPhone = (booking.phone || '').replace(/\D/g, '').slice(-10);
-    if (!cleanPhone) {
-      showToast('Customer phone number not available.', 'error');
-      return;
-    }
-
     setIsGeneratingImage(true);
     try {
-      if (receiptRef.current) {
-        const canvas = await html2canvas(receiptRef.current, {
-          scale: 2.5,
-          useCORS: true,
-          backgroundColor: '#ffffff',
-          logging: false,
-        });
-
-        // 1. Download image automatically so admin has it on hand
-        const link = document.createElement('a');
-        link.download = `HH-Event-Order-${orderNo}.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
-
-        // 2. Try copying image directly to clipboard for effortless Ctrl+V in WhatsApp
-        try {
-          canvas.toBlob((blob) => {
-            if (blob && navigator.clipboard && window.ClipboardItem) {
-              navigator.clipboard.write([
-                new window.ClipboardItem({ 'image/png': blob }),
-              ]).catch(() => {});
-            }
-          }, 'image/png');
-        } catch {}
-      }
-
-      const text = encodeURIComponent(getWhatsAppMessage());
-      const whatsappUrl = `https://wa.me/91${cleanPhone}?text=${text}`;
-      window.open(whatsappUrl, '_blank');
-      showToast('Invoice image downloaded & text copied to WhatsApp chat!', 'success');
-    } catch {
-      const text = encodeURIComponent(getWhatsAppMessage());
-      window.open(`https://wa.me/91${cleanPhone}?text=${text}`, '_blank');
+      await shareEventOrderDirectly({
+        booking,
+        element: receiptRef.current,
+        showToast,
+      });
     } finally {
       setIsGeneratingImage(false);
     }
@@ -304,7 +268,7 @@ Ph:9448151878`;
               leftIcon={<Download className="w-3.5 h-3.5 text-[#0082a6]" />}
               className="cursor-pointer text-xs font-semibold"
             >
-              Download Image (PNG)
+              {isGeneratingImage ? 'Downloading...' : 'Download Image (JPG)'}
             </Button>
 
             <Button
@@ -325,7 +289,7 @@ Ph:9448151878`;
               className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
             >
               <MessageSquare className="w-3.5 h-3.5" />
-              <span>{isGeneratingImage ? 'Preparing...' : 'Share on WhatsApp'}</span>
+              <span>{isGeneratingImage ? 'Sharing...' : 'Share on WhatsApp'}</span>
             </button>
           </div>
         </div>

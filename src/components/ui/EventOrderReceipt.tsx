@@ -353,6 +353,7 @@ export const EventOrderReceipt: React.FC<EventOrderReceiptProps> = ({
               {signatureUrl ? (
                 <img
                   src={signatureUrl}
+                  crossOrigin="anonymous"
                   alt="Authorized Signatory"
                   className="max-h-14 max-w-[170px] object-contain"
                 />
