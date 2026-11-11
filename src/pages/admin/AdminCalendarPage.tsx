@@ -631,6 +631,12 @@ Ph:9448151878`;
             onSelectDate={(d) => setSelectedDate(d)}
             selectedHall={selectedHall}
             onSelectHall={(h) => setSelectedHall(h)}
+            allowPastDates={true}
+            onBookSlot={(hall, date, slot) => {
+              setSelectedHall(hall);
+              setSelectedDate(date);
+              openQuickBook(slot);
+            }}
           />
         </div>
 
@@ -1126,6 +1132,24 @@ Ph:9448151878`;
             </div>
 
             <form onSubmit={handleSaveQuickBooking} className="space-y-4 text-xs">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Event Function Date *
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#173D35] bg-white font-medium text-slate-800"
+                />
+                {selectedDate < new Date().toISOString().split('T')[0] && (
+                  <p className="text-[11px] text-amber-700 font-semibold mt-1 flex items-center gap-1">
+                    <span>⚠️ Past Date:</span> Recording a completed past event. An official invoice and event order will be generated.
+                  </p>
+                )}
+              </div>
+
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
                   Select Package &amp; Hall Space *

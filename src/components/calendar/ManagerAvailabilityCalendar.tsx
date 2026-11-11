@@ -521,17 +521,14 @@ export const ManagerAvailabilityCalendar: React.FC<ManagerAvailabilityCalendarPr
                 <span className="text-xs text-slate-600">Change Day Session:</span>
                 <button
                   type="button"
-                  disabled={isSelectedDatePast}
                   onClick={() => handleToggleSlot('day')}
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs ${
-                    isSelectedDatePast
-                      ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                      : dayAvailable
+                    dayAvailable
                       ? 'bg-rose-600 hover:bg-rose-700 text-white cursor-pointer'
                       : 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer'
                   }`}
                 >
-                  {isSelectedDatePast ? 'Date Elapsed' : dayAvailable ? 'Mark Unavailable' : 'Mark Available'}
+                  {dayAvailable ? 'Mark Unavailable' : 'Mark Available'}
                 </button>
               </div>
             </div>
@@ -564,14 +561,12 @@ export const ManagerAvailabilityCalendar: React.FC<ManagerAvailabilityCalendarPr
 
                 <span
                   className={`text-xs px-2.5 py-1 rounded-full font-semibold uppercase tracking-wider shrink-0 ${
-                    isSelectedDatePast
-                      ? 'bg-slate-200 text-slate-600'
-                      : eveningAvailable
+                    eveningAvailable
                       ? 'bg-emerald-600 text-white shadow-xs'
                       : 'bg-rose-600 text-white shadow-xs'
                   }`}
                 >
-                  {isSelectedDatePast ? 'CLOSED (PAST)' : eveningAvailable ? 'AVAILABLE' : 'UNAVAILABLE'}
+                  {eveningAvailable ? 'AVAILABLE' : 'UNAVAILABLE'}
                 </span>
               </div>
 
@@ -579,17 +574,14 @@ export const ManagerAvailabilityCalendar: React.FC<ManagerAvailabilityCalendarPr
                 <span className="text-xs text-slate-600">Change Evening Session:</span>
                 <button
                   type="button"
-                  disabled={isSelectedDatePast}
                   onClick={() => handleToggleSlot('evening')}
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs ${
-                    isSelectedDatePast
-                      ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                      : eveningAvailable
+                    eveningAvailable
                       ? 'bg-rose-600 hover:bg-rose-700 text-white cursor-pointer'
                       : 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer'
                   }`}
                 >
-                  {isSelectedDatePast ? 'Date Elapsed' : eveningAvailable ? 'Mark Unavailable' : 'Mark Available'}
+                  {eveningAvailable ? 'Mark Unavailable' : 'Mark Available'}
                 </button>
               </div>
             </div>
@@ -602,26 +594,16 @@ export const ManagerAvailabilityCalendar: React.FC<ManagerAvailabilityCalendarPr
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
-                  disabled={isSelectedDatePast}
                   onClick={() => handleSetWholeDay(true)}
-                  className={`w-full py-2 px-3 rounded-xl border text-xs font-bold transition-colors text-center ${
-                    isSelectedDatePast
-                      ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
-                      : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-200 cursor-pointer'
-                  }`}
+                  className="w-full py-2 px-3 rounded-xl border text-xs font-bold transition-colors text-center bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-200 cursor-pointer"
                 >
                   Mark Whole Day Available
                 </button>
 
                 <button
                   type="button"
-                  disabled={isSelectedDatePast}
                   onClick={() => handleSetWholeDay(false)}
-                  className={`w-full py-2 px-3 rounded-xl border text-xs font-bold transition-colors text-center ${
-                    isSelectedDatePast
-                      ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
-                      : 'bg-rose-50 hover:bg-rose-100 text-rose-800 border-rose-200 cursor-pointer'
-                  }`}
+                  className="w-full py-2 px-3 rounded-xl border text-xs font-bold transition-colors text-center bg-rose-50 hover:bg-rose-100 text-rose-800 border-rose-200 cursor-pointer"
                 >
                   Mark Whole Day Unavailable
                 </button>
@@ -629,13 +611,8 @@ export const ManagerAvailabilityCalendar: React.FC<ManagerAvailabilityCalendarPr
 
               <button
                 type="button"
-                disabled={isSelectedDatePast}
                 onClick={handleResetDate}
-                className={`w-full py-2 px-3 rounded-xl border text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 ${
-                  isSelectedDatePast
-                    ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
-                    : 'bg-slate-50 hover:bg-slate-100 text-slate-600 border-slate-200 cursor-pointer'
-                }`}
+                className="w-full py-2 px-3 rounded-xl border text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 bg-slate-50 hover:bg-slate-100 text-slate-600 border-slate-200 cursor-pointer"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
                 <span>Reset This Date to Default Available</span>
@@ -650,21 +627,18 @@ export const ManagerAvailabilityCalendar: React.FC<ManagerAvailabilityCalendarPr
               <div className="flex gap-2">
                 <input
                   type="text"
-                  disabled={isSelectedDatePast}
                   value={managerNote}
                   onChange={(e) => setManagerNote(e.target.value)}
-                  placeholder={isSelectedDatePast ? 'Historical record (locked)' : 'e.g. VIP reservation / hall maintenance'}
-                  className="flex-1 px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed"
+                  placeholder="e.g. Past record / VIP reservation / hall maintenance"
+                  className="flex-1 px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
                 <Button
                   onClick={handleSaveNote}
-                  disabled={isSelectedDatePast}
                   variant="outline"
                   size="sm"
                   leftIcon={<Save className="w-3.5 h-3.5" />}
-                  className={isSelectedDatePast ? 'opacity-50 cursor-not-allowed' : ''}
                 >
-                  Save
+                  Save Note
                 </Button>
               </div>
               <p className="text-[10px] text-slate-400">

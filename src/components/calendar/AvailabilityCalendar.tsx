@@ -33,6 +33,7 @@ interface AvailabilityCalendarProps {
   onSelectHall?: (hall: HallTarget) => void;
   className?: string;
   onBookSlot?: (hall: HallTarget, date: string, slot: SlotTarget) => void;
+  allowPastDates?: boolean;
 }
 
 export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
@@ -43,6 +44,7 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
   onSelectHall,
   className = '',
   onBookSlot,
+  allowPastDates = false,
 }) => {
   const today = new Date();
 
@@ -85,8 +87,9 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
 
-  // Prevent navigating to past months
+  // Prevent navigating to past months (unless allowPastDates is enabled for admin)
   const canGoPrev =
+    allowPastDates ||
     currentYear > today.getFullYear() ||
     (currentYear === today.getFullYear() && currentMonth > today.getMonth());
 
@@ -120,8 +123,8 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
   const firstDayIndex = new Date(currentYear, currentMonth, 1).getDay();
 
   const handleDateClick = (dateStr: string) => {
-    // Strictly prevent selecting past dates
-    if (dateStr < todayStr) return;
+    // Strictly prevent selecting past dates on public calendar, allow for admin
+    if (!allowPastDates && dateStr < todayStr) return;
     setSelectedDate(dateStr);
     if (onSelectDate) onSelectDate(dateStr);
   };
@@ -203,14 +206,14 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
     !isDayBooked &&
     (isSlotBlockedByManager(activeHall, selectedDate, 'day') ||
       !isSlotAvailable(activeHall, selectedDate, 'day'));
-  const daySlotAvailable = !isSelectedDatePast && !isDayBooked && !isDayBlocked;
+  const daySlotAvailable = (!isSelectedDatePast || allowPastDates) && !isDayBooked && !isDayBlocked;
 
   const isEveBooked = isSlotOccupiedByBooking(activeHall, selectedDate, 'evening');
   const isEveBlocked =
     !isEveBooked &&
     (isSlotBlockedByManager(activeHall, selectedDate, 'evening') ||
       !isSlotAvailable(activeHall, selectedDate, 'evening'));
-  const eveningSlotAvailable = !isSelectedDatePast && !isEveBooked && !isEveBlocked;
+  const eveningSlotAvailable = (!isSelectedDatePast || allowPastDates) && !isEveBooked && !isEveBlocked;
 
   const selectedDateObj = new Date(selectedDate + 'T00:00:00');
   const readableDate = isNaN(selectedDateObj.getTime())
@@ -223,7 +226,7 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
       });
 
   const handleBook = (slot: SlotTarget) => {
-    if (isSelectedDatePast) return;
+    if (isSelectedDatePast && !allowPastDates) return;
     if (onBookSlot) {
       onBookSlot(activeHall, selectedDate, slot);
     } else {
@@ -361,7 +364,7 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
         <div className="space-y-1">
           <span className="text-[11px] font-bold uppercase tracking-widest text-[#C9AA72] flex items-center gap-1.5">
             <span className="w-4 h-4 rounded-full bg-[#173D35] text-[#D9C194] text-[9.5px] font-bold flex items-center justify-center">2</span>
-            Step 2: Pick an Upcoming Date
+            {allowPastDates ? 'Step 2: Pick Any Date (Past & Upcoming Records Enabled)' : 'Step 2: Pick an Upcoming Date'}
           </span>
           <div className="flex items-center gap-2.5">
             <CalendarIcon className="w-5 h-5 text-[#C9AA72]" />
@@ -435,20 +438,24 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
             const day = i + 1;
             const dateStr = formatDateKey(currentYear, currentMonth, day);
             const isPastDate = dateStr < todayStr;
-            const isSelected = selectedDate === dateStr && !isPastDate;
+            const isSelected = selectedDate === dateStr && (!isPastDate || allowPastDates);
             const isToday = todayStr === dateStr;
 
             const isDayBooked = isSlotOccupiedByBooking(activeHall, dateStr, 'day');
             const isDayManagerBlocked = isSlotBlockedByManager(activeHall, dateStr, 'day');
-            const daySlotOpen = isPastDate ? false : isSlotAvailable(activeHall, dateStr, 'day') && !isDayBooked;
+            const daySlotOpen = isPastDate && !allowPastDates
+              ? false
+              : isSlotAvailable(activeHall, dateStr, 'day') && !isDayBooked;
 
             const isEveBooked = isSlotOccupiedByBooking(activeHall, dateStr, 'evening');
             const isEveManagerBlocked = isSlotBlockedByManager(activeHall, dateStr, 'evening');
-            const eveSlotOpen = isPastDate ? false : isSlotAvailable(activeHall, dateStr, 'evening') && !isEveBooked;
+            const eveSlotOpen = isPastDate && !allowPastDates
+              ? false
+              : isSlotAvailable(activeHall, dateStr, 'evening') && !isEveBooked;
 
             const isBothBlockedByManager = (isDayManagerBlocked || !daySlotOpen) && (isEveManagerBlocked || !eveSlotOpen) && !isDayBooked && !isEveBooked;
 
-            const summary = isPastDate
+            const summary = isPastDate && !allowPastDates
               ? 'past'
               : daySlotOpen && eveSlotOpen
               ? 'available'
@@ -456,14 +463,16 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
               ? (isBothBlockedByManager ? 'blocked' : 'unavailable')
               : 'partial';
 
+            const isClickDisabled = isPastDate && !allowPastDates;
+
             return (
               <button
                 key={dateStr}
                 type="button"
-                disabled={isPastDate}
+                disabled={isClickDisabled}
                 onClick={() => handleDateClick(dateStr)}
                 className={`min-h-[52px] sm:min-h-[68px] p-1 sm:p-2 rounded-xl text-left transition-all relative flex flex-col justify-between items-center sm:items-stretch border ${
-                  isPastDate
+                  isPastDate && !allowPastDates
                     ? 'bg-slate-100/70 border-slate-200/60 text-slate-300 cursor-not-allowed opacity-40 select-none shadow-none'
                     : isSelected
                     ? 'bg-[#F5F1E8] border-[#C9AA72] shadow-sm ring-2 ring-[#C9AA72]/60 cursor-pointer'
@@ -473,10 +482,12 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
                     ? 'bg-rose-50/50 border-rose-200 hover:border-rose-300 cursor-pointer'
                     : summary === 'partial'
                     ? 'bg-amber-50/40 border-amber-200 hover:border-amber-300 cursor-pointer'
+                    : isPastDate && allowPastDates
+                    ? 'bg-slate-50/80 border-slate-200 hover:border-[#D6CCA9] hover:bg-[#FAF8F5] cursor-pointer'
                     : 'bg-white border-[#E2DACB] hover:border-[#D6CCA9] hover:bg-[#FAF8F5] cursor-pointer'
                 }`}
                 aria-label={`${dateStr}: ${
-                  isPastDate
+                  isPastDate && !allowPastDates
                     ? 'Past Date (Disabled)'
                     : summary === 'blocked'
                     ? 'Blocked (Hold / Maintenance)'
@@ -484,6 +495,8 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
                     ? 'Booked'
                     : summary === 'partial'
                     ? '1 Session Open'
+                    : isPastDate && allowPastDates
+                    ? 'Past Date (Click to Record/Inspect)'
                     : 'Available'
                 }`}
               >
@@ -491,7 +504,7 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
                 <div className="flex items-center justify-between w-full">
                   <span
                     className={`text-[11px] sm:text-xs font-bold leading-tight ${
-                      isPastDate
+                      isPastDate && !allowPastDates
                         ? 'text-slate-400 font-normal'
                         : isSelected
                         ? 'text-[#173D35] font-bold'
@@ -499,6 +512,8 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
                         ? 'text-blue-700'
                         : summary === 'unavailable'
                         ? 'text-rose-700'
+                        : isPastDate && allowPastDates
+                        ? 'text-slate-700'
                         : 'text-[#252525]'
                     }`}
                   >
@@ -512,10 +527,15 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
                   {isToday && (
                     <span className="sm:hidden w-1.5 h-1.5 rounded-full bg-[#C9AA72]" title="Today" />
                   )}
+                  {isPastDate && allowPastDates && !isToday && (
+                    <span className="hidden sm:inline text-[8.5px] font-medium text-slate-500 bg-slate-100 border border-slate-200 px-1 py-0.2 rounded">
+                      Past
+                    </span>
+                  )}
                 </div>
 
-                {/* Session status dots (Day dot, Evening dot) — Disabled for past dates */}
-                {isPastDate ? (
+                {/* Session status dots (Day dot, Evening dot) — Disabled for public past dates */}
+                {isPastDate && !allowPastDates ? (
                   <div className="flex items-center gap-1 my-0.5 opacity-20">
                     <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-slate-300" />
                     <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-slate-300" />
@@ -544,7 +564,7 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
                 )}
 
                 {/* Micro Label */}
-                {isPastDate ? (
+                {isPastDate && !allowPastDates ? (
                   <>
                     <span className="text-[9px] font-medium text-slate-400 hidden sm:block">Past</span>
                     <span className="text-[8px] font-medium text-slate-400 sm:hidden">&mdash;</span>
@@ -559,6 +579,8 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
                           ? 'text-rose-700'
                           : summary === 'partial'
                           ? 'text-amber-700'
+                          : isPastDate && allowPastDates
+                          ? 'text-slate-600'
                           : 'text-emerald-700'
                       }`}
                     >
@@ -568,6 +590,8 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
                         ? 'Booked'
                         : summary === 'partial'
                         ? '1 Open'
+                        : isPastDate && allowPastDates
+                        ? 'Past Open'
                         : 'Open'}
                     </span>
                     <span
@@ -715,7 +739,9 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
                 }`}>
                   <span className={`text-xs ${isDayBlocked ? 'text-blue-700 font-semibold' : 'text-[#737373]'}`}>
                     {daySlotAvailable
-                      ? 'Instant reservation open'
+                      ? isSelectedDatePast && allowPastDates
+                        ? 'Past Date Open • Click to Record Event'
+                        : 'Instant reservation open'
                       : isDayBlocked
                       ? 'Unavailable until freed by management'
                       : 'Already reserved on this date'}
@@ -728,7 +754,7 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
                       className="w-full sm:w-auto justify-center font-bold"
                       rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
                     >
-                      Book Day Session
+                      {isSelectedDatePast && allowPastDates ? 'Record Past Event' : 'Book Day Session'}
                     </Button>
                   ) : isDayBlocked ? (
                     <span className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-700 bg-blue-100 border border-blue-300 px-3 py-1.5 rounded-xl">
@@ -803,7 +829,9 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
                 }`}>
                   <span className={`text-xs ${isEveBlocked ? 'text-blue-700 font-semibold' : 'text-[#737373]'}`}>
                     {eveningSlotAvailable
-                      ? 'Instant reservation open'
+                      ? isSelectedDatePast && allowPastDates
+                        ? 'Past Date Open • Click to Record Event'
+                        : 'Instant reservation open'
                       : isEveBlocked
                       ? 'Unavailable until freed by management'
                       : 'Already reserved on this date'}
@@ -816,7 +844,7 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
                       className="w-full sm:w-auto justify-center font-bold"
                       rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
                     >
-                      Book Evening Session
+                      {isSelectedDatePast && allowPastDates ? 'Record Past Event' : 'Book Evening Session'}
                     </Button>
                   ) : isEveBlocked ? (
                     <span className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-700 bg-blue-100 border border-blue-300 px-3 py-1.5 rounded-xl">
