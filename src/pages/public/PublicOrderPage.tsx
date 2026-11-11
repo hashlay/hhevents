@@ -122,7 +122,10 @@ export const PublicOrderPage: React.FC<PublicOrderPageProps> = ({ navigate }) =>
     try {
       const ok = await downloadReceiptAsJpg(
         receiptRef.current,
-        isCompleted ? `HH-Bill-${booking.id}.jpg` : `HH-Event-Order-${booking.id}.jpg`
+        isCompleted ? `HH-Bill-${booking.id}.jpg` : `HH-Event-Order-${booking.id}.jpg`,
+        booking,
+        isCompleted,
+        signatureUrl
       );
       if (ok) {
         showToast(`${docLabel} JPG downloaded successfully!`, 'success');
@@ -144,6 +147,7 @@ export const PublicOrderPage: React.FC<PublicOrderPageProps> = ({ navigate }) =>
         booking,
         element: receiptRef.current,
         showToast,
+        signatureUrl,
       });
     } catch (err: any) {
       showToast('Could not share Event Order via WhatsApp.', 'error');

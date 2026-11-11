@@ -1,5 +1,6 @@
 import html2canvas from 'html2canvas';
 import { BookingRequest } from '../types';
+import { renderReceiptToBlob } from './receiptCanvasRenderer';
 
 /**
  * Builds the official WhatsApp caption for the confirmed Event Order.
@@ -129,39 +130,45 @@ export async function renderElementToJpgBlob(element: HTMLElement): Promise<Blob
  * Downloads a DOM element directly as a high-quality JPG image.
  */
 export async function downloadReceiptAsJpg(
-  element: HTMLElement,
-  filename: string = 'HH-Event-Order.jpg'
+  element?: HTMLElement | null,
+  filename: string = 'HH-Event-Order.jpg',
+  booking?: BookingRequest,
+  isBill?: boolean,
+  signatureUrl?: string
 ): Promise<boolean> {
   try {
-    const { jpgBlob } = await renderElementToBlobs(element);
-    if (!jpgBlob) {
-      // Fallback: try direct dataURL
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#ffffff',
-        logging: false,
-      });
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
+    if (booking) {
+      const rendered = await renderReceiptToBlob(
+        booking,
+        isBill ?? (booking.status || '').toUpperCase() === 'COMPLETED',
+        signatureUrl
+      );
+      const url = URL.createObjectURL(rendered.jpegBlob);
       const link = document.createElement('a');
       link.download = filename.endsWith('.jpg') ? filename : `${filename}.jpg`;
-      link.href = dataUrl;
+      link.href = url;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
       return true;
     }
 
-    const url = URL.createObjectURL(jpgBlob);
-    const link = document.createElement('a');
-    link.download = filename.endsWith('.jpg') ? filename : `${filename}.jpg`;
-    link.href = url;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    setTimeout(() => URL.revokeObjectURL(url), 10000);
-    return true;
+    if (element) {
+      const { jpgBlob } = await renderElementToBlobs(element);
+      if (jpgBlob) {
+        const url = URL.createObjectURL(jpgBlob);
+        const link = document.createElement('a');
+        link.download = filename.endsWith('.jpg') ? filename : `${filename}.jpg`;
+        link.href = url;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+        return true;
+      }
+    }
+    return false;
   } catch (err) {
     console.error('Download JPG failed:', err);
     return false;
@@ -169,26 +176,25 @@ export async function downloadReceiptAsJpg(
 }
 
 /**
- * Direct WhatsApp Event Order Image Sharing:
+ * Direct WhatsApp Event Order & Bill Image Sharing:
  *
- * 1. Generates the Event Order as an actual JPG image file and caption.
- * 2. Preferred Option A (Mobile & Supported Browsers):
- *    Uses Web Share API with files: [imageFile], passing both the real JPG file
- *    and the caption together to WhatsApp in one tap.
- * 3. Option B (Desktop / WhatsApp Web fallback):
- *    Copies the image to the OS clipboard (as image/png, browser standard),
- *    triggers an automatic JPG download to the computer, and launches the
- *    customer's WhatsApp chat with the caption. The user simply hits Ctrl+V
- *    in WhatsApp Web to attach the copied image and press Send!
+ * 1. Generates the Event Order or Bill as an ultra-crisp, high-resolution JPG image file and caption.
+ * 2. Mobile & Web Share API:
+ *    Uses Web Share API with files: [imageFile] and text: caption.
+ *    Opens WhatsApp with the image attached and the caption automatically inserted as the image caption.
+ * 3. Desktop / WhatsApp Web Workflow:
+ *    Copies the image to the OS clipboard, downloads the JPG, and opens the customer's WhatsApp chat with the caption.
  */
 export async function shareEventOrderDirectly({
   booking,
   element,
   showToast,
+  signatureUrl,
 }: {
   booking: BookingRequest;
   element?: HTMLElement | null;
   showToast?: (msg: string, type: 'success' | 'error' | 'info') => void;
+  signatureUrl?: string;
 }): Promise<void> {
   const cleanPhone = (booking.phone || (booking as any).applicantPhone || '')
     .replace(/\D/g, '')
@@ -201,20 +207,29 @@ export async function shareEventOrderDirectly({
 
   const isCompleted = (booking.status || '').toUpperCase() === 'COMPLETED';
   const caption = buildEventOrderCaption(booking);
-  const filename = isCompleted ? `HH-Bill-${booking.id}.jpg` : `HH-Event-Order-${booking.id}.jpg`;
   const docTypeLabel = isCompleted ? 'Bill' : 'Event Order';
 
   let jpgBlob: Blob | null = null;
   let pngBlob: Blob | null = null;
+  let filename = isCompleted ? `HH-Bill-${booking.id}.jpg` : `HH-Event-Order-${booking.id}.jpg`;
 
-  if (element) {
-    const blobs = await renderElementToBlobs(element);
-    jpgBlob = blobs.jpgBlob;
-    pngBlob = blobs.pngBlob;
+  // 1. Offscreen Canvas 2D Renderer (fast, reliable, 100% works on mobile & desktop without DOM delays)
+  try {
+    const rendered = await renderReceiptToBlob(booking, isCompleted, signatureUrl);
+    jpgBlob = rendered.jpegBlob;
+    pngBlob = rendered.pngBlob;
+    filename = rendered.fileName;
+  } catch (canvasErr) {
+    console.warn('Canvas rendering fallback to html2canvas:', canvasErr);
+    if (element) {
+      const blobs = await renderElementToBlobs(element);
+      jpgBlob = blobs.jpgBlob;
+      pngBlob = blobs.pngBlob;
+    }
   }
 
   // OPTION A: Web Share API with File
-  // Native mobile browsers (Android Chrome, iOS Safari) and supported Windows desktop devices
+  // Native mobile browsers (Android Chrome, iOS Safari) and supported desktop devices
   // allow sharing the real JPG file attachment directly into WhatsApp with the caption.
   if (jpgBlob) {
     const jpgFile = new File([jpgBlob], filename, { type: 'image/jpeg' });
@@ -284,7 +299,7 @@ export async function shareEventOrderDirectly({
 
   if (copiedToClipboard) {
     showToast?.(
-      `${docTypeLabel} JPG copied to clipboard & downloaded! In WhatsApp, press Ctrl+V to attach image and send.`,
+      `${docTypeLabel} JPG copied to clipboard & downloaded! In WhatsApp Web, press Ctrl+V to attach image, then click Send.`,
       'success'
     );
   } else {

@@ -139,17 +139,14 @@ export const AdminCalendarPage: React.FC<AdminCalendarPageProps> = ({ navigate }
   }, []);
 
   const handleDirectWhatsAppShare = async (b: BookingRequest) => {
-    setDirectShareBooking(b);
-    // Allow React to mount the booking receipt into DOM
-    await new Promise((resolve) => setTimeout(resolve, 200));
     try {
       await shareEventOrderDirectly({
         booking: b,
-        element: directReceiptRef.current,
         showToast,
+        signatureUrl,
       });
-    } finally {
-      setDirectShareBooking(null);
+    } catch (err: any) {
+      showToast('Could not share to WhatsApp.', 'error');
     }
   };
 
@@ -1654,29 +1651,6 @@ Ph:9448151878`;
           onClose={() => setWhatsAppBooking(null)}
           booking={whatsAppBooking}
         />
-      )}
-
-      {/* Hidden offscreen container for direct Event Order JPG generation */}
-      {directShareBooking && (
-        <div
-          style={{
-            position: 'fixed',
-            left: -99999,
-            top: 0,
-            width: 820,
-            zIndex: -99999,
-            visibility: 'visible',
-            pointerEvents: 'none',
-          }}
-        >
-          <div ref={directReceiptRef} className="bg-white p-4">
-            <EventOrderReceipt
-              booking={directShareBooking}
-              signatureUrl={signatureUrl}
-              signatoryDesignation={signatoryDesignation}
-            />
-          </div>
-        </div>
       )}
     </AdminLayout>
   );

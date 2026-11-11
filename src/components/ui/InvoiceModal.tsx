@@ -223,7 +223,10 @@ Ph:9448151878`;
     try {
       const ok = await downloadReceiptAsJpg(
         receiptRef.current,
-        downloadFileName
+        downloadFileName,
+        booking,
+        isCompleted,
+        signatureUrl
       );
       if (ok) {
         showToast(
@@ -247,6 +250,7 @@ Ph:9448151878`;
         booking,
         element: receiptRef.current,
         showToast,
+        signatureUrl,
       });
     } finally {
       setIsGeneratingImage(false);
