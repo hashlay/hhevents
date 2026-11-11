@@ -226,3 +226,4 @@ export const PublicOrderPage: React.FC<PublicOrderPageProps> = ({ navigate }) =>
     </div>
   );
 };
+

@@ -372,3 +372,4 @@ export const EventOrderReceipt: React.FC<EventOrderReceiptProps> = ({
     </div>
   );
 };
+

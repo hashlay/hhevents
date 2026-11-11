@@ -23,13 +23,27 @@ import {
   Ticket,
   Tag,
   Sparkles,
+  ChevronLeft,
+  ChevronRight,
+  Calendar as CalendarIcon,
+  X,
+  Eye,
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { BackButton } from '../../components/ui/BackButton';
 import { useToast } from '../../context/ToastContext';
 import { VENUE_INFO, TIMING_SLOTS, OFFICIAL_TARIFF_SCHEDULE, DEFAULT_BOOKING_PACKAGES, BookingPackage } from '../../services/hallData';
 import { checkSlotAvailability } from '../../services/bookingStorage';
-import { saveBooking } from '../../services/storageService';
+import { saveBooking, getBookings, syncBookingsFromServer } from '../../services/storageService';
+import {
+  isSlotAvailable,
+  isSlotBlockedByManager,
+  syncAvailabilityFromServer,
+  subscribeAvailability,
+  HallTarget,
+  SlotTarget,
+} from '../../services/availabilityManager';
+import { AvailabilityCalendar } from '../../components/calendar/AvailabilityCalendar';
 import { HallId, SlotType, ACOption, BookingRequest } from '../../types';
 
 interface BookPageProps {
@@ -46,7 +60,7 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
   // Parse URL query parameters
   const urlParams = new URLSearchParams(window.location.search);
   const paramPackage = urlParams.get('package');
-  const paramHall = (urlParams.get('hall') as HallId) || 'hall_1';
+  const paramHall = (urlParams.get('hall') as HallId) || 'both';
   const paramDate = urlParams.get('date');
   const paramSlot = (urlParams.get('slot') as SlotType) || 'day';
 
@@ -54,7 +68,14 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
   const [packages, setPackages] = useState<BookingPackage[]>(DEFAULT_BOOKING_PACKAGES);
   const [isLoadingPackages, setIsLoadingPackages] = useState(false);
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const today = new Date();
+  const formatDateKey = (year: number, month: number, day: number) => {
+    const m = String(month + 1).padStart(2, '0');
+    const d = String(day).padStart(2, '0');
+    return `${year}-${m}-${d}`;
+  };
+
+  const todayStr = formatDateKey(today.getFullYear(), today.getMonth(), today.getDate());
   const defaultFutureDate = new Date(Date.now() + 86400000 * 7).toISOString().split('T')[0];
 
   // Selections (strictly disallow past dates)
@@ -63,7 +84,175 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
   );
   const [slot, setSlot] = useState<SlotType>(paramSlot);
   const [selectedPackageId, setSelectedPackageId] = useState<string>(paramPackage || 'full-ac-hall');
-  const [hallPreference, setHallPreference] = useState<'hall_1' | 'hall_2' | 'both'>('hall_1');
+  const [hallPreference, setHallPreference] = useState<'hall_1' | 'hall_2' | 'both'>(
+    (paramHall as any) || 'both'
+  );
+
+  // Live bookings & availability state
+  const [allBookings, setAllBookings] = useState<BookingRequest[]>(getBookings());
+  const [, setAvailabilityTick] = useState(0);
+  const [isMasterModalOpen, setIsMasterModalOpen] = useState(false);
+
+  // Calendar month/year navigation state
+  const initialCalendarDate = date ? new Date(date + 'T00:00:00') : today;
+  const [calendarYear, setCalendarYear] = useState<number>(
+    isNaN(initialCalendarDate.getTime()) ? today.getFullYear() : initialCalendarDate.getFullYear()
+  );
+  const [calendarMonth, setCalendarMonth] = useState<number>(
+    isNaN(initialCalendarDate.getTime()) ? today.getMonth() : initialCalendarDate.getMonth()
+  );
+
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
+  const canGoPrev =
+    calendarYear > today.getFullYear() ||
+    (calendarYear === today.getFullYear() && calendarMonth > today.getMonth());
+
+  const handlePrevMonth = () => {
+    if (!canGoPrev) return;
+    if (calendarMonth === 0) {
+      setCalendarMonth(11);
+      setCalendarYear((y) => y - 1);
+    } else {
+      setCalendarMonth((m) => m - 1);
+    }
+  };
+
+  const handleNextMonth = () => {
+    if (calendarMonth === 11) {
+      setCalendarMonth(0);
+      setCalendarYear((y) => y + 1);
+    } else {
+      setCalendarMonth((m) => m + 1);
+    }
+  };
+
+  const handleCurrentMonth = () => {
+    setCalendarMonth(today.getMonth());
+    setCalendarYear(today.getFullYear());
+  };
+
+  const daysInMonth = new Date(calendarYear, calendarMonth + 1, 0).getDate();
+  const firstDayIndex = new Date(calendarYear, calendarMonth, 1).getDay();
+
+  // Reactive sync of bookings and manager availability on mount
+  useEffect(() => {
+    let mounted = true;
+    syncBookingsFromServer()
+      .then((fresh) => {
+        if (mounted) setAllBookings(fresh);
+      })
+      .catch(() => {});
+    syncAvailabilityFromServer().catch(() => {});
+    const unsub = subscribeAvailability(() => {
+      if (mounted) setAvailabilityTick((t) => t + 1);
+    });
+    return () => {
+      mounted = false;
+      unsub();
+    };
+  }, []);
+
+  // Helper to check if a slot is occupied by a reservation
+  const isSlotOccupiedByBooking = (
+    hall: 'hall_1' | 'hall_2' | 'both',
+    targetDate: string,
+    targetSlot: SlotType
+  ) => {
+    return allBookings.some((b) => {
+      const isDate = b.date === targetDate || b.eventDate === targetDate;
+      if (!isDate) return false;
+      if (b.slot !== targetSlot && (b as any).timeSlot !== targetSlot) return false;
+      const st = (b.status || '').toUpperCase();
+      if (st === 'CANCELLED' || st === 'REJECTED') return false;
+
+      const rawHall = (b as any).hallSelection || b.hall || '';
+      const pkgId = (b.packageId || '').toLowerCase();
+      const pkgName = ((b as any).packageName || '').toLowerCase();
+      const resources: string[] = Array.isArray((b as any).occupiedResources)
+        ? (b as any).occupiedResources
+        : [];
+
+      const isFullCampus =
+        rawHall === 'both' ||
+        pkgId.includes('full') ||
+        pkgName.includes('full') ||
+        pkgName.includes('combined') ||
+        (resources.includes('gents_hall') && resources.includes('ladies_hall'));
+
+      const isHall1 =
+        rawHall === 'hall_1' ||
+        pkgId.includes('single') ||
+        pkgName.includes('gents') ||
+        resources.includes('gents_hall');
+
+      const isHall2 =
+        rawHall === 'hall_2' ||
+        pkgName.includes('ladies') ||
+        resources.includes('ladies_hall');
+
+      if (hall === 'both') {
+        return isFullCampus || isHall1 || isHall2;
+      }
+      if (hall === 'hall_1') {
+        return isFullCampus || isHall1;
+      }
+      if (hall === 'hall_2') {
+        return isFullCampus || isHall2;
+      }
+      return isFullCampus;
+    });
+  };
+
+  const handleDateClick = (dateStr: string) => {
+    if (dateStr < todayStr) return;
+    const isBooked = isSlotOccupiedByBooking(hallPreference, dateStr, slot);
+    if (isBooked) {
+      showToast(`This date is already booked for ${slot === 'day' ? 'Day' : 'Evening'} Session.`, 'error');
+      return;
+    }
+    const isBlocked =
+      isSlotBlockedByManager(hallPreference, dateStr, slot) ||
+      !isSlotAvailable(hallPreference, dateStr, slot);
+    if (isBlocked) {
+      showToast(`This date is blocked (maintenance/hold) for ${slot === 'day' ? 'Day' : 'Evening'} Session.`, 'error');
+      return;
+    }
+    setDate(dateStr);
+  };
+
+  // If default future date happens to be occupied, find the first open date
+  useEffect(() => {
+    if (allBookings.length > 0 && !paramDate) {
+      const isCurrentOccupied =
+        isSlotOccupiedByBooking(hallPreference, date, slot) ||
+        isSlotBlockedByManager(hallPreference, date, slot) ||
+        !isSlotAvailable(hallPreference, date, slot);
+
+      if (isCurrentOccupied) {
+        const now = new Date();
+        for (let d = 1; d <= 45; d++) {
+          const testDateObj = new Date(now.getTime() + d * 86400000);
+          const testDateStr = formatDateKey(
+            testDateObj.getFullYear(),
+            testDateObj.getMonth(),
+            testDateObj.getDate()
+          );
+          const occupied =
+            isSlotOccupiedByBooking(hallPreference, testDateStr, slot) ||
+            isSlotBlockedByManager(hallPreference, testDateStr, slot) ||
+            !isSlotAvailable(hallPreference, testDateStr, slot);
+          if (!occupied) {
+            setDate(testDateStr);
+            break;
+          }
+        }
+      }
+    }
+  }, [allBookings]);
 
   // Customer Contact Fields
   const [customerName, setCustomerName] = useState('');
@@ -150,8 +339,38 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
 
   // Re-check conflict on field changes
   useEffect(() => {
-    if (date && slot && currentPackage) {
-      const hallToCheck = currentPackage.id.includes('full') ? 'both' : hallPreference;
+    if (date && slot) {
+      const hallToCheck = currentPackage
+        ? currentPackage.id.includes('full')
+          ? 'both'
+          : hallPreference
+        : hallPreference;
+      if (date < todayStr) {
+        setConflictReason(
+          'Reservations cannot be made for past dates. Please pick today or an upcoming event date on the calendar.'
+        );
+        return;
+      }
+      const isBooked = isSlotOccupiedByBooking(hallToCheck, date, slot);
+      if (isBooked) {
+        setConflictReason(
+          `This venue space is already booked on ${date} for ${
+            slot === 'day' ? 'Day (Morning)' : 'Evening'
+          } Session.`
+        );
+        return;
+      }
+      const isBlocked =
+        isSlotBlockedByManager(hallToCheck, date, slot) ||
+        !isSlotAvailable(hallToCheck, date, slot);
+      if (isBlocked) {
+        setConflictReason(
+          `This venue space is marked unavailable (venue hold / maintenance) on ${date} for ${
+            slot === 'day' ? 'Day (Morning)' : 'Evening'
+          } Session.`
+        );
+        return;
+      }
       const res = checkSlotAvailability(hallToCheck as HallId, date, slot);
       if (!res.available) {
         setConflictReason(res.conflictReason || 'The selected space is reserved for this session.');
@@ -159,7 +378,7 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
         setConflictReason(null);
       }
     }
-  }, [date, slot, currentPackage, hallPreference]);
+  }, [date, slot, currentPackage, hallPreference, allBookings]);
 
   // Revalidate coupon if package changes
   useEffect(() => {
@@ -248,7 +467,38 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
   const handleNextStep = () => {
     if (currentStep === 'date') {
       if (!date) {
-        showToast('Please select a reservation date.', 'error');
+        showToast('Please select an available event date from the calendar.', 'error');
+        return;
+      }
+      if (date < todayStr) {
+        showToast('Reservations cannot be made for past dates.', 'error');
+        return;
+      }
+      const hallToCheck = currentPackage
+        ? currentPackage.id.includes('full')
+          ? 'both'
+          : hallPreference
+        : hallPreference;
+      const isBooked = isSlotOccupiedByBooking(hallToCheck, date, slot);
+      if (isBooked) {
+        showToast(
+          `The selected date is already booked for ${
+            slot === 'day' ? 'Day (Morning)' : 'Evening'
+          } Session. Please select a green date.`,
+          'error'
+        );
+        return;
+      }
+      const isBlocked =
+        isSlotBlockedByManager(hallToCheck, date, slot) ||
+        !isSlotAvailable(hallToCheck, date, slot);
+      if (isBlocked) {
+        showToast(
+          `The selected date is unavailable (venue hold / maintenance) for ${
+            slot === 'day' ? 'Day (Morning)' : 'Evening'
+          } Session.`,
+          'error'
+        );
         return;
       }
       if (conflictReason) {
@@ -434,63 +684,388 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
           </div>
         )}
 
-        {/* STEP 1: DATE & SESSION SLOT */}
+        {/* STEP 1: DATE & SESSION SLOT WITH INTERACTIVE AVAILABILITY CALENDAR */}
         {currentStep === 'date' && (
-          <div className="bg-white rounded-3xl p-6 sm:p-10 border border-[#E2DACB] shadow-sm space-y-8 animate-in fade-in">
-            <div className="space-y-1">
-              <span className="text-xs font-bold uppercase tracking-wider text-[#C9AA72]">Step 1 of 5</span>
-              <h2 className="text-2xl font-bold text-[#252525] font-serif-heading">
-                Select Event Date &amp; Session Slot
-              </h2>
-              <p className="text-xs text-[#4A4A4A]">
-                Choose your preferred date and session slot. Sessions operate with dedicated turnover intervals.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Date Input */}
-              <div className="space-y-2">
-                <label className="text-xs font-bold uppercase tracking-wide text-slate-700 block">
-                  Event Date
-                </label>
-                <input
-                  type="date"
-                  min={new Date().toISOString().split('T')[0]}
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  className="w-full px-4 py-3 rounded-2xl border border-slate-300 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#C9AA72]"
-                />
-                <span className="text-[11px] text-[#737373] block">
-                  Schedule reference: {OFFICIAL_TARIFF_SCHEDULE}
-                </span>
+          <div className="bg-white rounded-3xl p-5 sm:p-9 border border-[#E2DACB] shadow-sm space-y-7 animate-in fade-in">
+            {/* Step Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E2DACB] pb-5">
+              <div className="space-y-1">
+                <span className="text-xs font-bold uppercase tracking-wider text-[#C9AA72]">Step 1 of 5</span>
+                <h2 className="text-2xl sm:text-3xl font-bold text-[#173D35] font-serif-heading">
+                  Select Event Date &amp; Session Slot
+                </h2>
+                <p className="text-xs text-[#4A4A4A]">
+                  Choose your session slot below to inspect live month availability. Green dates are open for immediate reservation.
+                </p>
               </div>
 
-              {/* Session Slot Selection */}
-              <div className="space-y-2">
+              {/* View Master Schedule Modal Shortcut */}
+              <button
+                type="button"
+                onClick={() => setIsMasterModalOpen(true)}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[#FAF8F5] hover:bg-[#F5F1E8] border border-[#E2DACB] hover:border-[#C9AA72] text-[#173D35] text-xs font-bold transition-all shadow-2xs self-start sm:self-auto cursor-pointer"
+                title="Open Master Schedule Modal"
+              >
+                <Eye className="w-4 h-4 text-[#C9AA72]" />
+                <span>View Master Schedule</span>
+              </button>
+            </div>
+
+            {/* 1. SESSION SLOT SELECTION */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
                 <label className="text-xs font-bold uppercase tracking-wide text-slate-700 block">
-                  Session Slot
+                  1. Choose Session Slot
                 </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {TIMING_SLOTS.map((s) => (
+                <span className="text-[11px] text-[#737373]">
+                  Schedule: {OFFICIAL_TARIFF_SCHEDULE}
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {TIMING_SLOTS.map((s) => {
+                  const isSelected = slot === s.id;
+                  return (
                     <button
                       key={s.id}
                       type="button"
-                      onClick={() => setSlot(s.id)}
-                      className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
-                        slot === s.id
-                          ? 'border-[#C9AA72] bg-[#F5F1E8] text-[#252525] ring-1 ring-[#C9AA72]'
-                          : 'border-slate-200 hover:border-slate-300 text-slate-700'
+                      onClick={() => setSlot(s.id as SlotType)}
+                      className={`p-4 sm:p-5 rounded-2xl border text-left transition-all cursor-pointer relative flex flex-col justify-between ${
+                        isSelected
+                          ? 'border-[#173D35] bg-[#173D35] text-white shadow-md ring-2 ring-[#C9AA72]'
+                          : 'border-[#E2DACB] hover:border-[#C9AA72] bg-white hover:bg-[#FAF8F5] text-[#252525]'
                       }`}
                     >
-                      <span className="font-bold text-sm block">{s.label}</span>
-                      <span className="text-xs font-mono text-[#173D35] font-semibold mt-1 block">
-                        {s.timeRange}
-                      </span>
+                      <div className="flex items-start justify-between gap-3 mb-2">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <Clock className={`w-4 h-4 ${isSelected ? 'text-[#D9C194]' : 'text-[#C9AA72]'}`} />
+                            <span className="font-bold text-base font-serif-heading">{s.label}</span>
+                          </div>
+                          <span
+                            className={`text-xs font-mono font-bold mt-1 inline-block ${
+                              isSelected ? 'text-[#D9C194]' : 'text-[#173D35]'
+                            }`}
+                          >
+                            {s.timeRange}
+                          </span>
+                        </div>
+                        {isSelected && (
+                          <span className="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-[#C9AA72] text-[#173D35]">
+                            Active Slot
+                          </span>
+                        )}
+                      </div>
+                      <p className={`text-xs mt-1 ${isSelected ? 'text-white/85' : 'text-[#737373]'}`}>
+                        {s.id === 'day'
+                          ? 'Morning & afternoon ceremonies, nikah, muhurtham, and grand lunch banquets.'
+                          : 'Ambient evening lighting, gala receptions, cultural gatherings, and dinner banquets.'}
+                      </p>
                     </button>
-                  ))}
-                </div>
+                  );
+                })}
               </div>
             </div>
+
+            {/* 2. VENUE SPACE AVAILABILITY FILTER */}
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+              <label className="text-xs font-bold uppercase tracking-wide text-slate-700 block">
+                2. Venue Space Availability
+              </label>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setHallPreference('both')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    hallPreference === 'both'
+                      ? 'bg-[#173D35] text-white shadow-xs ring-1 ring-[#C9AA72]'
+                      : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
+                  }`}
+                >
+                  Combined Hall (Full Campus)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setHallPreference('hall_1')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    hallPreference === 'hall_1'
+                      ? 'bg-[#173D35] text-white shadow-xs ring-1 ring-[#C9AA72]'
+                      : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
+                  }`}
+                >
+                  Hall 1 (Gents Wing)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setHallPreference('hall_2')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    hallPreference === 'hall_2'
+                      ? 'bg-[#173D35] text-white shadow-xs ring-1 ring-[#C9AA72]'
+                      : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
+                  }`}
+                >
+                  Hall 2 (Ladies Wing)
+                </button>
+              </div>
+            </div>
+
+            {/* 3. INTERACTIVE MONTH AVAILABILITY CALENDAR */}
+            <div className="bg-[#FAF8F5] rounded-3xl p-4 sm:p-7 border border-[#E2DACB] space-y-5">
+              {/* Calendar Month Header & Controls */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E2DACB] pb-4">
+                <div className="space-y-0.5">
+                  <span className="text-[11px] font-bold uppercase tracking-widest text-[#C9AA72] flex items-center gap-1.5">
+                    <CalendarIcon className="w-3.5 h-3.5" />
+                    Month Availability for {slot === 'day' ? 'Day Session (10 AM – 3 PM)' : 'Evening Session (6 PM – 10 PM)'}
+                  </span>
+                  <h3 className="text-xl sm:text-2xl font-bold text-[#173D35] font-serif-heading">
+                    {monthNames[calendarMonth]} {calendarYear}
+                  </h3>
+                </div>
+
+                {/* Month Navigation Controls */}
+                <div className="flex items-center gap-2 self-start sm:self-auto">
+                  <button
+                    type="button"
+                    onClick={handlePrevMonth}
+                    disabled={!canGoPrev}
+                    className={`p-2 rounded-xl border border-[#E2DACB] transition-colors ${
+                      canGoPrev
+                        ? 'bg-white hover:bg-[#EDE6D8] text-[#252525] cursor-pointer'
+                        : 'bg-slate-100 text-slate-300 border-slate-200 cursor-not-allowed opacity-40'
+                    }`}
+                    aria-label="Previous Month"
+                    title={canGoPrev ? 'Previous Month' : 'Past months cannot be selected'}
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleCurrentMonth}
+                    className="px-3.5 py-2 rounded-xl bg-white hover:bg-[#EDE6D8] text-xs text-[#173D35] border border-[#E2DACB] transition-colors font-bold cursor-pointer shadow-2xs"
+                  >
+                    Current Month
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleNextMonth}
+                    className="p-2 rounded-xl bg-white hover:bg-[#EDE6D8] text-[#252525] border border-[#E2DACB] transition-colors cursor-pointer"
+                    aria-label="Next Month"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Days of week header */}
+              <div className="grid grid-cols-7 gap-1 sm:gap-2 text-center border-b border-[#E2DACB] pb-2">
+                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d, i) => (
+                  <span
+                    key={d}
+                    className={`text-[11px] font-bold uppercase tracking-wider ${
+                      i === 0 ? 'text-[#C9AA72]' : 'text-[#737373]'
+                    }`}
+                  >
+                    {d}
+                  </span>
+                ))}
+              </div>
+
+              {/* Month Days Grid */}
+              <div className="grid grid-cols-7 gap-1.5 sm:gap-2.5">
+                {/* Empty cells before first day */}
+                {Array.from({ length: firstDayIndex }).map((_, i) => (
+                  <div key={`blank-${i}`} className="min-h-[56px] sm:min-h-[72px] rounded-2xl bg-white/40 border border-transparent" />
+                ))}
+
+                {/* Day cells */}
+                {Array.from({ length: daysInMonth }).map((_, i) => {
+                  const day = i + 1;
+                  const dateStr = formatDateKey(calendarYear, calendarMonth, day);
+                  const isPast = dateStr < todayStr;
+                  const isToday = dateStr === todayStr;
+                  const isSelected = date === dateStr && !isPast;
+
+                  const isBooked = isSlotOccupiedByBooking(hallPreference, dateStr, slot);
+                  const isBlocked =
+                    isSlotBlockedByManager(hallPreference, dateStr, slot) ||
+                    !isSlotAvailable(hallPreference, dateStr, slot);
+                  const isAvailable = !isPast && !isBooked && !isBlocked;
+
+                  let cellBg = 'bg-white border-[#E2DACB] text-[#252525]';
+                  let statusBadge = 'Available';
+                  let statusColor = 'text-emerald-700';
+                  let dotColor = 'bg-emerald-500';
+
+                  if (isPast) {
+                    cellBg = 'bg-slate-100/70 border-slate-200/60 text-slate-300 cursor-not-allowed opacity-40 select-none';
+                    statusBadge = 'Past';
+                    statusColor = 'text-slate-400';
+                    dotColor = 'bg-slate-300';
+                  } else if (isSelected) {
+                    cellBg = 'bg-[#173D35] border-[#173D35] text-white shadow-md ring-2 ring-[#C9AA72] cursor-pointer';
+                    statusBadge = 'Selected';
+                    statusColor = 'text-[#D9C194]';
+                    dotColor = 'bg-[#C9AA72]';
+                  } else if (isBooked) {
+                    cellBg = 'bg-rose-50/90 border-rose-300 text-rose-800 cursor-not-allowed shadow-none';
+                    statusBadge = 'Booked';
+                    statusColor = 'text-rose-700';
+                    dotColor = 'bg-rose-500';
+                  } else if (isBlocked) {
+                    cellBg = 'bg-blue-50/90 border-blue-300 text-blue-900 cursor-not-allowed shadow-none';
+                    statusBadge = 'Blocked';
+                    statusColor = 'text-blue-700';
+                    dotColor = 'bg-blue-600';
+                  } else {
+                    // Available
+                    cellBg = 'bg-emerald-50/70 border-emerald-300 hover:border-emerald-500 hover:bg-emerald-100/90 text-emerald-950 cursor-pointer shadow-xs';
+                    statusBadge = 'Available';
+                    statusColor = 'text-emerald-700';
+                    dotColor = 'bg-emerald-500';
+                  }
+
+                  return (
+                    <button
+                      key={dateStr}
+                      type="button"
+                      disabled={isPast || isBooked || isBlocked}
+                      onClick={() => handleDateClick(dateStr)}
+                      className={`min-h-[56px] sm:min-h-[72px] p-1.5 sm:p-2.5 rounded-2xl text-left transition-all relative flex flex-col justify-between items-stretch border ${cellBg}`}
+                      title={
+                        isPast
+                          ? 'Past Date (Disabled)'
+                          : isBooked
+                          ? `Booked for ${slot === 'day' ? 'Day (Morning)' : 'Evening'} Session (Disabled)`
+                          : isBlocked
+                          ? `Blocked (Hold / Maintenance) for ${slot === 'day' ? 'Day (Morning)' : 'Evening'} Session (Disabled)`
+                          : `Available for ${slot === 'day' ? 'Day (Morning)' : 'Evening'} Session (Click to Select)`
+                      }
+                    >
+                      {/* Top row: day number & today / selected badge */}
+                      <div className="flex items-center justify-between w-full">
+                        <span
+                          className={`text-xs sm:text-sm font-bold leading-none ${
+                            isSelected
+                              ? 'text-white'
+                              : isPast
+                              ? 'text-slate-400 font-normal'
+                              : isBooked
+                              ? 'text-rose-900'
+                              : isBlocked
+                              ? 'text-blue-900'
+                              : 'text-emerald-950'
+                          }`}
+                        >
+                          {day}
+                        </span>
+                        {isToday && !isSelected && (
+                          <span className="text-[9px] font-bold text-[#173D35] bg-[#C9AA72]/20 border border-[#C9AA72] px-1 py-0.2 rounded">
+                            Today
+                          </span>
+                        )}
+                        {isSelected && (
+                          <span className="text-[9px] font-bold text-[#173D35] bg-[#C9AA72] px-1.5 py-0.2 rounded-full">
+                            ✓
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Bottom row: session dot + status label */}
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <span className={`w-2 h-2 rounded-full shrink-0 ${dotColor}`} />
+                        <span
+                          className={`text-[9.5px] sm:text-[10.5px] font-bold truncate leading-tight ${
+                            isSelected ? 'text-white/90' : statusColor
+                          }`}
+                        >
+                          {statusBadge}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Color Legend */}
+              <div className="pt-4 border-t border-[#E2DACB] flex flex-wrap items-center justify-between gap-4 text-xs">
+                <div className="flex flex-wrap items-center gap-3 sm:gap-5 text-[11px] sm:text-xs">
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
+                    <span className="font-semibold text-emerald-950">Available (Selectable)</span>
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-blue-600 shrink-0" />
+                    <span className="font-semibold text-blue-900">Blocked (Hold / Maintenance)</span>
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0" />
+                    <span className="font-semibold text-rose-900">Booked (Reserved)</span>
+                  </span>
+                  <span className="flex items-center gap-1.5 opacity-50">
+                    <span className="w-2.5 h-2.5 rounded-full bg-slate-300 shrink-0" />
+                    <span className="text-slate-600">Past (Disabled)</span>
+                  </span>
+                </div>
+                <span className="text-[10px] sm:text-[11px] text-[#737373]">
+                  Live slot status:{' '}
+                  <strong className="text-[#173D35]">
+                    {slot === 'day' ? 'Day (Morning) Session' : 'Evening Session'}
+                  </strong>
+                </span>
+              </div>
+            </div>
+
+            {/* Selected Date Confirmation Banner */}
+            {date && !conflictReason && date >= todayStr && (
+              <div className="p-4 sm:p-5 rounded-2xl bg-[#F5F1E8] border border-[#C9AA72] flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-[#173D35] text-[#D9C194] flex items-center justify-center shrink-0 shadow-xs">
+                    <CheckCircle2 className="w-5 h-5 text-[#C9AA72]" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-[#C9AA72] block">
+                      Confirmed Selection
+                    </span>
+                    <strong className="text-sm sm:text-base font-bold text-[#173D35] block">
+                      {new Date(date + 'T00:00:00').toLocaleDateString('en-IN', {
+                        weekday: 'long',
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric',
+                      })}
+                    </strong>
+                    <p className="text-xs text-[#4A4A4A]">
+                      {slot === 'day' ? 'Day Session (10:00 AM – 3:00 PM)' : 'Evening Session (6:00 PM – 10:00 PM)'} &bull;{' '}
+                      {hallPreference === 'both'
+                        ? 'Combined Hall (Full Campus)'
+                        : hallPreference === 'hall_1'
+                        ? 'Hall 1 (Gents Wing)'
+                        : 'Hall 2 (Ladies Wing)'}
+                    </p>
+                  </div>
+                </div>
+                <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold self-start sm:self-auto border border-emerald-300">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  Available for Booking
+                </span>
+              </div>
+            )}
+
+            {/* Conflict Warning */}
+            {conflictReason && (
+              <div className="p-4 sm:p-5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+                <div>
+                  <strong className="font-bold text-sm block">Selected Slot is Occupied / Unavailable</strong>
+                  <p className="text-xs text-rose-700 mt-0.5">{conflictReason}</p>
+                  <p className="text-xs text-rose-600 font-semibold mt-1">
+                    Please click an open (green) date from the calendar above, or switch session slots.
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Past Date Warning */}
             {date < todayStr && (
@@ -498,31 +1073,18 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
                 <AlertCircle className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
                 <div>
                   <strong className="block font-bold">Past Date Selected:</strong>
-                  <p>Reservations cannot be made for past dates. Please pick today ({todayStr}) or an upcoming event date.</p>
+                  <p>Reservations cannot be made for past dates. Please pick today ({todayStr}) or an upcoming green date on the calendar.</p>
                 </div>
               </div>
             )}
 
-            {/* Live Conflict Warning */}
-            {conflictReason && (
-              <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
-                <div>
-                  <strong className="block font-bold">Session Slot Occupied:</strong>
-                  <p>{conflictReason}</p>
-                  <p className="text-[11px] text-rose-700 mt-1">
-                    Please choose another session slot or an alternate date.
-                  </p>
-                </div>
-              </div>
-            )}
-
+            {/* Step 1 Actions */}
             <div className="flex justify-end pt-4 border-t border-slate-100">
               <Button
                 onClick={handleNextStep}
                 variant="gold"
                 size="md"
-                disabled={!!conflictReason || date < todayStr}
+                disabled={!!conflictReason || date < todayStr || !date}
                 rightIcon={<ArrowRight className="w-4 h-4" />}
                 className="w-full sm:w-auto justify-center"
               >
@@ -1123,6 +1685,60 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
               >
                 Track Booking Status
               </Button>
+            </div>
+          </div>
+        )}
+
+        {/* MASTER SCHEDULE MODAL */}
+        {isMasterModalOpen && (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+            <div className="bg-white rounded-3xl max-w-4xl w-full p-4 sm:p-6 border border-[#E2DACB] shadow-2xl space-y-4 my-auto animate-in fade-in zoom-in-95 max-h-[92vh] overflow-y-auto">
+              <div className="flex items-center justify-between pb-3 border-b border-[#E2DACB]">
+                <div className="space-y-0.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#C9AA72]">
+                    Master Venue Schedule
+                  </span>
+                  <h3 className="text-lg sm:text-xl font-bold text-[#173D35] font-serif-heading">
+                    Full Venue &amp; Session Inspector
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsMasterModalOpen(false)}
+                  className="p-2 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
+                  aria-label="Close"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <AvailabilityCalendar
+                selectedDate={date}
+                initialHall={hallPreference}
+                onSelectDate={(newDate) => {
+                  setDate(newDate);
+                }}
+                onBookSlot={(h, d, s) => {
+                  setDate(d);
+                  setSlot(s);
+                  setHallPreference(h);
+                  setIsMasterModalOpen(false);
+                  showToast(
+                    `Selected ${d} for ${s === 'day' ? 'Day' : 'Evening'} Session`,
+                    'success'
+                  );
+                }}
+              />
+
+              <div className="flex justify-end pt-2 border-t border-[#E2DACB]">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsMasterModalOpen(false)}
+                >
+                  Close Schedule
+                </Button>
+              </div>
             </div>
           </div>
         )}
