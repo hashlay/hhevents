@@ -287,6 +287,10 @@ export interface AvailabilityBlackout {
   reason: string;
   blockedBy: string;
   createdAt: string;
+  blockType?: 'customer_hold' | 'maintenance' | 'manager_hold';
+  customerName?: string;
+  customerPhone?: string;
+  notes?: string;
 }
 
 export interface MaintenanceBlock {

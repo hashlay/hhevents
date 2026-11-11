@@ -18,6 +18,7 @@ import {
   isSlotAvailable,
   getDayAvailabilitySummary,
   subscribeAvailability,
+  isSlotBlockedByManager,
 } from '../../services/availabilityManager';
 import { getBookings, syncBookingsFromServer } from '../../services/storageService';
 import { BookingRequest } from '../../types';
@@ -432,14 +433,22 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
             const isSelected = selectedDate === dateStr && !isPastDate;
             const isToday = todayStr === dateStr;
 
-            const daySlotOpen = isPastDate ? false : isSlotAvailable(activeHall, dateStr, 'day') && !isSlotOccupiedByBooking(activeHall, dateStr, 'day');
-            const eveSlotOpen = isPastDate ? false : isSlotAvailable(activeHall, dateStr, 'evening') && !isSlotOccupiedByBooking(activeHall, dateStr, 'evening');
+            const isDayBooked = isSlotOccupiedByBooking(activeHall, dateStr, 'day');
+            const isDayManagerBlocked = isSlotBlockedByManager(activeHall, dateStr, 'day');
+            const daySlotOpen = isPastDate ? false : isSlotAvailable(activeHall, dateStr, 'day') && !isDayBooked;
+
+            const isEveBooked = isSlotOccupiedByBooking(activeHall, dateStr, 'evening');
+            const isEveManagerBlocked = isSlotBlockedByManager(activeHall, dateStr, 'evening');
+            const eveSlotOpen = isPastDate ? false : isSlotAvailable(activeHall, dateStr, 'evening') && !isEveBooked;
+
+            const isBothBlockedByManager = (isDayManagerBlocked || !daySlotOpen) && (isEveManagerBlocked || !eveSlotOpen) && !isDayBooked && !isEveBooked;
+
             const summary = isPastDate
               ? 'past'
               : daySlotOpen && eveSlotOpen
               ? 'available'
               : !daySlotOpen && !eveSlotOpen
-              ? 'unavailable'
+              ? (isBothBlockedByManager ? 'blocked' : 'unavailable')
               : 'partial';
 
             return (
@@ -453,6 +462,8 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
                     ? 'bg-slate-100/70 border-slate-200/60 text-slate-300 cursor-not-allowed opacity-40 select-none shadow-none'
                     : isSelected
                     ? 'bg-[#F5F1E8] border-[#C9AA72] shadow-sm ring-2 ring-[#C9AA72]/60 cursor-pointer'
+                    : summary === 'blocked'
+                    ? 'bg-blue-50/50 border-blue-200 hover:border-blue-300 cursor-pointer'
                     : summary === 'unavailable'
                     ? 'bg-rose-50/50 border-rose-200 hover:border-rose-300 cursor-pointer'
                     : summary === 'partial'
@@ -462,6 +473,8 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
                 aria-label={`${dateStr}: ${
                   isPastDate
                     ? 'Past Date (Disabled)'
+                    : summary === 'blocked'
+                    ? 'Blocked (Hold / Maintenance)'
                     : summary === 'unavailable'
                     ? 'Booked'
                     : summary === 'partial'
@@ -477,6 +490,8 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
                         ? 'text-slate-400 font-normal'
                         : isSelected
                         ? 'text-[#173D35] font-bold'
+                        : summary === 'blocked'
+                        ? 'text-blue-700'
                         : summary === 'unavailable'
                         ? 'text-rose-700'
                         : 'text-[#252525]'
@@ -502,16 +517,22 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
                   </div>
                 ) : (
                   <div className="flex items-center gap-1 my-0.5">
+                    {/* Day Dot: Green (open), Blue (manager/hold blocked), Red (customer booked) */}
                     <span
-                      title={`Day Session (10 AM–3 PM): ${daySlotOpen ? 'Available' : 'Unavailable'}`}
+                      title={`Day Session (10 AM–3 PM): ${
+                        daySlotOpen ? 'Available' : isDayBooked ? 'Booked' : 'Blocked (Hold/Maintenance)'
+                      }`}
                       className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full shrink-0 ${
-                        daySlotOpen ? 'bg-emerald-500' : 'bg-rose-500'
+                        daySlotOpen ? 'bg-emerald-500' : isDayBooked ? 'bg-rose-500' : 'bg-blue-600'
                       }`}
                     />
+                    {/* Evening Dot: Green (open), Blue (manager/hold blocked), Red (customer booked) */}
                     <span
-                      title={`Evening Session (6 PM–10 PM): ${eveSlotOpen ? 'Available' : 'Unavailable'}`}
+                      title={`Evening Session (6 PM–10 PM): ${
+                        eveSlotOpen ? 'Available' : isEveBooked ? 'Booked' : 'Blocked (Hold/Maintenance)'
+                      }`}
                       className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full shrink-0 ${
-                        eveSlotOpen ? 'bg-emerald-500' : 'bg-rose-500'
+                        eveSlotOpen ? 'bg-emerald-500' : isEveBooked ? 'bg-rose-500' : 'bg-blue-600'
                       }`}
                     />
                   </div>
@@ -527,25 +548,35 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
                   <>
                     <span
                       className={`text-[9px] font-bold leading-tight truncate max-w-full hidden sm:block ${
-                        summary === 'unavailable'
+                        summary === 'blocked'
+                          ? 'text-blue-700'
+                          : summary === 'unavailable'
                           ? 'text-rose-700'
                           : summary === 'partial'
                           ? 'text-amber-700'
                           : 'text-emerald-700'
                       }`}
                     >
-                      {summary === 'unavailable' ? 'Booked' : summary === 'partial' ? '1 Open' : 'Open'}
+                      {summary === 'blocked'
+                        ? 'Blocked'
+                        : summary === 'unavailable'
+                        ? 'Booked'
+                        : summary === 'partial'
+                        ? '1 Open'
+                        : 'Open'}
                     </span>
                     <span
                       className={`sm:hidden text-[8px] font-bold leading-none ${
-                        summary === 'unavailable'
+                        summary === 'blocked'
+                          ? 'text-blue-700'
+                          : summary === 'unavailable'
                           ? 'text-rose-700'
                           : summary === 'partial'
                           ? 'text-amber-700'
                           : 'text-emerald-700'
                       }`}
                     >
-                      {summary === 'unavailable' ? '✕' : summary === 'partial' ? '½' : '✓'}
+                      {summary === 'blocked' ? '■' : summary === 'unavailable' ? '✕' : summary === 'partial' ? '½' : '✓'}
                     </span>
                   </>
                 )}
@@ -562,8 +593,8 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
               <span>Available</span>
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-              <span>1 Session Open</span>
+              <span className="w-2.5 h-2.5 rounded-full bg-blue-600" />
+              <span>Blocked (Hold / Maintenance)</span>
             </span>
             <span className="flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />

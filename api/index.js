@@ -848,7 +848,16 @@ apiRouter.get("/availability", async (req, res) => {
   });
 });
 apiRouter.post("/availability/blackout", requireAdminAuth, async (req, res) => {
-  const { date, slot, resources, reason } = req.body;
+  const {
+    date,
+    slot,
+    resources,
+    reason,
+    blockType,
+    customerName,
+    customerPhone,
+    notes
+  } = req.body;
   if (!date || !slot) {
     return res.status(400).json({ error: "Date and slot are required" });
   }
@@ -859,14 +868,104 @@ apiRouter.post("/availability/blackout", requireAdminAuth, async (req, res) => {
     date,
     slot: slot || "full_day",
     resources: resources || ["all"],
-    reason: reason || "Manager unavailable date blackout",
+    reason: reason || notes || "Manager unavailable date blackout",
+    blockType: blockType || "maintenance",
+    // 'customer_hold' | 'maintenance' | 'manager_hold'
+    customerName: customerName || "",
+    customerPhone: customerPhone || "",
+    notes: notes || reason || "",
     blockedBy: admin.email,
     createdAt: (/* @__PURE__ */ new Date()).toISOString()
   };
   db.availabilityBlackouts.push(newBlock);
   await persistDb();
-  await logAudit("BLACKOUT_ADDED", admin.email, "availability", date, `Blocked ${date} (${slot}): ${reason}`);
+  await logAudit(
+    "BLACKOUT_ADDED",
+    admin.email,
+    "availability",
+    date,
+    `Blocked ${date} (${slot}): [${blockType || "hold"}] ${reason || notes || ""} ${customerName ? `for ${customerName} (${customerPhone})` : ""}`
+  );
   res.json({ success: true, blackout: newBlock });
+});
+apiRouter.post("/availability/release", requireAdminAuth, async (req, res) => {
+  const { date, slot, hall, deleteBookings } = req.body;
+  if (!date || !slot) {
+    return res.status(400).json({ error: "Date and slot are required to release." });
+  }
+  const db = await getDb(true);
+  const admin = req.adminSession;
+  const targetHall = hall || "both";
+  const slotLower = String(slot).toLowerCase();
+  const initialBlackoutsCount = (db.availabilityBlackouts || []).length;
+  db.availabilityBlackouts = (db.availabilityBlackouts || []).filter((b) => {
+    if (b.date !== date) return true;
+    const slotMatch = b.slot === "full_day" || slotLower === "full_day" || b.slot === slotLower;
+    if (!slotMatch) return true;
+    if (targetHall === "both") return false;
+    const isHall1 = b.resources.includes("all") || b.resources.includes("gents_hall");
+    const isHall2 = b.resources.includes("all") || b.resources.includes("ladies_hall");
+    if (targetHall === "hall_1" && isHall1) return false;
+    if (targetHall === "hall_2" && isHall2) return false;
+    return true;
+  });
+  const removedBlackouts = initialBlackoutsCount - db.availabilityBlackouts.length;
+  let deletedBookingsCount = 0;
+  if (deleteBookings !== false) {
+    const toDeleteIds = [];
+    db.bookings = (db.bookings || []).filter((b) => {
+      const isDate = b.date === date;
+      if (!isDate) return true;
+      const slotMatch = b.slot === slotLower || slotLower === "full_day";
+      if (!slotMatch) return true;
+      if (b.status === "CANCELLED" || b.status === "REJECTED") return true;
+      let matchesHall = false;
+      if (targetHall === "both") {
+        matchesHall = true;
+      } else {
+        const bHall = b.hallSelection || b.hall || "both";
+        matchesHall = bHall === "both" || bHall === targetHall;
+      }
+      if (matchesHall) {
+        toDeleteIds.push((b.id || "").trim().toLowerCase());
+        deletedBookingsCount++;
+        return false;
+      }
+      return true;
+    });
+    if (toDeleteIds.length > 0 && Array.isArray(db.payments)) {
+      db.payments = db.payments.filter((p) => !toDeleteIds.includes((p.bookingId || "").trim().toLowerCase()));
+    }
+    if (toDeleteIds.length > 0 && Array.isArray(db.coupons)) {
+      for (const c of db.coupons) {
+        if (c.usedBy && Array.isArray(c.usedBy)) {
+          const prevCount = c.usedBy.length;
+          c.usedBy = c.usedBy.filter(
+            (u) => !toDeleteIds.includes((u.bookingId || "").trim().toLowerCase()) && !toDeleteIds.includes((u.referenceNo || "").trim().toLowerCase())
+          );
+          if (c.usedBy.length < prevCount) {
+            c.usedCount = Math.max(0, (c.usedCount || 0) - (prevCount - c.usedBy.length));
+          }
+        }
+      }
+    }
+  }
+  await persistDb();
+  await logAudit(
+    "SLOT_RELEASED",
+    admin.email,
+    "availability",
+    date,
+    `Released ${date} (${slotLower}) for ${targetHall}. Removed ${removedBlackouts} blackouts, permanently deleted ${deletedBookingsCount} bookings.`
+  );
+  res.json({
+    success: true,
+    date,
+    slot: slotLower,
+    hall: targetHall,
+    removedBlackouts,
+    deletedBookingsCount
+  });
 });
 apiRouter.delete("/availability/blackout/:id", requireAdminAuth, async (req, res) => {
   const { id } = req.params;

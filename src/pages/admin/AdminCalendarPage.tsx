@@ -41,6 +41,12 @@ import {
   resetDateToDefault,
   subscribeAvailability,
   syncAvailabilityFromServer,
+  getSlotBlackout,
+  isSlotBlockedByManager,
+  blockSlotWithDetails,
+  releaseSlotAvailability,
+  releaseFullDayAvailability,
+  BlackoutEntry,
 } from '../../services/availabilityManager';
 import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../context/AuthContext';
@@ -110,6 +116,18 @@ export const AdminCalendarPage: React.FC<AdminCalendarPageProps> = ({ navigate }
   });
 
   const [whatsAppBooking, setWhatsAppBooking] = useState<BookingRequest | null>(null);
+
+  // Block Slot with Details Modal State
+  const [isBlockModalOpen, setIsBlockModalOpen] = useState(false);
+  const [blockSlotTarget, setBlockSlotTarget] = useState<SlotTarget | 'full_day'>('day');
+  const [blockForm, setBlockForm] = useState({
+    blockType: 'customer_hold' as 'customer_hold' | 'maintenance' | 'manager_hold',
+    customerName: '',
+    customerPhone: '',
+    notes: '',
+  });
+  const [isSavingBlock, setIsSavingBlock] = useState(false);
+  const [isReleasingSlot, setIsReleasingSlot] = useState(false);
 
   const getWhatsAppConfirmationMessage = (b: BookingRequest) => {
     const bObj = b as any;
@@ -293,43 +311,95 @@ Ph:9448151878`;
     }
   };
 
-  // 1-Tap Toggle Slot Availability
-  const handleToggleSlot = (slot: SlotTarget) => {
-    const currentOpen = isSlotAvailable(selectedHall, selectedDate, slot);
-    const newTarget = !currentOpen;
-    setSlotAvailability(
-      selectedHall,
-      selectedDate,
-      slot,
-      newTarget,
-      newTarget ? 'Made Available by Manager' : 'Blocked by Manager'
-    );
-    showToast(
-      newTarget
-        ? `${slot === 'day' ? 'Day Session' : 'Evening Session'} is now OPEN for ${getHallTitle(selectedHall)}`
-        : `${slot === 'day' ? 'Day Session' : 'Evening Session'} is now BLOCKED for ${getHallTitle(selectedHall)}`,
-      newTarget ? 'success' : 'info'
-    );
+  // Open Dialog to block slot with detailed reason/customer hold
+  const openBlockModal = (slot: SlotTarget | 'full_day') => {
+    setBlockSlotTarget(slot);
+    setBlockForm({
+      blockType: 'customer_hold',
+      customerName: '',
+      customerPhone: '',
+      notes: '',
+    });
+    setIsBlockModalOpen(true);
+  };
+
+  const handleConfirmBlockSlot = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingBlock(true);
+    try {
+      await blockSlotWithDetails({
+        hall: selectedHall,
+        date: selectedDate,
+        slot: blockSlotTarget,
+        blockType: blockForm.blockType,
+        customerName: blockForm.customerName.trim(),
+        customerPhone: blockForm.customerPhone.trim(),
+        notes: blockForm.notes.trim(),
+        reason:
+          blockForm.notes.trim() ||
+          (blockForm.blockType === 'customer_hold'
+            ? `Customer Hold: ${blockForm.customerName}`
+            : blockForm.blockType === 'maintenance'
+            ? 'Venue Maintenance'
+            : 'Manager Administrative Hold'),
+      });
+
+      showToast(
+        `${blockSlotTarget === 'full_day' ? 'Full Day' : blockSlotTarget.toUpperCase() + ' Session'} on ${selectedDate} is now BLOCKED (${blockForm.blockType === 'customer_hold' ? 'Customer Hold' : blockForm.blockType === 'maintenance' ? 'Maintenance' : 'Manager Hold'}).`,
+        'success'
+      );
+      setIsBlockModalOpen(false);
+    } catch (err: any) {
+      showToast(err.message || 'Failed to block slot on server.', 'error');
+    } finally {
+      setIsSavingBlock(false);
+    }
+  };
+
+  // Permanently make slot available & free up slot (cleans server blackouts AND deletes bookings from database)
+  const handleMakeSlotAvailable = async (slot: SlotTarget) => {
+    setIsReleasingSlot(true);
+    try {
+      const result = await releaseSlotAvailability(selectedHall, selectedDate, slot, true);
+      const fresh = await syncBookingsFromServer();
+      setBookings(fresh);
+      showToast(
+        `${slot === 'day' ? 'Day Session' : 'Evening Session'} on ${selectedDate} is now completely FREE and Available!${result.deletedBookingsCount > 0 ? ` (${result.deletedBookingsCount} booking removed from database)` : ''}`,
+        'success'
+      );
+    } catch (err: any) {
+      showToast(err.message || 'Failed to make slot available on server.', 'error');
+    } finally {
+      setIsReleasingSlot(false);
+    }
   };
 
   // Full day open/block actions
-  const handleSetFullDay = (makeAvailable: boolean) => {
-    setDayAvailability(
-      selectedHall,
-      selectedDate,
-      makeAvailable,
-      makeAvailable ? 'Full Day Opened by Manager' : 'Full Day Blocked by Manager'
-    );
-    showToast(
-      makeAvailable
-        ? `Full Day opened for ${getHallTitle(selectedHall)} on ${selectedDate}`
-        : `Full Day blocked for ${getHallTitle(selectedHall)} on ${selectedDate}`,
-      makeAvailable ? 'success' : 'info'
-    );
+  const handleReleaseFullDay = async (makeAvailable: boolean) => {
+    if (!makeAvailable) {
+      openBlockModal('full_day');
+      return;
+    }
+
+    setIsReleasingSlot(true);
+    try {
+      const result = await releaseFullDayAvailability(selectedHall, selectedDate, true);
+      const fresh = await syncBookingsFromServer();
+      setBookings(fresh);
+      showToast(
+        `Full Day on ${selectedDate} is now completely FREE and Available!${result.deletedBookingsCount > 0 ? ` (${result.deletedBookingsCount} bookings removed from database)` : ''}`,
+        'success'
+      );
+    } catch (err: any) {
+      showToast(err.message || 'Failed to release full day.', 'error');
+    } finally {
+      setIsReleasingSlot(false);
+    }
   };
 
   // Reset overrides back to system default
-  const handleResetDate = () => {
+  const handleResetDate = async () => {
+    await releaseFullDayAvailability('both', selectedDate, false).catch(() => {});
     resetDateToDefault(selectedDate);
     showToast(`Reset ${selectedDate} overrides back to default open state.`, 'info');
   };
@@ -583,250 +653,374 @@ Ph:9448151878`;
             </div>
 
             {/* Session 1: Day Session (10 AM - 3 PM) */}
-            <div className="p-4 rounded-xl border border-slate-200 bg-[#FAF8F5] space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-[#173D35]" />
-                  <span className="text-xs font-bold text-slate-900 uppercase tracking-wide">
-                    Day Session (10 AM – 3 PM)
-                  </span>
-                </div>
-                {dayBooking ? (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-rose-100 text-rose-800 border border-rose-200">
-                    RESERVED
-                  </span>
-                ) : isDayAvailable ? (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
-                    AVAILABLE
-                  </span>
-                ) : (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-600" />
-                    BLOCKED
-                  </span>
-                )}
-              </div>
+            {(() => {
+              const dayBlackout = getSlotBlackout(selectedHall, selectedDate, 'day');
 
-              {/* Day Booking Details if present */}
-              {dayBooking ? (
-                <div className="p-3 bg-white rounded-lg border border-slate-200 text-xs space-y-2">
+              return (
+                <div className="p-4 rounded-xl border border-slate-200 bg-[#FAF8F5] space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="font-mono font-bold text-slate-800">{dayBooking.id}</span>
-                    <BookingStatusBadge status={dayBooking.status} />
-                  </div>
-                  <div>
-                    <h5 className="font-bold text-slate-900 text-sm">
-                      {dayBooking.customerName || dayBooking.applicantName}
-                    </h5>
-                    <p className="text-[11px] text-slate-600 mt-0.5">
-                      {dayBooking.additionalInfo || dayBooking.eventTitle || 'Day Session Event'}
-                    </p>
-                  </div>
-                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      {dayBooking.phone && (
-                        <>
+                      <Clock className="w-4 h-4 text-[#173D35]" />
+                      <span className="text-xs font-bold text-slate-900 uppercase tracking-wide">
+                        Day Session (10 AM – 3 PM)
+                      </span>
+                    </div>
+                    {dayBooking ? (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-rose-100 text-rose-800 border border-rose-200">
+                        RESERVED
+                      </span>
+                    ) : dayBlackout ? (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-900 border border-blue-200 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+                        {dayBlackout.blockType === 'customer_hold'
+                          ? 'CUSTOMER HOLD'
+                          : dayBlackout.blockType === 'maintenance'
+                          ? 'MAINTENANCE'
+                          : 'BLOCKED'}
+                      </span>
+                    ) : isDayAvailable ? (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+                        AVAILABLE
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-900 border border-blue-200 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+                        BLOCKED
+                      </span>
+                    )}
+                  </div>
+
+                  {/* 1. Confirmed / Pending Booking View (Red) */}
+                  {dayBooking ? (
+                    <div className="p-3 bg-white rounded-lg border border-slate-200 text-xs space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono font-bold text-slate-800">{dayBooking.id}</span>
+                        <BookingStatusBadge status={dayBooking.status} />
+                      </div>
+                      <div>
+                        <h5 className="font-bold text-slate-900 text-sm">
+                          {dayBooking.customerName || dayBooking.applicantName}
+                        </h5>
+                        <p className="text-[11px] text-slate-600 mt-0.5">
+                          {dayBooking.additionalInfo || dayBooking.eventTitle || 'Day Session Event'}
+                        </p>
+                      </div>
+                      <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          {dayBooking.phone && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => setWhatsAppBooking(dayBooking)}
+                                className="p-1.5 rounded-md bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 cursor-pointer shadow-2xs"
+                                title="Share Event Order via WhatsApp"
+                              >
+                                <MessageSquare className="w-3.5 h-3.5" />
+                              </button>
+                              <a
+                                href={`tel:${dayBooking.phone}`}
+                                className="p-1.5 rounded-md bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200"
+                                title="Call Customer"
+                              >
+                                <Phone className="w-3.5 h-3.5" />
+                              </a>
+                            </>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {dayBooking.status === 'PENDING' && (
+                            <Button
+                              variant="gold"
+                              size="sm"
+                              className="text-xs font-bold py-1 px-2.5 shadow-2xs"
+                              onClick={() => handleApproveBooking(dayBooking.id)}
+                            >
+                              Approve Request
+                            </Button>
+                          )}
                           <button
                             type="button"
-                            onClick={() => setWhatsAppBooking(dayBooking)}
-                            className="p-1.5 rounded-md bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 cursor-pointer shadow-2xs"
-                            title="Share Event Order via WhatsApp"
+                            onClick={() => handleMakeSlotAvailable('day')}
+                            disabled={isReleasingSlot}
+                            className="text-[11px] font-bold text-rose-600 hover:text-rose-800 hover:underline cursor-pointer"
+                            title="Cancel booking and completely delete from database"
                           >
-                            <MessageSquare className="w-3.5 h-3.5" />
+                            {isReleasingSlot ? 'Freeing...' : 'Cancel & Free Slot'}
                           </button>
-                          <a
-                            href={`tel:${dayBooking.phone}`}
-                            className="p-1.5 rounded-md bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200"
-                            title="Call Customer"
-                          >
-                            <Phone className="w-3.5 h-3.5" />
-                          </a>
-                        </>
-                      )}
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {dayBooking.status === 'PENDING' && (
-                        <Button
-                          variant="gold"
-                          size="sm"
-                          className="text-xs font-bold py-1 px-2.5 shadow-2xs"
-                          onClick={() => handleApproveBooking(dayBooking.id)}
-                        >
-                          Approve Request
-                        </Button>
+                  ) : dayBlackout ? (
+                    /* 2. Manager / Customer Hold Blackout View (Blue Theme) */
+                    <div className="p-3 bg-blue-50/70 rounded-lg border border-blue-200 text-xs space-y-2 text-blue-950">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold uppercase tracking-wider text-[10px] bg-blue-100 text-blue-900 px-2 py-0.5 rounded-full border border-blue-200">
+                          {dayBlackout.blockType === 'customer_hold'
+                            ? 'Customer Hold'
+                            : dayBlackout.blockType === 'maintenance'
+                            ? 'Venue Maintenance'
+                            : 'Manager Administrative Hold'}
+                        </span>
+                        <span className="text-[10px] text-blue-600 font-mono">
+                          {dayBlackout.createdAt ? new Date(dayBlackout.createdAt).toLocaleDateString('en-IN') : ''}
+                        </span>
+                      </div>
+
+                      {dayBlackout.customerName && (
+                        <div>
+                          <span className="text-[10px] text-blue-700 font-semibold uppercase block">Customer Details</span>
+                          <div className="font-bold text-sm text-blue-950">{dayBlackout.customerName}</div>
+                          {dayBlackout.customerPhone && (
+                            <div className="text-xs font-mono text-blue-800 flex items-center gap-1 mt-0.5">
+                              <Phone className="w-3 h-3 text-blue-600" />
+                              <a href={`tel:${dayBlackout.customerPhone}`} className="hover:underline">
+                                {dayBlackout.customerPhone}
+                              </a>
+                            </div>
+                          )}
+                        </div>
                       )}
+
+                      {(dayBlackout.notes || dayBlackout.reason) && (
+                        <div>
+                          <span className="text-[10px] text-blue-700 font-semibold uppercase block">Reason / Details</span>
+                          <p className="text-[11.5px] text-blue-950 bg-white/80 p-2 rounded-lg border border-blue-100 leading-relaxed">
+                            {dayBlackout.notes || dayBlackout.reason}
+                          </p>
+                        </div>
+                      )}
+
+                      {dayBlackout.blockedBy && (
+                        <div className="text-[10px] text-blue-600">
+                          Blocked by: <strong>{dayBlackout.blockedBy}</strong>
+                        </div>
+                      )}
+
+                      <div className="pt-2 border-t border-blue-200/60 flex items-center justify-between">
+                        <span className="text-[11px] text-blue-800 italic">Not available for public</span>
+                        <button
+                          type="button"
+                          onClick={() => handleMakeSlotAvailable('day')}
+                          disabled={isReleasingSlot}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white transition-colors cursor-pointer shadow-xs"
+                        >
+                          <Unlock className="w-3.5 h-3.5" />
+                          <span>{isReleasingSlot ? 'Freeing...' : 'Make Available'}</span>
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    /* 3. Available State: Block Slot (with details) & Book */
+                    <div className="flex items-center gap-2 pt-1">
                       <button
                         type="button"
-                        onClick={() => handleCancelBooking(dayBooking.id)}
-                        className="text-[11px] font-bold text-rose-600 hover:text-rose-800 hover:underline"
+                        onClick={() => openBlockModal('day')}
+                        className="flex-1 py-2 px-3 rounded-lg text-xs font-bold border transition-all flex items-center justify-center gap-1.5 bg-white hover:bg-blue-50 text-blue-700 border-blue-200 shadow-2xs cursor-pointer"
+                        title="Block slot with customer hold or maintenance details"
                       >
-                        Cancel & Free Slot
+                        <Lock className="w-3.5 h-3.5 text-blue-600" />
+                        <span>Block Slot</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => openQuickBook('day')}
+                        className="py-2 px-3 rounded-lg text-xs font-bold bg-[#F5F1E8] hover:bg-[#EDE6D8] text-[#173D35] border border-[#E2DACB] transition-all flex items-center gap-1 shadow-2xs cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Book</span>
                       </button>
                     </div>
-                  </div>
-                </div>
-              ) : (
-                /* No booking: 1-Tap Toggle and Quick Reserve */
-                <div className="flex items-center gap-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => handleToggleSlot('day')}
-                    className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold border transition-all flex items-center justify-center gap-1.5 ${
-                      isDayAvailable
-                        ? 'bg-white hover:bg-rose-50 text-rose-700 border-rose-200 shadow-2xs'
-                        : 'bg-[#173D35] hover:bg-[#123028] text-white border-[#173D35] shadow-xs'
-                    }`}
-                  >
-                    {isDayAvailable ? (
-                      <>
-                        <Lock className="w-3.5 h-3.5 text-rose-600" />
-                        <span>Block Slot</span>
-                      </>
-                    ) : (
-                      <>
-                        <Unlock className="w-3.5 h-3.5 text-emerald-400" />
-                        <span>Make Available</span>
-                      </>
-                    )}
-                  </button>
-
-                  {isDayAvailable && (
-                    <button
-                      type="button"
-                      onClick={() => openQuickBook('day')}
-                      className="py-2 px-3 rounded-lg text-xs font-bold bg-[#F5F1E8] hover:bg-[#EDE6D8] text-[#173D35] border border-[#E2DACB] transition-all flex items-center gap-1 shadow-2xs"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>Book</span>
-                    </button>
                   )}
                 </div>
-              )}
-            </div>
+              );
+            })()}
 
             {/* Session 2: Evening Session (6 PM - 10 PM) */}
-            <div className="p-4 rounded-xl border border-slate-200 bg-[#FAF8F5] space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-[#173D35]" />
-                  <span className="text-xs font-bold text-slate-900 uppercase tracking-wide">
-                    Evening Session (6 PM – 10 PM)
-                  </span>
-                </div>
-                {eveningBooking ? (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-rose-100 text-rose-800 border border-rose-200">
-                    RESERVED
-                  </span>
-                ) : isEveningAvailable ? (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
-                    AVAILABLE
-                  </span>
-                ) : (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-600" />
-                    BLOCKED
-                  </span>
-                )}
-              </div>
+            {(() => {
+              const eveningBlackout = getSlotBlackout(selectedHall, selectedDate, 'evening');
 
-              {/* Evening Booking Details if present */}
-              {eveningBooking ? (
-                <div className="p-3 bg-white rounded-lg border border-slate-200 text-xs space-y-2">
+              return (
+                <div className="p-4 rounded-xl border border-slate-200 bg-[#FAF8F5] space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="font-mono font-bold text-slate-800">{eveningBooking.id}</span>
-                    <BookingStatusBadge status={eveningBooking.status} />
-                  </div>
-                  <div>
-                    <h5 className="font-bold text-slate-900 text-sm">
-                      {eveningBooking.customerName || eveningBooking.applicantName}
-                    </h5>
-                    <p className="text-[11px] text-slate-600 mt-0.5">
-                      {eveningBooking.additionalInfo || eveningBooking.eventTitle || 'Evening Session Event'}
-                    </p>
-                  </div>
-                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      {eveningBooking.phone && (
-                        <>
+                      <Clock className="w-4 h-4 text-[#173D35]" />
+                      <span className="text-xs font-bold text-slate-900 uppercase tracking-wide">
+                        Evening Session (6 PM – 10 PM)
+                      </span>
+                    </div>
+                    {eveningBooking ? (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-rose-100 text-rose-800 border border-rose-200">
+                        RESERVED
+                      </span>
+                    ) : eveningBlackout ? (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-900 border border-blue-200 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+                        {eveningBlackout.blockType === 'customer_hold'
+                          ? 'CUSTOMER HOLD'
+                          : eveningBlackout.blockType === 'maintenance'
+                          ? 'MAINTENANCE'
+                          : 'BLOCKED'}
+                      </span>
+                    ) : isEveningAvailable ? (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+                        AVAILABLE
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-900 border border-blue-200 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+                        BLOCKED
+                      </span>
+                    )}
+                  </div>
+
+                  {/* 1. Confirmed / Pending Booking View (Red) */}
+                  {eveningBooking ? (
+                    <div className="p-3 bg-white rounded-lg border border-slate-200 text-xs space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono font-bold text-slate-800">{eveningBooking.id}</span>
+                        <BookingStatusBadge status={eveningBooking.status} />
+                      </div>
+                      <div>
+                        <h5 className="font-bold text-slate-900 text-sm">
+                          {eveningBooking.customerName || eveningBooking.applicantName}
+                        </h5>
+                        <p className="text-[11px] text-slate-600 mt-0.5">
+                          {eveningBooking.additionalInfo || eveningBooking.eventTitle || 'Evening Session Event'}
+                        </p>
+                      </div>
+                      <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          {eveningBooking.phone && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => setWhatsAppBooking(eveningBooking)}
+                                className="p-1.5 rounded-md bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 cursor-pointer shadow-2xs"
+                                title="Share Event Order via WhatsApp"
+                              >
+                                <MessageSquare className="w-3.5 h-3.5" />
+                              </button>
+                              <a
+                                href={`tel:${eveningBooking.phone}`}
+                                className="p-1.5 rounded-md bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200"
+                                title="Call Customer"
+                              >
+                                <Phone className="w-3.5 h-3.5" />
+                              </a>
+                            </>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {eveningBooking.status === 'PENDING' && (
+                            <Button
+                              variant="gold"
+                              size="sm"
+                              className="text-xs font-bold py-1 px-2.5 shadow-2xs"
+                              onClick={() => handleApproveBooking(eveningBooking.id)}
+                            >
+                              Approve Request
+                            </Button>
+                          )}
                           <button
                             type="button"
-                            onClick={() => setWhatsAppBooking(eveningBooking)}
-                            className="p-1.5 rounded-md bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 cursor-pointer shadow-2xs"
-                            title="Share Event Order via WhatsApp"
+                            onClick={() => handleMakeSlotAvailable('evening')}
+                            disabled={isReleasingSlot}
+                            className="text-[11px] font-bold text-rose-600 hover:text-rose-800 hover:underline cursor-pointer"
+                            title="Cancel booking and completely delete from database"
                           >
-                            <MessageSquare className="w-3.5 h-3.5" />
+                            {isReleasingSlot ? 'Freeing...' : 'Cancel & Free Slot'}
                           </button>
-                          <a
-                            href={`tel:${eveningBooking.phone}`}
-                            className="p-1.5 rounded-md bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200"
-                            title="Call Customer"
-                          >
-                            <Phone className="w-3.5 h-3.5" />
-                          </a>
-                        </>
-                      )}
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {eveningBooking.status === 'PENDING' && (
-                        <Button
-                          variant="gold"
-                          size="sm"
-                          className="text-xs font-bold py-1 px-2.5 shadow-2xs"
-                          onClick={() => handleApproveBooking(eveningBooking.id)}
-                        >
-                          Approve Request
-                        </Button>
+                  ) : eveningBlackout ? (
+                    /* 2. Manager / Customer Hold Blackout View (Blue Theme) */
+                    <div className="p-3 bg-blue-50/70 rounded-lg border border-blue-200 text-xs space-y-2 text-blue-950">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold uppercase tracking-wider text-[10px] bg-blue-100 text-blue-900 px-2 py-0.5 rounded-full border border-blue-200">
+                          {eveningBlackout.blockType === 'customer_hold'
+                            ? 'Customer Hold'
+                            : eveningBlackout.blockType === 'maintenance'
+                            ? 'Venue Maintenance'
+                            : 'Manager Administrative Hold'}
+                        </span>
+                        <span className="text-[10px] text-blue-600 font-mono">
+                          {eveningBlackout.createdAt ? new Date(eveningBlackout.createdAt).toLocaleDateString('en-IN') : ''}
+                        </span>
+                      </div>
+
+                      {eveningBlackout.customerName && (
+                        <div>
+                          <span className="text-[10px] text-blue-700 font-semibold uppercase block">Customer Details</span>
+                          <div className="font-bold text-sm text-blue-950">{eveningBlackout.customerName}</div>
+                          {eveningBlackout.customerPhone && (
+                            <div className="text-xs font-mono text-blue-800 flex items-center gap-1 mt-0.5">
+                              <Phone className="w-3 h-3 text-blue-600" />
+                              <a href={`tel:${eveningBlackout.customerPhone}`} className="hover:underline">
+                                {eveningBlackout.customerPhone}
+                              </a>
+                            </div>
+                          )}
+                        </div>
                       )}
+
+                      {(eveningBlackout.notes || eveningBlackout.reason) && (
+                        <div>
+                          <span className="text-[10px] text-blue-700 font-semibold uppercase block">Reason / Details</span>
+                          <p className="text-[11.5px] text-blue-950 bg-white/80 p-2 rounded-lg border border-blue-100 leading-relaxed">
+                            {eveningBlackout.notes || eveningBlackout.reason}
+                          </p>
+                        </div>
+                      )}
+
+                      {eveningBlackout.blockedBy && (
+                        <div className="text-[10px] text-blue-600">
+                          Blocked by: <strong>{eveningBlackout.blockedBy}</strong>
+                        </div>
+                      )}
+
+                      <div className="pt-2 border-t border-blue-200/60 flex items-center justify-between">
+                        <span className="text-[11px] text-blue-800 italic">Not available for public</span>
+                        <button
+                          type="button"
+                          onClick={() => handleMakeSlotAvailable('evening')}
+                          disabled={isReleasingSlot}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white transition-colors cursor-pointer shadow-xs"
+                        >
+                          <Unlock className="w-3.5 h-3.5" />
+                          <span>{isReleasingSlot ? 'Freeing...' : 'Make Available'}</span>
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    /* 3. Available State: Block Slot (with details) & Book */
+                    <div className="flex items-center gap-2 pt-1">
                       <button
                         type="button"
-                        onClick={() => handleCancelBooking(eveningBooking.id)}
-                        className="text-[11px] font-bold text-rose-600 hover:text-rose-800 hover:underline"
+                        onClick={() => openBlockModal('evening')}
+                        className="flex-1 py-2 px-3 rounded-lg text-xs font-bold border transition-all flex items-center justify-center gap-1.5 bg-white hover:bg-blue-50 text-blue-700 border-blue-200 shadow-2xs cursor-pointer"
+                        title="Block slot with customer hold or maintenance details"
                       >
-                        Cancel & Free Slot
+                        <Lock className="w-3.5 h-3.5 text-blue-600" />
+                        <span>Block Slot</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => openQuickBook('evening')}
+                        className="py-2 px-3 rounded-lg text-xs font-bold bg-[#F5F1E8] hover:bg-[#EDE6D8] text-[#173D35] border border-[#E2DACB] transition-all flex items-center gap-1 shadow-2xs cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Book</span>
                       </button>
                     </div>
-                  </div>
-                </div>
-              ) : (
-                /* No booking: 1-Tap Toggle and Quick Reserve */
-                <div className="flex items-center gap-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => handleToggleSlot('evening')}
-                    className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold border transition-all flex items-center justify-center gap-1.5 ${
-                      isEveningAvailable
-                        ? 'bg-white hover:bg-rose-50 text-rose-700 border-rose-200 shadow-2xs'
-                        : 'bg-[#173D35] hover:bg-[#123028] text-white border-[#173D35] shadow-xs'
-                    }`}
-                  >
-                    {isEveningAvailable ? (
-                      <>
-                        <Lock className="w-3.5 h-3.5 text-rose-600" />
-                        <span>Block Slot</span>
-                      </>
-                    ) : (
-                      <>
-                        <Unlock className="w-3.5 h-3.5 text-emerald-400" />
-                        <span>Make Available</span>
-                      </>
-                    )}
-                  </button>
-
-                  {isEveningAvailable && (
-                    <button
-                      type="button"
-                      onClick={() => openQuickBook('evening')}
-                      className="py-2 px-3 rounded-lg text-xs font-bold bg-[#F5F1E8] hover:bg-[#EDE6D8] text-[#173D35] border border-[#E2DACB] transition-all flex items-center gap-1 shadow-2xs"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>Book</span>
-                    </button>
                   )}
                 </div>
-              )}
-            </div>
+              );
+            })()}
 
             {/* Quick Full-Day Actions */}
             <div className="pt-3 border-t border-slate-100 space-y-2">
@@ -836,15 +1030,16 @@ Ph:9448151878`;
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
-                  onClick={() => handleSetFullDay(true)}
-                  className="py-2 px-2.5 rounded-lg text-xs font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 transition-all text-center"
+                  onClick={() => handleReleaseFullDay(true)}
+                  disabled={isReleasingSlot}
+                  className="py-2 px-2.5 rounded-lg text-xs font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 transition-all text-center cursor-pointer shadow-2xs"
                 >
-                  Free Whole Day
+                  {isReleasingSlot ? 'Freeing...' : 'Free Whole Day'}
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleSetFullDay(false)}
-                  className="py-2 px-2.5 rounded-lg text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 transition-all text-center"
+                  onClick={() => openBlockModal('full_day')}
+                  className="py-2 px-2.5 rounded-lg text-xs font-semibold bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 transition-all text-center cursor-pointer shadow-2xs"
                 >
                   Block Whole Day
                 </button>
@@ -852,7 +1047,7 @@ Ph:9448151878`;
               <button
                 type="button"
                 onClick={handleResetDate}
-                className="w-full py-1.5 text-[11px] font-semibold text-slate-500 hover:text-slate-800 transition-colors flex items-center justify-center gap-1"
+                className="w-full py-1.5 text-[11px] font-semibold text-slate-500 hover:text-slate-800 transition-colors flex items-center justify-center gap-1 cursor-pointer"
               >
                 <RotateCcw className="w-3 h-3" />
                 Reset Date to Default
@@ -1202,6 +1397,189 @@ Ph:9448151878`;
                   className="font-bold"
                 >
                   Confirm & Reserve Instantly
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Block Slot with Details Modal */}
+      {isBlockModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/50 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-2xl border border-slate-200 space-y-4 max-h-[92vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div>
+                <div className="flex items-center gap-1.5 text-blue-700 font-bold text-xs uppercase tracking-wider mb-0.5">
+                  <Lock className="w-3.5 h-3.5" />
+                  <span>Administrative Slot Block</span>
+                </div>
+                <h4 className="font-bold text-slate-900 text-base font-serif-heading">
+                  Block {blockSlotTarget === 'full_day' ? 'Full Day' : `${blockSlotTarget.toUpperCase()} Session`} — {selectedDate}
+                </h4>
+                <p className="text-xs text-slate-500">
+                  Holds this slot. It will appear as Blue (Blocked) in management and will be completely unavailable for public reservations.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsBlockModalOpen(false)}
+                className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleConfirmBlockSlot} className="space-y-4 text-xs">
+              {/* Block Type Selection */}
+              <div>
+                <label className="block text-xs font-bold text-slate-800 mb-1.5">
+                  Why are you blocking this slot? *
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setBlockForm({ ...blockForm, blockType: 'customer_hold' })}
+                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                      blockForm.blockType === 'customer_hold'
+                        ? 'bg-blue-50 border-blue-600 ring-2 ring-blue-600/20 text-blue-950 font-bold'
+                        : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-blue-600" />
+                      <span className="text-xs">Customer Hold</span>
+                    </div>
+                    <p className="text-[10px] text-slate-500 font-normal mt-1 leading-tight">
+                      Customer requested tentative hold
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setBlockForm({ ...blockForm, blockType: 'maintenance' })}
+                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                      blockForm.blockType === 'maintenance'
+                        ? 'bg-blue-50 border-blue-600 ring-2 ring-blue-600/20 text-blue-950 font-bold'
+                        : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-amber-500" />
+                      <span className="text-xs">Maintenance</span>
+                    </div>
+                    <p className="text-[10px] text-slate-500 font-normal mt-1 leading-tight">
+                      AC, cleaning, repairs, or setup
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setBlockForm({ ...blockForm, blockType: 'manager_hold' })}
+                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                      blockForm.blockType === 'manager_hold'
+                        ? 'bg-blue-50 border-blue-600 ring-2 ring-blue-600/20 text-blue-950 font-bold'
+                        : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-slate-600" />
+                      <span className="text-xs">Manager Hold</span>
+                    </div>
+                    <p className="text-[10px] text-slate-500 font-normal mt-1 leading-tight">
+                      General private reservation
+                    </p>
+                  </button>
+                </div>
+              </div>
+
+              {/* Customer Hold Fields */}
+              {blockForm.blockType === 'customer_hold' && (
+                <div className="p-3 bg-blue-50/60 rounded-xl border border-blue-200 space-y-3">
+                  <div className="text-[11px] font-bold text-blue-900 uppercase tracking-wider">
+                    Customer Contact Information
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        Customer Name *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Mohammed Iqbal"
+                        value={blockForm.customerName}
+                        onChange={(e) => setBlockForm({ ...blockForm, customerName: e.target.value })}
+                        className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-600 bg-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        Mobile Phone Number
+                      </label>
+                      <input
+                        type="tel"
+                        placeholder="e.g. 9611810386"
+                        value={blockForm.customerPhone}
+                        onChange={(e) => setBlockForm({ ...blockForm, customerPhone: e.target.value })}
+                        className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-600 bg-white font-mono"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Maintenance / Details Notes */}
+              <div>
+                <label className="block text-xs font-bold text-slate-800 mb-1">
+                  {blockForm.blockType === 'maintenance'
+                    ? 'Maintenance Task Details *'
+                    : blockForm.blockType === 'customer_hold'
+                    ? 'Hold Reason / Conditions (Optional)'
+                    : 'Reason / Remarks *'}
+                </label>
+                <textarea
+                  rows={2}
+                  required={blockForm.blockType !== 'customer_hold'}
+                  placeholder={
+                    blockForm.blockType === 'maintenance'
+                      ? 'e.g. Full hall AC condenser servicing, dining area repaint'
+                      : blockForm.blockType === 'customer_hold'
+                      ? 'e.g. Customer requested 2 days to finalize advance payment with family'
+                      : 'e.g. Venue booked for management VIP meeting'
+                  }
+                  value={blockForm.notes}
+                  onChange={(e) => setBlockForm({ ...blockForm, notes: e.target.value })}
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-600 bg-white"
+                />
+              </div>
+
+              {/* Hall Scope Info */}
+              <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-600 flex items-center justify-between">
+                <span>Applied Scope:</span>
+                <strong className="text-slate-900">{getHallTitle(selectedHall)}</strong>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsBlockModalOpen(false)}
+                  disabled={isSavingBlock}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="sm"
+                  isLoading={isSavingBlock}
+                  leftIcon={<Lock className="w-3.5 h-3.5" />}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold border-blue-600"
+                >
+                  Confirm &amp; Block Slot
                 </Button>
               </div>
             </form>
