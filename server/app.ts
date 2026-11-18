@@ -468,7 +468,7 @@ apiRouter.post("/bookings", async (req: Request, res: Response) => {
     const pkgName = matchedPkg ? matchedPkg.name : (hallSelection === "both" ? "Full Hall" : "Single Hall");
 
     const randomNum = Math.floor(100000 + Math.random() * 900000);
-    const bookingId = `HH-2026-${randomNum}`;
+    const bookingId = (isAdmin && req.body.id && typeof req.body.id === "string") ? req.body.id.trim() : `HH-2026-${randomNum}`;
     const now = new Date().toISOString();
 
     // Coupon discount processing

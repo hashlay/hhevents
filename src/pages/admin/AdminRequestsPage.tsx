@@ -26,6 +26,8 @@ import {
   Edit2,
   Sun,
   Moon,
+  ArrowLeft,
+  Download,
 } from 'lucide-react';
 import { AdminLayout } from '../../components/layout/AdminLayout';
 import { Card } from '../../components/ui/Card';
@@ -36,7 +38,7 @@ import { EmptyState } from '../../components/ui/EmptyState';
 import { InvoiceModal } from '../../components/ui/InvoiceModal';
 import { WhatsAppShareModal } from '../../components/ui/WhatsAppShareModal';
 import { EventOrderReceipt } from '../../components/ui/EventOrderReceipt';
-import { shareEventOrderDirectly } from '../../services/eventOrderShare';
+import { shareEventOrderDirectly, downloadReceiptAsJpg } from '../../services/eventOrderShare';
 import { DEFAULT_AUTHORIZED_SIGNATURE } from '../../services/defaultSignature';
 import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../context/AuthContext';
@@ -48,6 +50,7 @@ import {
   checkSlotAvailability,
   deleteBooking,
   updateBooking,
+  generateBookingId,
 } from '../../services/bookingStorage';
 import { BookingRequest, BookingStatus } from '../../types';
 import {
@@ -233,7 +236,17 @@ Ph:9448151878`;
   // Direct Manual Reservation Modal State & Packages
   const [packageOptions, setPackageOptions] = useState<ReservationPackageOption[]>(RESERVATION_PACKAGE_OPTIONS);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [createModalStep, setCreateModalStep] = useState<'form' | 'preview'>('form');
+  const [pendingReservation, setPendingReservation] = useState<(BookingRequest & any) | null>(null);
   const [isSubmittingReservation, setIsSubmittingReservation] = useState(false);
+  const [isDownloadingPreviewJpg, setIsDownloadingPreviewJpg] = useState(false);
+  const previewReceiptRef = React.useRef<HTMLDivElement>(null);
+
+  const handleCloseCreateModal = () => {
+    setIsCreateModalOpen(false);
+    setCreateModalStep('form');
+    setPendingReservation(null);
+  };
   const [createForm, setCreateForm] = useState({
     date: new Date().toISOString().slice(0, 10),
     hall: 'both' as 'both' | 'hall_1' | 'hall_2',
@@ -428,7 +441,7 @@ Ph:9448151878`;
       .catch(() => {});
   }, []);
 
-  const handleCreateReservation = async (e: React.FormEvent) => {
+  const handleProceedToPreview = (e: React.FormEvent) => {
     e.preventDefault();
     if (!createForm.customerName.trim() || !createForm.phone.trim() || !createForm.date) {
       showToast('Please fill in Customer Name, Phone, and Event Date', 'error');
@@ -468,48 +481,61 @@ Ph:9448151878`;
       ? `${effectiveOccasion} — ${createForm.additionalNote.trim()}`
       : effectiveOccasion;
 
+    const bookingId = pendingReservation?.id || generateBookingId();
+
+    const pending: BookingRequest & any = {
+      id: bookingId,
+      customerName: createForm.customerName.trim(),
+      phone: cleanPhone.slice(-10),
+      email: 'desk@hhevents.in',
+      hall: createForm.hall,
+      hallSelection: createForm.hall,
+      slot: createForm.slot,
+      timeSlot: createForm.slot,
+      date: createForm.date,
+      eventDate: createForm.date,
+      packageId: createForm.packageId,
+      packageName: createForm.packageName,
+      acOption: createForm.packageId.toLowerCase().includes('non-ac') ? 'Non AC' : 'AC',
+      totalAmount: netRent,
+      totalEstimate: netRent,
+      packagePrice: baseRent,
+      originalAmount: baseRent,
+      discountAmount: discAmount > 0 ? discAmount : undefined,
+      discountType: createForm.discountValue > 0 ? createForm.discountType : undefined,
+      discountValue: createForm.discountValue > 0 ? createForm.discountValue : undefined,
+      discountReason: discAmount > 0 ? (createForm.discountReason.trim() || undefined) : undefined,
+      customDiscountReason: discAmount > 0 ? (createForm.discountReason.trim() || undefined) : undefined,
+      couponCode: discAmount > 0 ? (createForm.discountReason.trim() ? `DIRECT-${createForm.discountReason.trim()}` : 'DIRECT-Special Discount') : undefined,
+      extraCharge: extraAmount > 0 ? extraAmount : undefined,
+      extraChargeReason: extraAmount > 0 ? (createForm.extraChargeReason.trim() || 'Extra Charge') : undefined,
+      amountPaid: advance,
+      balanceDue: balanceDue,
+      paymentStatus: balanceDue === 0 && advance > 0 ? 'fully_paid' : advance > 0 ? 'advance_paid' : 'unpaid',
+      advancePaymentStatus: balanceDue === 0 && advance > 0 ? 'fully_paid' : advance > 0 ? 'advance_paid' : 'unpaid',
+      status: 'CONFIRMED',
+      notes: finalEventTitle,
+      additionalInfo: finalEventTitle,
+      submittedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    setPendingReservation(pending);
+    setCreateModalStep('preview');
+  };
+
+  const handleFinalConfirmReservation = async () => {
+    if (!pendingReservation) return;
+
     setIsSubmittingReservation(true);
     try {
-      const payload = {
-        customerName: createForm.customerName.trim(),
-        phone: cleanPhone.slice(-10),
-        email: 'desk@hhevents.in',
-        hall: createForm.hall,
-        hallSelection: createForm.hall,
-        slot: createForm.slot,
-        timeSlot: createForm.slot,
-        date: createForm.date,
-        eventDate: createForm.date,
-        packageId: createForm.packageId,
-        packageName: createForm.packageName,
-        acOption: createForm.packageId.toLowerCase().includes('non-ac') ? 'Non AC' : 'AC',
-        totalAmount: netRent,
-        totalEstimate: netRent,
-        packagePrice: baseRent,
-        discountAmount: discAmount,
-        discountType: createForm.discountValue > 0 ? createForm.discountType : undefined,
-        discountValue: createForm.discountValue > 0 ? createForm.discountValue : undefined,
-        discountReason: discAmount > 0 ? (createForm.discountReason.trim() || undefined) : undefined,
-        customDiscountReason: discAmount > 0 ? (createForm.discountReason.trim() || undefined) : undefined,
-        couponCode: discAmount > 0 ? (createForm.discountReason.trim() ? `DIRECT-${createForm.discountReason.trim()}` : 'DIRECT-Special Discount') : undefined,
-        extraCharge: extraAmount > 0 ? extraAmount : undefined,
-        extraChargeReason: extraAmount > 0 ? (createForm.extraChargeReason.trim() || 'Extra Charge') : undefined,
-        amountPaid: advance,
-        balanceDue: balanceDue,
-        paymentStatus: balanceDue === 0 && advance > 0 ? 'fully_paid' : advance > 0 ? 'advance_paid' : 'unpaid',
-        advancePaymentStatus: balanceDue === 0 && advance > 0 ? 'fully_paid' : advance > 0 ? 'advance_paid' : 'unpaid',
-        status: 'CONFIRMED',
-        notes: finalEventTitle,
-        additionalInfo: finalEventTitle,
-      };
-
       const res = await fetch('/api/bookings', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${getAuthToken()}`,
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(pendingReservation),
       });
 
       if (!res.ok) {
@@ -518,8 +544,10 @@ Ph:9448151878`;
         return;
       }
 
-      showToast(`Reservation successfully confirmed for ${createForm.customerName}!`, 'success');
+      showToast(`Reservation successfully confirmed for ${pendingReservation.customerName}!`, 'success');
       setIsCreateModalOpen(false);
+      setCreateModalStep('form');
+      setPendingReservation(null);
       setCreateForm({
         date: new Date().toISOString().slice(0, 10),
         hall: packageOptions[0]?.hall || 'both',
@@ -545,6 +573,30 @@ Ph:9448151878`;
       showToast('Error connecting to server', 'error');
     } finally {
       setIsSubmittingReservation(false);
+    }
+  };
+
+  const handleDownloadPreviewJpg = async () => {
+    if (!previewReceiptRef.current || !pendingReservation) return;
+    setIsDownloadingPreviewJpg(true);
+    try {
+      const rawNum = pendingReservation.id.replace(/\D/g, '').slice(-3) || '101';
+      const ok = await downloadReceiptAsJpg(
+        previewReceiptRef.current,
+        `HH-Event-Order-${rawNum}.jpg`,
+        pendingReservation,
+        false,
+        signatureUrl
+      );
+      if (ok) {
+        showToast('Event Order JPG downloaded successfully!', 'success');
+      } else {
+        showToast('Could not generate JPG. Use Print / Save PDF instead.', 'info');
+      }
+    } catch {
+      showToast('Could not generate JPG. Use Print / Save PDF instead.', 'info');
+    } finally {
+      setIsDownloadingPreviewJpg(false);
     }
   };
 
@@ -858,7 +910,11 @@ Ph:9448151878`;
             Refresh Data
           </Button>
           <Button
-            onClick={() => setIsCreateModalOpen(true)}
+            onClick={() => {
+              setCreateModalStep('form');
+              setPendingReservation(null);
+              setIsCreateModalOpen(true);
+            }}
             variant="gold"
             size="sm"
             leftIcon={<Plus className="w-4 h-4" />}
@@ -2592,14 +2648,15 @@ Ph:9448151878`;
         {isCreateModalOpen && (
           <Dialog
             isOpen={isCreateModalOpen}
-            onClose={() => setIsCreateModalOpen(false)}
-            title="Direct Manual Reservation"
-            maxWidth="md"
+            onClose={handleCloseCreateModal}
+            title={createModalStep === 'preview' ? `Preview Event Order — Check & Confirm (${pendingReservation?.id || ''})` : "Direct Manual Reservation"}
+            maxWidth={createModalStep === 'preview' ? "2xl" : "md"}
           >
-            <form onSubmit={handleCreateReservation} className="space-y-4 text-xs">
-              <p className="text-slate-500 text-[11px] -mt-1">
-                Instantly book and confirm a reservation directly into the venue database with custom pricing &amp; discounts.
-              </p>
+            {createModalStep === 'form' ? (
+              <form onSubmit={handleProceedToPreview} className="space-y-4 text-xs">
+                <p className="text-slate-500 text-[11px] -mt-1">
+                  Instantly book and confirm a reservation directly into the venue database with custom pricing &amp; discounts.
+                </p>
 
               {/* Hall & Slot */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -2911,7 +2968,7 @@ Ph:9448151878`;
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => setIsCreateModalOpen(false)}
+                  onClick={handleCloseCreateModal}
                 >
                   Cancel
                 </Button>
@@ -2919,13 +2976,87 @@ Ph:9448151878`;
                   type="submit"
                   variant="gold"
                   size="sm"
-                  disabled={isSubmittingReservation}
-                  leftIcon={<Check className="w-4 h-4" />}
+                  leftIcon={<Eye className="w-4 h-4" />}
                 >
-                  {isSubmittingReservation ? 'Reserving...' : 'Confirm & Reserve Instantly'}
+                  Preview &amp; Verify Event Order →
                 </Button>
               </div>
             </form>
+          ) : (
+            <div className="space-y-4 text-slate-900">
+              {/* Information Banner */}
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-2.5 text-xs text-amber-900 no-print">
+                <AlertCircle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-bold">Check &amp; Confirm Event Order:</span> Review all customer details, slot, package, tariff, discount, extra charges, advance payment, and terms below. If you notice any mistakes, click <strong className="underline decoration-amber-600">"← Back &amp; Edit Details"</strong> to fix them before saving.
+                </div>
+              </div>
+
+              {/* Event Order Receipt Preview */}
+              {pendingReservation && (
+                <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs bg-white">
+                  <EventOrderReceipt
+                    booking={pendingReservation}
+                    receiptNumber={pendingReservation.id.replace(/\D/g, '')}
+                    signatureUrl={signatureUrl}
+                    signatoryDesignation={signatoryDesignation}
+                    containerRef={previewReceiptRef}
+                  />
+                </div>
+              )}
+
+              {/* Bottom Action Controls */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-3 border-t border-slate-200 no-print">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCreateModalStep('form')}
+                  leftIcon={<ArrowLeft className="w-3.5 h-3.5" />}
+                  className="cursor-pointer text-xs font-semibold"
+                >
+                  ← Back &amp; Edit Mistakes
+                </Button>
+
+                <div className="flex items-center gap-2 flex-wrap justify-end">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={isDownloadingPreviewJpg}
+                    onClick={handleDownloadPreviewJpg}
+                    leftIcon={<Download className="w-3.5 h-3.5 text-[#0082a6]" />}
+                    className="cursor-pointer text-xs font-semibold"
+                  >
+                    {isDownloadingPreviewJpg ? 'Downloading...' : 'Download JPG'}
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.print()}
+                    leftIcon={<Printer className="w-3.5 h-3.5 text-slate-700" />}
+                    className="cursor-pointer text-xs font-semibold"
+                  >
+                    Print / Save PDF
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="gold"
+                    size="sm"
+                    disabled={isSubmittingReservation}
+                    onClick={handleFinalConfirmReservation}
+                    leftIcon={<Check className="w-4 h-4" />}
+                    className="cursor-pointer text-xs font-bold"
+                  >
+                    {isSubmittingReservation ? 'Reserving...' : '✓ Confirm & Reserve Now'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
           </Dialog>
         )}
 

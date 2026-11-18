@@ -19,6 +19,12 @@ import {
   ShieldCheck,
   AlertTriangle,
   X,
+  Eye,
+  Printer,
+  Download,
+  ArrowLeft,
+  Check,
+  AlertCircle,
 } from 'lucide-react';
 import { AdminLayout } from '../../components/layout/AdminLayout';
 import { AvailabilityCalendar } from '../../components/calendar/AvailabilityCalendar';
@@ -53,7 +59,7 @@ import { useAuth } from '../../context/AuthContext';
 import { BookingRequest } from '../../types';
 import { WhatsAppShareModal } from '../../components/ui/WhatsAppShareModal';
 import { EventOrderReceipt } from '../../components/ui/EventOrderReceipt';
-import { shareEventOrderDirectly } from '../../services/eventOrderShare';
+import { shareEventOrderDirectly, downloadReceiptAsJpg } from '../../services/eventOrderShare';
 import { DEFAULT_AUTHORIZED_SIGNATURE } from '../../services/defaultSignature';
 import {
   RESERVATION_PACKAGE_OPTIONS,
@@ -82,6 +88,17 @@ export const AdminCalendarPage: React.FC<AdminCalendarPageProps> = ({ navigate }
   // Quick reservation modal state & dynamic package list
   const [packageOptions, setPackageOptions] = useState<ReservationPackageOption[]>(RESERVATION_PACKAGE_OPTIONS);
   const [isQuickBookModalOpen, setIsQuickBookModalOpen] = useState(false);
+  const [quickBookStep, setQuickBookStep] = useState<'form' | 'preview'>('form');
+  const [pendingQuickBook, setPendingQuickBook] = useState<(BookingRequest & any) | null>(null);
+  const [isSubmittingQuickBook, setIsSubmittingQuickBook] = useState(false);
+  const [isDownloadingQuickJpg, setIsDownloadingQuickJpg] = useState(false);
+  const quickReceiptRef = React.useRef<HTMLDivElement>(null);
+
+  const handleCloseQuickBook = () => {
+    setIsQuickBookModalOpen(false);
+    setQuickBookStep('form');
+    setPendingQuickBook(null);
+  };
   const [quickBookForm, setQuickBookForm] = useState<{
     customerName: string;
     phone: string;
@@ -462,11 +479,23 @@ Ph:9448151878`;
     }
   };
 
-  // Quick manual booking submission
-  const handleSaveQuickBooking = async (e: React.FormEvent) => {
+  // Proceed to Event Order Preview before confirming quick manual reservation
+  const handleProceedToQuickPreview = (e: React.FormEvent) => {
     e.preventDefault();
     if (!quickBookForm.customerName.trim() || !quickBookForm.phone.trim()) {
       showToast('Please enter both customer name and phone number.', 'error');
+      return;
+    }
+
+    const cleanPhone = quickBookForm.phone.replace(/\D/g, '');
+    if (cleanPhone.length < 10) {
+      showToast('Please enter a valid 10-digit phone number.', 'error');
+      return;
+    }
+
+    const isAvail = isSlotAvailable(quickBookForm.hall, selectedDate, quickBookForm.slot);
+    if (!isAvail) {
+      showToast('Conflict detected: Requested slot is already occupied or blocked on this date.', 'error');
       return;
     }
 
@@ -479,6 +508,7 @@ Ph:9448151878`;
     const extraAmount = Math.max(0, Number(quickBookForm.extraCharge) || 0);
     const netRent = Math.max(0, baseRent - discAmount + extraAmount);
     const advance = Number(quickBookForm.advancePaid) || 0;
+    const balanceDue = Math.max(0, netRent - advance);
 
     const effectiveOccasion =
       quickBookForm.occasionCategory === 'Other (Custom Occasion)'
@@ -489,10 +519,12 @@ Ph:9448151878`;
       ? `${effectiveOccasion} — ${quickBookForm.additionalNote.trim()}`
       : effectiveOccasion;
 
+    const bookingId = pendingQuickBook?.id || generateBookingId();
+
     const newBooking: BookingRequest & any = {
-      id: generateBookingId(),
+      id: bookingId,
       customerName: quickBookForm.customerName.trim(),
-      phone: quickBookForm.phone.trim(),
+      phone: cleanPhone.slice(-10),
       email: 'desk@hhevents.in',
       hall: quickBookForm.hall as any,
       hallSelection: quickBookForm.hall as any,
@@ -504,12 +536,14 @@ Ph:9448151878`;
       eventDate: selectedDate,
       status: 'CONFIRMED',
       acOption: quickBookForm.packageId.toLowerCase().includes('non-ac') ? 'Non AC' : 'AC',
-      advancePaymentStatus: advance >= netRent && netRent > 0 ? 'fully_paid' : advance > 0 ? 'advance_paid' : 'unpaid',
+      advancePaymentStatus: balanceDue === 0 && advance > 0 ? 'fully_paid' : advance > 0 ? 'advance_paid' : 'unpaid',
+      paymentStatus: balanceDue === 0 && advance > 0 ? 'fully_paid' : advance > 0 ? 'advance_paid' : 'unpaid',
       totalAmount: netRent,
       totalEstimate: netRent,
       packagePrice: baseRent,
+      originalAmount: baseRent,
       amountPaid: advance,
-      balanceDue: Math.max(0, netRent - advance),
+      balanceDue: balanceDue,
       discountAmount: discAmount > 0 ? discAmount : undefined,
       discountType: quickBookForm.discountValue > 0 ? quickBookForm.discountType : undefined,
       discountValue: quickBookForm.discountValue > 0 ? quickBookForm.discountValue : undefined,
@@ -525,12 +559,20 @@ Ph:9448151878`;
       updatedAt: new Date().toISOString(),
     };
 
+    setPendingQuickBook(newBooking);
+    setQuickBookStep('preview');
+  };
+
+  const handleConfirmFinalQuickBook = async () => {
+    if (!pendingQuickBook) return;
+
+    setIsSubmittingQuickBook(true);
     try {
-      await saveBookingAsync(newBooking);
+      await saveBookingAsync(pendingQuickBook);
       const fresh = await syncBookingsFromServer();
       setBookings(fresh);
       await syncAvailabilityFromServer();
-      setIsQuickBookModalOpen(false);
+      handleCloseQuickBook();
       setQuickBookForm({
         customerName: '',
         phone: '',
@@ -549,9 +591,35 @@ Ph:9448151878`;
         extraChargeReason: '',
         advancePaid: 15000,
       });
-      showToast(`Direct Reservation confirmed for ${newBooking.customerName} on ${selectedDate}.`, 'success');
+      showToast(`Direct Reservation confirmed for ${pendingQuickBook.customerName} on ${pendingQuickBook.date}.`, 'success');
     } catch (err: any) {
       showToast(err?.message || 'Failed to save manual reservation.', 'error');
+    } finally {
+      setIsSubmittingQuickBook(false);
+    }
+  };
+
+  const handleDownloadQuickJpg = async () => {
+    if (!quickReceiptRef.current || !pendingQuickBook) return;
+    setIsDownloadingQuickJpg(true);
+    try {
+      const rawNum = pendingQuickBook.id.replace(/\D/g, '').slice(-3) || '101';
+      const ok = await downloadReceiptAsJpg(
+        quickReceiptRef.current,
+        `HH-Event-Order-${rawNum}.jpg`,
+        pendingQuickBook,
+        false,
+        signatureUrl
+      );
+      if (ok) {
+        showToast('Event Order JPG downloaded successfully!', 'success');
+      } else {
+        showToast('Could not generate JPG. Use Print / Save PDF instead.', 'info');
+      }
+    } catch {
+      showToast('Could not generate JPG. Use Print / Save PDF instead.', 'info');
+    } finally {
+      setIsDownloadingQuickJpg(false);
     }
   };
 
@@ -587,6 +655,8 @@ Ph:9448151878`;
       discountReason: '',
       advancePaid: 15000,
     }));
+    setQuickBookStep('form');
+    setPendingQuickBook(null);
     setIsQuickBookModalOpen(true);
   };
 
@@ -1118,24 +1188,27 @@ Ph:9448151878`;
       {/* Quick Manual Reservation Modal */}
       {isQuickBookModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/50 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-2xl border border-slate-200 space-y-4 max-h-[92vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div className={`bg-white rounded-2xl ${quickBookStep === 'preview' ? 'max-w-3xl' : 'max-w-lg'} w-full p-5 sm:p-6 shadow-2xl border border-slate-200 space-y-4 max-h-[92vh] overflow-y-auto`}>
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 no-print">
               <div>
-                <h4 className="font-bold text-slate-900 text-base font-serif-heading">Direct Manual Reservation</h4>
+                <h4 className="font-bold text-slate-900 text-base font-serif-heading">
+                  {quickBookStep === 'preview' ? `Preview Event Order — Check & Confirm (${pendingQuickBook?.id || ''})` : 'Direct Manual Reservation'}
+                </h4>
                 <p className="text-xs text-slate-500">
-                  Instantly book and confirm a reservation on {selectedDate}
+                  {quickBookStep === 'preview' ? 'Review all details, pricing, advance payment, and terms before saving' : `Instantly book and confirm a reservation on ${selectedDate}`}
                 </p>
               </div>
               <button
                 type="button"
-                onClick={() => setIsQuickBookModalOpen(false)}
+                onClick={handleCloseQuickBook}
                 className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveQuickBooking} className="space-y-4 text-xs">
+            {quickBookStep === 'form' ? (
+              <form onSubmit={handleProceedToQuickPreview} className="space-y-4 text-xs">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
                   Event Function Date *
@@ -1447,7 +1520,7 @@ Ph:9448151878`;
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => setIsQuickBookModalOpen(false)}
+                  onClick={handleCloseQuickBook}
                 >
                   Cancel
                 </Button>
@@ -1456,11 +1529,87 @@ Ph:9448151878`;
                   variant="gold"
                   size="sm"
                   className="font-bold"
+                  leftIcon={<Eye className="w-4 h-4" />}
                 >
-                  Confirm & Reserve Instantly
+                  Preview &amp; Verify Event Order →
                 </Button>
               </div>
             </form>
+          ) : (
+            <div className="space-y-4 text-slate-900">
+              {/* Information Banner */}
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-2.5 text-xs text-amber-900 no-print">
+                <AlertCircle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-bold">Check &amp; Confirm Event Order:</span> Review all customer details, slot, package, tariff, discount, extra charges, advance payment, and terms below. If you notice any mistakes, click <strong className="underline decoration-amber-600">"← Back &amp; Edit Details"</strong> to fix them before saving.
+                </div>
+              </div>
+
+              {/* Event Order Receipt Preview */}
+              {pendingQuickBook && (
+                <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs bg-white">
+                  <EventOrderReceipt
+                    booking={pendingQuickBook}
+                    receiptNumber={pendingQuickBook.id.replace(/\D/g, '')}
+                    signatureUrl={signatureUrl}
+                    signatoryDesignation={signatoryDesignation}
+                    containerRef={quickReceiptRef}
+                  />
+                </div>
+              )}
+
+              {/* Bottom Action Controls */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-3 border-t border-slate-200 no-print">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setQuickBookStep('form')}
+                  leftIcon={<ArrowLeft className="w-3.5 h-3.5" />}
+                  className="cursor-pointer text-xs font-semibold"
+                >
+                  ← Back &amp; Edit Mistakes
+                </Button>
+
+                <div className="flex items-center gap-2 flex-wrap justify-end">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={isDownloadingQuickJpg}
+                    onClick={handleDownloadQuickJpg}
+                    leftIcon={<Download className="w-3.5 h-3.5 text-[#0082a6]" />}
+                    className="cursor-pointer text-xs font-semibold"
+                  >
+                    {isDownloadingQuickJpg ? 'Downloading...' : 'Download JPG'}
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.print()}
+                    leftIcon={<Printer className="w-3.5 h-3.5 text-slate-700" />}
+                    className="cursor-pointer text-xs font-semibold"
+                  >
+                    Print / Save PDF
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="gold"
+                    size="sm"
+                    disabled={isSubmittingQuickBook}
+                    onClick={handleConfirmFinalQuickBook}
+                    leftIcon={<Check className="w-4 h-4" />}
+                    className="cursor-pointer text-xs font-bold"
+                  >
+                    {isSubmittingQuickBook ? 'Reserving...' : '✓ Confirm & Reserve Now'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
           </div>
         </div>
       )}
