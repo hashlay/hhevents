@@ -267,6 +267,7 @@ export interface BookingRecord {
   status: 'PENDING' | 'APPROVED' | 'CONFIRMED' | 'CANCELLED' | 'REJECTED' | 'COMPLETED';
   totalAmount: number;
   totalEstimate?: number;
+  estimatedAmount?: number;
   advanceRequired: number;
   amountPaid: number;
   balanceDue: number;

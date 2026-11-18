@@ -259,6 +259,10 @@ Ph:9448151878`;
     slot: 'day' as 'day' | 'evening',
     packageId: '',
     reason: '',
+    discountAmount: 0,
+    discountReason: '',
+    extraCharge: 0,
+    extraChargeReason: '',
   });
 
   const startEditingSchedule = (booking: BookingRequest) => {
@@ -276,11 +280,28 @@ Ph:9448151878`;
       else currentPkgId = 'single-ac-hall-1';
     }
 
+    const bObj = booking as any;
+    const existingDisc = Number(bObj.discountAmount) || 0;
+    let existingDiscReason = (bObj.discountReason || '').trim();
+    if (!existingDiscReason && (bObj.couponCode || '').startsWith('DIRECT-')) {
+      existingDiscReason = (bObj.couponCode || '').replace(/^DIRECT-/, '').trim();
+    }
+    if (existingDiscReason.toLowerCase() === 'manager direct discount') {
+      existingDiscReason = 'Special Discount';
+    }
+
+    const existingExtra = Number(bObj.extraCharge) || 0;
+    const existingExtraReason = (bObj.extraChargeReason || '').trim();
+
     setEditScheduleForm({
       date: currentDate,
       slot: currentSlot,
       packageId: currentPkgId,
       reason: '',
+      discountAmount: existingDisc,
+      discountReason: existingDiscReason || (existingDisc > 0 ? 'Special Discount' : ''),
+      extraCharge: existingExtra,
+      extraChargeReason: existingExtraReason || (existingExtra > 0 ? 'If AC Needed' : ''),
     });
     setIsEditingSchedule(true);
   };
@@ -315,7 +336,11 @@ Ph:9448151878`;
           hallSelection: targetHall,
           acOption: targetAc,
           packagePrice: targetRent,
-          reason: editScheduleForm.reason || 'Manager schedule update',
+          reason: editScheduleForm.reason || 'Manager schedule & pricing update',
+          discountAmount: Math.max(0, Number(editScheduleForm.discountAmount) || 0),
+          discountReason: editScheduleForm.discountReason.trim() || undefined,
+          extraCharge: Math.max(0, Number(editScheduleForm.extraCharge) || 0),
+          extraChargeReason: editScheduleForm.extraChargeReason.trim() || undefined,
         }),
       });
 
@@ -326,15 +351,12 @@ Ph:9448151878`;
         return;
       }
 
-      showToast(`Reservation ${selectedBooking.id} successfully updated to ${editScheduleForm.date} (${editScheduleForm.slot.toUpperCase()} SESSION).`, 'success');
+      showToast(`Reservation ${selectedBooking.id} successfully updated!`, 'success');
 
       // Immediately sync availability cache for public & admin calendars
       await syncAvailabilityFromServer();
 
-      // Reload bookings list
-      await loadBookings();
-
-      // Update currently open dossier modal in place
+      // Update currently open dossier modal and client cache
       if (data.booking) {
         setSelectedBooking((prev) => {
           if (!prev) return null;
@@ -353,9 +375,18 @@ Ph:9448151878`;
             packagePrice: data.booking.packagePrice,
             originalAmount: data.booking.originalAmount,
             balanceDue: data.booking.balanceDue,
+            discountAmount: data.booking.discountAmount,
+            discountReason: data.booking.discountReason,
+            couponCode: data.booking.couponCode,
+            extraCharge: data.booking.extraCharge,
+            extraChargeReason: data.booking.extraChargeReason,
           };
         });
+        updateBooking(selectedBooking.id, data.booking);
       }
+
+      // Reload bookings list
+      await loadBookings();
 
       setIsEditingSchedule(false);
     } catch (err: any) {
@@ -1356,7 +1387,7 @@ Ph:9448151878`;
                     <div className="flex items-center gap-2">
                       <Calendar className="w-4 h-4 text-[#173D35]" />
                       <span className="font-bold text-sm text-slate-900">
-                        Edit Reservation Date, Session Slot &amp; Package
+                        Edit Reservation Date, Session Slot, Package &amp; Pricing
                       </span>
                     </div>
                     <span className="text-[10px] uppercase font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full">
@@ -1467,7 +1498,284 @@ Ph:9448151878`;
                     })()}
                   </div>
 
-                  {/* 4. Optional Reason / Note */}
+                  {/* 4. Package Pricing Adjustments: Discount & Extra Charges */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                    {/* Discount Control Block */}
+                    <div className="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200/90 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <Tag className="w-3.5 h-3.5 text-emerald-700" />
+                          <label className="text-xs font-bold text-emerald-950 uppercase tracking-wide">
+                            Special Discount
+                          </label>
+                        </div>
+                        {editScheduleForm.discountAmount > 0 ? (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setEditScheduleForm({
+                                ...editScheduleForm,
+                                discountAmount: 0,
+                                discountReason: '',
+                              })
+                            }
+                            className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-600 hover:text-rose-800 bg-white hover:bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-md transition-colors cursor-pointer shadow-2xs"
+                            title="Delete and remove discount completely"
+                          >
+                            <Trash2 className="w-3 h-3 text-rose-500" />
+                            <span>Delete Discount</span>
+                          </button>
+                        ) : (
+                          <span className="text-[10px] text-slate-500 bg-white/90 border border-slate-200 px-1.5 py-0.5 rounded font-medium">
+                            ₹0 (No Discount)
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="relative">
+                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-emerald-700 font-mono">
+                            ₹
+                          </span>
+                          <input
+                            type="number"
+                            min="0"
+                            placeholder="Discount Amount (0 if none)"
+                            value={editScheduleForm.discountAmount || ''}
+                            onChange={(e) =>
+                              setEditScheduleForm({
+                                ...editScheduleForm,
+                                discountAmount: Math.max(0, Number(e.target.value) || 0),
+                              })
+                            }
+                            className="w-full pl-6 pr-3 py-1.5 text-xs rounded-lg border border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-600 bg-white font-mono font-bold text-emerald-900"
+                          />
+                        </div>
+
+                        {/* Quick Preset Buttons for Discount */}
+                        <div className="flex items-center gap-1 flex-wrap pt-0.5">
+                          <span className="text-[9.5px] text-emerald-900/70 font-semibold mr-1">Presets:</span>
+                          {[1000, 2000, 3000, 5000].map((amt) => (
+                            <button
+                              key={amt}
+                              type="button"
+                              onClick={() =>
+                                setEditScheduleForm({
+                                  ...editScheduleForm,
+                                  discountAmount: amt,
+                                  discountReason: editScheduleForm.discountReason || 'Special Discount',
+                                })
+                              }
+                              className={`text-[10px] px-1.5 py-0.5 rounded border transition-colors cursor-pointer ${
+                                editScheduleForm.discountAmount === amt
+                                  ? 'bg-emerald-700 text-white border-emerald-800 font-bold'
+                                  : 'bg-white text-emerald-900 border-emerald-200 hover:bg-emerald-100/60'
+                              }`}
+                            >
+                              ₹{amt.toLocaleString('en-IN')}
+                            </button>
+                          ))}
+                          {editScheduleForm.discountAmount > 0 && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setEditScheduleForm({
+                                  ...editScheduleForm,
+                                  discountAmount: 0,
+                                  discountReason: '',
+                                })
+                              }
+                              className="text-[10px] px-1.5 py-0.5 rounded border bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100 font-bold transition-colors cursor-pointer"
+                            >
+                              Clear (₹0)
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="space-y-0.5">
+                        <label className="text-[10.5px] font-semibold text-emerald-900 block">
+                          Discount Reason / Label (Optional)
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Special Discount / VIP Waiver / Festival"
+                          value={editScheduleForm.discountReason}
+                          onChange={(e) =>
+                            setEditScheduleForm({
+                              ...editScheduleForm,
+                              discountReason: e.target.value,
+                            })
+                          }
+                          className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-emerald-200 focus:outline-none focus:ring-2 focus:ring-emerald-600 bg-white text-slate-800"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Extra Charge Control Block */}
+                    <div className="p-3 rounded-xl bg-amber-50/70 border border-amber-200 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <Plus className="w-3.5 h-3.5 text-amber-700" />
+                          <label className="text-xs font-bold text-amber-950 uppercase tracking-wide">
+                            Extra Charge (Add-ons / AC)
+                          </label>
+                        </div>
+                        {editScheduleForm.extraCharge > 0 ? (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setEditScheduleForm({
+                                ...editScheduleForm,
+                                extraCharge: 0,
+                                extraChargeReason: '',
+                              })
+                            }
+                            className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-600 hover:text-rose-800 bg-white hover:bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-md transition-colors cursor-pointer shadow-2xs"
+                            title="Delete and remove extra charge completely"
+                          >
+                            <Trash2 className="w-3 h-3 text-rose-500" />
+                            <span>Delete Extra Charge</span>
+                          </button>
+                        ) : (
+                          <span className="text-[10px] text-slate-500 bg-white/90 border border-slate-200 px-1.5 py-0.5 rounded font-medium">
+                            ₹0 (No Extra Charge)
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="relative">
+                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-amber-700 font-mono">
+                            ₹
+                          </span>
+                          <input
+                            type="number"
+                            min="0"
+                            placeholder="Extra Charge Amount (0 if none)"
+                            value={editScheduleForm.extraCharge || ''}
+                            onChange={(e) =>
+                              setEditScheduleForm({
+                                ...editScheduleForm,
+                                extraCharge: Math.max(0, Number(e.target.value) || 0),
+                              })
+                            }
+                            className="w-full pl-6 pr-3 py-1.5 text-xs rounded-lg border border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-600 bg-white font-mono font-bold text-amber-950"
+                          />
+                        </div>
+
+                        {/* Quick Preset Buttons for Extra Charges */}
+                        <div className="flex items-center gap-1 flex-wrap pt-0.5">
+                          <span className="text-[9.5px] text-amber-900/70 font-semibold mr-1">Presets:</span>
+                          {[
+                            { amt: 5000, label: '+₹5k (If AC Needed)', reason: 'If AC Needed' },
+                            { amt: 10000, label: '+₹10k (AC)', reason: 'AC Charges' },
+                            { amt: 15000, label: '+₹15k (Full AC)', reason: 'Full AC Needed' },
+                          ].map((item) => (
+                            <button
+                              key={item.amt}
+                              type="button"
+                              onClick={() =>
+                                setEditScheduleForm({
+                                  ...editScheduleForm,
+                                  extraCharge: item.amt,
+                                  extraChargeReason: item.reason,
+                                })
+                              }
+                              className={`text-[10px] px-1.5 py-0.5 rounded border transition-colors cursor-pointer ${
+                                editScheduleForm.extraCharge === item.amt
+                                  ? 'bg-amber-700 text-white border-amber-800 font-bold'
+                                  : 'bg-white text-amber-900 border-amber-200 hover:bg-amber-100/70'
+                              }`}
+                            >
+                              {item.label}
+                            </button>
+                          ))}
+                          {editScheduleForm.extraCharge > 0 && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setEditScheduleForm({
+                                  ...editScheduleForm,
+                                  extraCharge: 0,
+                                  extraChargeReason: '',
+                                })
+                              }
+                              className="text-[10px] px-1.5 py-0.5 rounded border bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100 font-bold transition-colors cursor-pointer"
+                            >
+                              Clear (₹0)
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="space-y-0.5">
+                        <label className="text-[10.5px] font-semibold text-amber-950 block">
+                          Extra Charge Reason / Description (Optional)
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. If AC Needed / Cleaning Fee / Generator Fuel"
+                          value={editScheduleForm.extraChargeReason}
+                          onChange={(e) =>
+                            setEditScheduleForm({
+                              ...editScheduleForm,
+                              extraChargeReason: e.target.value,
+                            })
+                          }
+                          className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-600 bg-white text-slate-800"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Real-time Financial Breakdown Card inside Editor */}
+                  {(() => {
+                    const selPkg = packageOptions.find((p) => p.id === editScheduleForm.packageId);
+                    const grossRent = selPkg ? selPkg.rent : ((selectedBooking as any).packagePrice || 30000);
+                    const disc = Math.max(0, Number(editScheduleForm.discountAmount) || 0);
+                    const extra = Math.max(0, Number(editScheduleForm.extraCharge) || 0);
+                    const netRent = Math.max(0, grossRent - disc + extra);
+                    const paid = Number((selectedBooking as any).amountPaid) || 0;
+                    const balance = Math.max(0, netRent - paid);
+
+                    return (
+                      <div className="p-3 rounded-xl bg-white border border-slate-200 shadow-2xs space-y-1.5 text-xs">
+                        <div className="flex justify-between items-center text-slate-600 font-medium">
+                          <span>Package Agreed Tariff:</span>
+                          <span className="font-mono font-bold text-slate-900">₹{grossRent.toLocaleString('en-IN')}</span>
+                        </div>
+                        {disc > 0 && (
+                          <div className="flex justify-between items-center text-emerald-800 bg-emerald-50/70 px-2 py-0.5 rounded font-medium">
+                            <span>Special Discount ({editScheduleForm.discountReason.trim() || 'Special Discount'}):</span>
+                            <span className="font-mono font-bold text-emerald-700">-₹{disc.toLocaleString('en-IN')}</span>
+                          </div>
+                        )}
+                        {extra > 0 && (
+                          <div className="flex justify-between items-center text-amber-900 bg-amber-50/70 px-2 py-0.5 rounded font-medium">
+                            <span>Extra Charge ({editScheduleForm.extraChargeReason.trim() || 'Extra Charge'}):</span>
+                            <span className="font-mono font-bold text-amber-800">+₹{extra.toLocaleString('en-IN')}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between items-center text-xs font-bold text-slate-900 pt-1.5 border-t border-slate-200">
+                          <span>New Net Payable Rent:</span>
+                          <span className="font-mono text-sm text-[#173D35]">₹{netRent.toLocaleString('en-IN')}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-[11px] text-slate-500">
+                          <span>Advance Already Paid:</span>
+                          <span className="font-mono text-emerald-700 font-semibold">₹{paid.toLocaleString('en-IN')}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-xs font-bold text-slate-900 pt-1 border-t border-slate-100">
+                          <span>Outstanding Balance Due:</span>
+                          <span className={`font-mono text-xs ${balance > 0 ? 'text-amber-800' : 'text-emerald-700'}`}>
+                            {balance > 0 ? `₹${balance.toLocaleString('en-IN')}` : 'Fully Settled (₹0)'}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* 5. Optional Reason / Note */}
                   <div>
                     <label className="block text-xs font-bold text-slate-700 mb-1">
                       Reason for Reschedule / Change (Optional)
@@ -1483,12 +1791,28 @@ Ph:9448151878`;
                     />
                   </div>
 
-                  {/* Schedule Change Comparison Pill */}
+                  {/* Schedule & Financial Change Comparison Pill */}
                   {(() => {
                     const selPkg = packageOptions.find((p) => p.id === editScheduleForm.packageId);
                     const isDateChanged = editScheduleForm.date !== (selectedBooking.date || selectedBooking.eventDate);
                     const isSlotChanged = editScheduleForm.slot !== ((selectedBooking.slot || (selectedBooking as any).timeSlot || 'day').toLowerCase());
                     const isPkgChanged = selPkg && selPkg.name !== selectedBooking.packageName && selPkg.id !== selectedBooking.packageId;
+
+                    const bObj = selectedBooking as any;
+                    const oldDisc = Number(bObj.discountAmount) || 0;
+                    const newDisc = Math.max(0, Number(editScheduleForm.discountAmount) || 0);
+                    const isDiscChanged = oldDisc !== newDisc;
+
+                    const oldExtra = Number(bObj.extraCharge) || 0;
+                    const newExtra = Math.max(0, Number(editScheduleForm.extraCharge) || 0);
+                    const isExtraChanged = oldExtra !== newExtra;
+
+                    const oldNet = bObj.totalAmount !== undefined
+                      ? Number(bObj.totalAmount)
+                      : (bObj.totalEstimate || bObj.estimatedAmount || 0);
+                    const newGross = selPkg ? selPkg.rent : ((selectedBooking as any).packagePrice || 30000);
+                    const newNet = Math.max(0, newGross - newDisc + newExtra);
+                    const isNetChanged = oldNet !== newNet;
 
                     return (
                       <div className="p-2.5 rounded-lg bg-amber-100/70 border border-amber-200 text-[11px] text-amber-900 space-y-1">
@@ -1509,6 +1833,50 @@ Ph:9448151878`;
                               <span>&bull;</span>
                               <span className="font-bold text-amber-950 underline">
                                 Package: {selectedBooking.packageName} → {selPkg.name} (₹{selPkg.rent.toLocaleString('en-IN')})
+                              </span>
+                            </>
+                          )}
+                          {isDiscChanged && (
+                            <>
+                              <span>&bull;</span>
+                              {oldDisc > 0 && newDisc === 0 ? (
+                                <span className="font-bold text-rose-700 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded">
+                                  Discount: -₹{oldDisc.toLocaleString('en-IN')} → ₹0 (DELETED)
+                                </span>
+                              ) : oldDisc === 0 && newDisc > 0 ? (
+                                <span className="font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">
+                                  Discount: Added -₹{newDisc.toLocaleString('en-IN')}
+                                </span>
+                              ) : (
+                                <span className="font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">
+                                  Discount: -₹{oldDisc.toLocaleString('en-IN')} → -₹{newDisc.toLocaleString('en-IN')}
+                                </span>
+                              )}
+                            </>
+                          )}
+                          {isExtraChanged && (
+                            <>
+                              <span>&bull;</span>
+                              {oldExtra > 0 && newExtra === 0 ? (
+                                <span className="font-bold text-rose-700 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded">
+                                  Extra Charge: +₹{oldExtra.toLocaleString('en-IN')} → ₹0 (DELETED)
+                                </span>
+                              ) : oldExtra === 0 && newExtra > 0 ? (
+                                <span className="font-bold text-amber-900 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">
+                                  Extra Charge: Added +₹{newExtra.toLocaleString('en-IN')}
+                                </span>
+                              ) : (
+                                <span className="font-bold text-amber-900 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">
+                                  Extra Charge: +₹{oldExtra.toLocaleString('en-IN')} → +₹{newExtra.toLocaleString('en-IN')}
+                                </span>
+                              )}
+                            </>
+                          )}
+                          {isNetChanged && (
+                            <>
+                              <span>&bull;</span>
+                              <span className="font-bold text-[#173D35] bg-emerald-100/70 border border-emerald-300 px-1.5 py-0.5 rounded">
+                                Net Total: ₹{oldNet.toLocaleString('en-IN')} → ₹{newNet.toLocaleString('en-IN')}
                               </span>
                             </>
                           )}
@@ -1634,7 +2002,7 @@ Ph:9448151878`;
                     }}
                     leftIcon={<Calendar className="w-3.5 h-3.5 text-[#173D35]" />}
                   >
-                    {isEditingSchedule ? 'Close Schedule Editor' : 'Edit Date / Slot / Package'}
+                    {isEditingSchedule ? 'Close Schedule Editor' : 'Edit Date / Slot / Package / Pricing'}
                   </Button>
 
                   <Button
@@ -2054,6 +2422,24 @@ Ph:9448151878`;
                 );
               })()}
 
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-700 uppercase">Discount Configuration</label>
+                {(customDiscountVal > 0 || Number((discountBooking as any).discountAmount) > 0) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCustomDiscountVal(0);
+                      setCustomDiscountReason('');
+                    }}
+                    className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 border border-rose-200 px-2 py-0.5 rounded cursor-pointer transition-colors shadow-2xs"
+                    title="Delete and reset discount to ₹0"
+                  >
+                    <Trash2 className="w-3 h-3 text-rose-500" />
+                    <span>Delete / Remove Discount</span>
+                  </button>
+                )}
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-700 uppercase">Discount Type</label>
@@ -2098,6 +2484,23 @@ Ph:9448151878`;
 
               {/* Extra Charge Section */}
               <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                <div className="flex items-center justify-between pb-1 border-b border-slate-200">
+                  <label className="text-xs font-bold text-slate-700 uppercase">Extra Charges (Add-ons / AC)</label>
+                  {(customExtraCharge > 0 || Number((discountBooking as any).extraCharge) > 0) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCustomExtraCharge(0);
+                        setCustomExtraChargeReason('');
+                      }}
+                      className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-600 hover:text-rose-800 bg-white hover:bg-rose-50 border border-rose-200 px-2 py-0.5 rounded cursor-pointer transition-colors shadow-2xs"
+                      title="Delete and reset extra charge to ₹0"
+                    >
+                      <Trash2 className="w-3 h-3 text-rose-500" />
+                      <span>Delete / Remove Extra Charge</span>
+                    </button>
+                  )}
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-slate-700 uppercase">Extra Charge (₹)</label>

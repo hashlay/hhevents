@@ -773,6 +773,10 @@ apiRouter.patch("/bookings/:id/reschedule", requireAdminAuth, async (req: Reques
     acOption,
     packagePrice,
     reason,
+    discountAmount,
+    discountReason,
+    extraCharge,
+    extraChargeReason,
   } = req.body;
 
   const db = await getDb();
@@ -849,25 +853,80 @@ apiRouter.patch("/bookings/:id/reschedule", requireAdminAuth, async (req: Reques
     ? Number(packagePrice)
     : (matchedPkg ? matchedPkg.rent : booking.packagePrice || booking.originalAmount);
 
-  if (newPkgPrice !== undefined && newPkgPrice !== null) {
-    booking.packagePrice = newPkgPrice;
-    booking.originalAmount = newPkgPrice;
-    const disc = Number(booking.discountAmount) || 0;
-    const extra = Number(booking.extraCharge) || 0;
-    const netRent = Math.max(0, newPkgPrice - disc + extra);
-    booking.totalAmount = netRent;
-    booking.totalEstimate = netRent;
-    const paid = Number(booking.amountPaid) || 0;
-    booking.balanceDue = Math.max(0, netRent - paid);
-    if (booking.balanceDue === 0 && paid > 0) {
-      booking.paymentStatus = "fully_paid";
-    } else if (paid > 0) {
-      booking.paymentStatus = "advance_paid";
+  const baseTariff = (newPkgPrice !== undefined && newPkgPrice !== null && Number(newPkgPrice) >= 0)
+    ? Number(newPkgPrice)
+    : (booking.packagePrice || booking.originalAmount || 0);
+
+  booking.packagePrice = baseTariff;
+  booking.originalAmount = baseTariff;
+
+  // Handle discount updates (add, edit, or delete)
+  let discountLogStr = "";
+  if (discountAmount !== undefined) {
+    const oldDisc = Number(booking.discountAmount) || 0;
+    const newDisc = Math.max(0, Number(discountAmount) || 0);
+    booking.discountAmount = newDisc;
+    booking.discountValue = newDisc;
+    booking.discountType = "fixed";
+    if (newDisc > 0) {
+      const cleanReason = (discountReason || booking.discountReason || "Special Discount").trim();
+      booking.discountReason = cleanReason;
+      if (!booking.couponCode || booking.couponCode.startsWith("DIRECT-")) {
+        booking.couponCode = `DIRECT-${cleanReason}`;
+      }
+      discountLogStr = `, Discount: -₹${newDisc.toLocaleString("en-IN")} (${cleanReason})`;
+    } else {
+      booking.discountAmount = 0;
+      booking.discountValue = 0;
+      booking.discountReason = undefined;
+      if (!booking.couponCode || booking.couponCode.startsWith("DIRECT-")) {
+        booking.couponCode = undefined;
+      }
+      if (oldDisc > 0) {
+        discountLogStr = `, Discount: -₹${oldDisc.toLocaleString("en-IN")} removed (₹0)`;
+      }
     }
   }
 
+  // Handle extra charges updates (add, edit, or delete)
+  let extraLogStr = "";
+  if (extraCharge !== undefined) {
+    const oldExtra = Number(booking.extraCharge) || 0;
+    const newExtra = Math.max(0, Number(extraCharge) || 0);
+    if (newExtra > 0) {
+      const cleanExtraReason = (extraChargeReason || booking.extraChargeReason || "Extra Charge").trim();
+      booking.extraCharge = newExtra;
+      booking.extraChargeReason = cleanExtraReason;
+      extraLogStr = `, Extra Charge: +₹${newExtra.toLocaleString("en-IN")} (${cleanExtraReason})`;
+    } else {
+      booking.extraCharge = undefined;
+      booking.extraChargeReason = undefined;
+      if (oldExtra > 0) {
+        extraLogStr = `, Extra Charge: +₹${oldExtra.toLocaleString("en-IN")} removed (₹0)`;
+      }
+    }
+  }
+
+  const finalDisc = Number(booking.discountAmount) || 0;
+  const finalExtra = Number(booking.extraCharge) || 0;
+  const netRent = Math.max(0, baseTariff - finalDisc + finalExtra);
+
+  booking.totalAmount = netRent;
+  booking.totalEstimate = netRent;
+  booking.estimatedAmount = netRent;
+
+  const paid = Number(booking.amountPaid) || 0;
+  booking.balanceDue = Math.max(0, netRent - paid);
+  if (booking.balanceDue === 0 && (paid > 0 || netRent === 0)) {
+    booking.paymentStatus = "fully_paid";
+  } else if (paid > 0) {
+    booking.paymentStatus = "advance_paid";
+  } else {
+    booking.paymentStatus = "unpaid";
+  }
+
   booking.updatedAt = new Date().toISOString();
-  booking.adminRemarks = `${booking.adminRemarks || ""}\n[${new Date().toLocaleDateString("en-IN")}] Rescheduled/Updated by ${admin.email}: ${oldDate} (${oldSlot}) -> ${targetDate} (${targetSlot})${oldPkg !== targetPackageName ? `, Package: ${oldPkg} -> ${targetPackageName}` : ""}. Reason: ${reason || "Customer request"}`.trim();
+  booking.adminRemarks = `${booking.adminRemarks || ""}\n[${new Date().toLocaleDateString("en-IN")}] Rescheduled/Updated by ${admin.email}: ${oldDate} (${oldSlot}) -> ${targetDate} (${targetSlot})${oldPkg !== targetPackageName ? `, Package: ${oldPkg} -> ${targetPackageName}` : ""}${discountLogStr}${extraLogStr}. Reason: ${reason || "Manager update"}`.trim();
 
   // If there were any availability blackouts linked to this booking on old date, remove them
   if (db.availabilityBlackouts && Array.isArray(db.availabilityBlackouts)) {
@@ -1111,16 +1170,24 @@ apiRouter.patch("/bookings/:id/discount", requireAdminAuth, async (req: Request,
   booking.updatedAt = new Date().toISOString();
 
   const cleanReason = reason ? reason.trim() : "";
-  if (cleanReason) {
-    booking.couponCode = `DIRECT-${cleanReason}`;
-    booking.discountReason = cleanReason;
-    booking.adminRemarks = `${booking.adminRemarks || ""}\nSpecial Discount applied: ₹${discountAmount.toLocaleString("en-IN")} (${cleanReason})${newExtraCharge > 0 ? ` | Extra charge: ₹${newExtraCharge.toLocaleString("en-IN")} (${effectiveExtraReason})` : ""}`.trim();
-  } else if (discountAmount > 0) {
-    booking.couponCode = "DIRECT-Special Discount";
-    booking.discountReason = "Special Discount";
-  } else if (discountAmount === 0 && (!booking.couponCode || booking.couponCode.startsWith("DIRECT-"))) {
-    booking.couponCode = undefined;
+  if (discountAmount > 0) {
+    if (cleanReason) {
+      booking.couponCode = `DIRECT-${cleanReason}`;
+      booking.discountReason = cleanReason;
+      booking.adminRemarks = `${booking.adminRemarks || ""}\nSpecial Discount applied: ₹${discountAmount.toLocaleString("en-IN")} (${cleanReason})${newExtraCharge > 0 ? ` | Extra charge: ₹${newExtraCharge.toLocaleString("en-IN")} (${effectiveExtraReason})` : ""}`.trim();
+    } else {
+      booking.couponCode = "DIRECT-Special Discount";
+      booking.discountReason = "Special Discount";
+      booking.adminRemarks = `${booking.adminRemarks || ""}\nSpecial Discount applied: ₹${discountAmount.toLocaleString("en-IN")}${newExtraCharge > 0 ? ` | Extra charge: ₹${newExtraCharge.toLocaleString("en-IN")} (${effectiveExtraReason})` : ""}`.trim();
+    }
+  } else {
+    booking.discountAmount = 0;
+    booking.discountValue = 0;
     booking.discountReason = undefined;
+    if (!booking.couponCode || booking.couponCode.startsWith("DIRECT-")) {
+      booking.couponCode = undefined;
+    }
+    booking.adminRemarks = `${booking.adminRemarks || ""}\nPricing updated: Discount removed / cleared (₹0)${newExtraCharge > 0 ? ` | Extra charge: ₹${newExtraCharge.toLocaleString("en-IN")} (${effectiveExtraReason})` : ""}`.trim();
   }
 
   await persistDb();
