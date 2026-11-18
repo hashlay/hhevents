@@ -87,8 +87,10 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
       const local = localStorage.getItem('hh_events_local_settings_v4');
       if (local) {
         const parsed = JSON.parse(local);
-        if (parsed.signatorySignature !== undefined && parsed.signatorySignature !== null) {
+        if (parsed.signatorySignature && parsed.signatorySignature.trim().length > 0 && parsed.signatorySignature !== '/authorized-signatory.png') {
           setSignatureUrl(parsed.signatorySignature);
+        } else {
+          setSignatureUrl(DEFAULT_AUTHORIZED_SIGNATURE);
         }
         if (parsed.signatoryName) setSignatoryDesignation(parsed.signatoryName);
       }
@@ -97,8 +99,10 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
     fetch('/api/settings')
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (data?.signatorySignature !== undefined && data?.signatorySignature !== null) {
+        if (data?.signatorySignature && data.signatorySignature.trim().length > 0 && data.signatorySignature !== '/authorized-signatory.png') {
           setSignatureUrl(data.signatorySignature);
+        } else {
+          setSignatureUrl(DEFAULT_AUTHORIZED_SIGNATURE);
         }
         if (data?.signatoryName) setSignatoryDesignation(data.signatoryName);
       })

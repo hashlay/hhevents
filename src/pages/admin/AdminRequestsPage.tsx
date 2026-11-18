@@ -93,12 +93,16 @@ export const AdminRequestsPage: React.FC<AdminRequestsPageProps> = ({ navigate }
     fetch('/api/settings')
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (data?.signatorySignature !== undefined && data?.signatorySignature !== null) {
+        if (data?.signatorySignature && data.signatorySignature.trim().length > 0 && data.signatorySignature !== '/authorized-signatory.png') {
           setSignatureUrl(data.signatorySignature);
+        } else {
+          setSignatureUrl(DEFAULT_AUTHORIZED_SIGNATURE);
         }
         if (data?.signatoryName) setSignatoryDesignation(data.signatoryName);
       })
-      .catch(() => {});
+      .catch(() => {
+        setSignatureUrl(DEFAULT_AUTHORIZED_SIGNATURE);
+      });
   }, []);
 
   const handleDirectWhatsAppShare = async (b: BookingRequest) => {

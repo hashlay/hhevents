@@ -8,9 +8,21 @@ import { DEFAULT_AUTHORIZED_SIGNATURE } from './defaultSignature';
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.crossOrigin = 'anonymous';
+    // Do not set crossOrigin for data URIs to prevent browser taint / load issues
+    if (src.startsWith('http')) {
+      img.crossOrigin = 'anonymous';
+    }
     img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error('Failed to load image'));
+    img.onerror = () => {
+      if (img.crossOrigin) {
+        const retry = new Image();
+        retry.onload = () => resolve(retry);
+        retry.onerror = () => reject(new Error('Failed to load image'));
+        retry.src = src;
+      } else {
+        reject(new Error('Failed to load image'));
+      }
+    };
     img.src = src;
   });
 }
@@ -552,8 +564,11 @@ export async function renderReceiptToCanvas(
   ctx.font = '11px Arial, Helvetica, sans-serif';
   ctx.fillText('For : H H Events & Conventions', marginX + contentW - 16, sigBoxY);
 
-  // Signature Image
-  const activeSig = signatureUrl || DEFAULT_AUTHORIZED_SIGNATURE;
+  // Signature Image (Guaranteed fallback to DEFAULT_AUTHORIZED_SIGNATURE)
+  const activeSig =
+    signatureUrl && signatureUrl.trim().length > 0 && signatureUrl !== '/authorized-signatory.png'
+      ? signatureUrl
+      : DEFAULT_AUTHORIZED_SIGNATURE;
   if (activeSig) {
     try {
       const sigImg = await loadImage(activeSig);

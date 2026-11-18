@@ -82,9 +82,11 @@ export const EventOrderReceipt: React.FC<EventOrderReceiptProps> = ({
   const isCompleted = (booking.status || '').toUpperCase() === 'COMPLETED';
   const isBillMode = mode === 'bill' || (mode !== 'event_order' && isCompleted);
 
-  // Default signature resolution
+  // Default signature resolution (guaranteed fallback to authorized signature)
   const activeSignature =
-    signatureUrl !== undefined ? signatureUrl : DEFAULT_AUTHORIZED_SIGNATURE;
+    signatureUrl && signatureUrl.trim().length > 0 && signatureUrl !== '/authorized-signatory.png'
+      ? signatureUrl
+      : DEFAULT_AUTHORIZED_SIGNATURE;
 
   // Financial calculations
   const totalAmount =
@@ -545,7 +547,6 @@ export const EventOrderReceipt: React.FC<EventOrderReceiptProps> = ({
               {activeSignature ? (
                 <img
                   src={activeSignature}
-                  crossOrigin="anonymous"
                   alt="Authorized Signatory"
                   className="max-h-14 max-w-[170px] object-contain mix-blend-multiply"
                 />

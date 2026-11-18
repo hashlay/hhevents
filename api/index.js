@@ -1628,8 +1628,15 @@ Pricing updated: Discount removed / cleared (\u20B90)${newExtraCharge > 0 ? ` | 
 });
 apiRouter.get("/settings", async (req, res) => {
   const db = await getDb();
-  if (db.settings.signatorySignature === void 0) {
-    db.settings.signatorySignature = "/authorized-signatory.png";
+  if (!db.settings.signatorySignature || db.settings.signatorySignature === "/authorized-signatory.png") {
+    try {
+      const sigPath = path2.join(process.cwd(), "public", "authorized-signatory.png");
+      if (fs2.existsSync(sigPath)) {
+        const fileBuf = fs2.readFileSync(sigPath);
+        db.settings.signatorySignature = `data:image/jpeg;base64,${fileBuf.toString("base64")}`;
+      }
+    } catch {
+    }
   }
   if (!db.settings.signatoryName) {
     db.settings.signatoryName = "Authorized Signatory";

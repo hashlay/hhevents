@@ -1209,8 +1209,14 @@ apiRouter.patch("/bookings/:id/discount", requireAdminAuth, async (req: Request,
 // ==========================================
 apiRouter.get("/settings", async (req: Request, res: Response) => {
   const db = await getDb();
-  if (db.settings.signatorySignature === undefined) {
-    db.settings.signatorySignature = '/authorized-signatory.png';
+  if (!db.settings.signatorySignature || db.settings.signatorySignature === '/authorized-signatory.png') {
+    try {
+      const sigPath = path.join(process.cwd(), 'public', 'authorized-signatory.png');
+      if (fs.existsSync(sigPath)) {
+        const fileBuf = fs.readFileSync(sigPath);
+        db.settings.signatorySignature = `data:image/jpeg;base64,${fileBuf.toString('base64')}`;
+      }
+    } catch {}
   }
   if (!db.settings.signatoryName) {
     db.settings.signatoryName = 'Authorized Signatory';

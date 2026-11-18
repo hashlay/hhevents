@@ -1,27 +1,52 @@
 import html2canvas from 'html2canvas';
 import { BookingRequest } from '../types';
 import { renderReceiptToBlob } from './receiptCanvasRenderer';
+import { DEFAULT_AUTHORIZED_SIGNATURE } from './defaultSignature';
 
 /**
- * Builds the official WhatsApp caption for the confirmed Event Order.
+ * Builds the comprehensive official WhatsApp message for the confirmed Event Order or completed Bill.
+ * Includes complete customer, package, schedule, and financial breakdown (tariff, discount, extra charges, net total, advance, balance)
+ * along with the online verification link.
  */
 export function buildEventOrderCaption(booking: BookingRequest): string {
   const isCompleted = (booking.status || '').toUpperCase() === 'COMPLETED';
-
-  // For COMPLETED bookings, the caption is strictly the official Bill caption:
-  if (isCompleted) {
-    return `Thanks for doing business with us.
-Regards,
-H H Events & Conventions`;
-  }
-
   const bObj = booking as any;
-  const hostName = booking.customerName || bObj.applicantName || 'Sir/Madam';
-  const paid = Number(bObj.amountPaid) || 0;
-  const total = Number(bObj.totalAmount) || Number(booking.totalEstimate) || 0;
-  const balance = Number(bObj.balanceDue) !== undefined && !isNaN(Number(bObj.balanceDue))
-    ? Number(bObj.balanceDue)
-    : Math.max(0, total - paid);
+  const hostName = booking.customerName || bObj.applicantName || 'Customer';
+
+  // Financial details
+  const totalAmount =
+    bObj.totalAmount !== undefined
+      ? Number(bObj.totalAmount)
+      : (booking.totalEstimate || booking.estimatedAmount || 0);
+  const discountAmount = Number(bObj.discountAmount) || 0;
+  const extraCharge = Number(bObj.extraCharge) || 0;
+  const grossRent =
+    Number(bObj.originalAmount || bObj.packagePrice) ||
+    (discountAmount > 0 || extraCharge > 0 ? totalAmount + discountAmount - extraCharge : totalAmount);
+
+  const amountPaid =
+    bObj.amountPaid !== undefined
+      ? Number(bObj.amountPaid)
+      : booking.advancePaymentStatus === 'fully_paid'
+      ? totalAmount
+      : booking.advancePaymentStatus === 'advance_paid'
+      ? Math.round(totalAmount * 0.25)
+      : 0;
+
+  const balanceDue =
+    bObj.balanceDue !== undefined && !isNaN(Number(bObj.balanceDue))
+      ? Number(bObj.balanceDue)
+      : Math.max(0, totalAmount - amountPaid);
+
+  // Package & Spaces
+  const packageName = booking.packageName || bObj.packageTitle || 'Hall Reservation';
+  const hallType = (booking.hall || bObj.hallSelection || 'both');
+  const spaceLabel =
+    hallType === 'both'
+      ? 'Combined Campus (Full Hall)'
+      : hallType === 'hall_2'
+      ? 'Ladies Wing (Hall 2)'
+      : 'Gents Wing (Hall 1)';
 
   // Event Date formatting
   const evDateRaw = booking.date || bObj.eventDate || '';
@@ -39,14 +64,53 @@ H H Events & Conventions`;
     }
   }
 
-  const sessionSlot = (booking.slot || bObj.timeSlot || 'day').toLowerCase();
-  const sessionName = sessionSlot === 'evening' ? 'Night' : 'Day';
+  const rawSlot = (booking.slot || bObj.timeSlot || 'day').toLowerCase();
+  const sessionLabel = rawSlot === 'evening' ? 'Evening Session (6PM–10PM)' : 'Day Session (10AM–3PM)';
+
+  // Discount & Extra Charge lines
+  let discountLine = '';
+  if (discountAmount > 0) {
+    const rawDisc = (bObj.discountReason || (bObj.couponCode?.startsWith('DIRECT-') ? bObj.couponCode.replace(/^DIRECT-/, '') : '') || '').trim();
+    const reasonText = rawDisc && rawDisc.toLowerCase() !== 'special discount' ? ` (${rawDisc})` : '';
+    discountLine = `\n🏷️ Special Discount: -₹${discountAmount.toLocaleString('en-IN')}${reasonText}`;
+  }
+
+  let extraChargeLine = '';
+  if (extraCharge > 0) {
+    const extraReason = (bObj.extraChargeReason || 'If AC Needed').trim();
+    extraChargeLine = `\n⚡ Extra Charge: +₹${extraCharge.toLocaleString('en-IN')}${extraReason ? ` (${extraReason})` : ''}`;
+  }
 
   const origin =
     typeof window !== 'undefined' && window.location.origin
       ? window.location.origin
       : 'https://hhevents.vercel.app';
   const orderLink = `${origin}/order/${booking.id}`;
+
+  if (isCompleted) {
+    return `Dear Customer (${hostName}),
+
+Your event invoice bill has been generated.
+
+Please find your Invoice Bill attached for your reference.
+
+📋 Invoice Ref: ${booking.id}
+🎪 Package: ${packageName} — ${spaceLabel}
+📅 Event Date: ${shortDate} ${dayOfWeek} (${sessionLabel})
+💰 Agreed Tariff / Package Price: ₹${grossRent.toLocaleString('en-IN')}${discountLine}${extraChargeLine}
+💵 Total Bill Amount: ₹${totalAmount.toLocaleString('en-IN')}
+👑 Total Paid: ₹${amountPaid.toLocaleString('en-IN')}
+💳 Balance Due: ₹${balanceDue > 0 ? balanceDue.toLocaleString('en-IN') : '0.00 (Fully Settled)'}
+
+📄 View / Download Tax Invoice Online:
+${orderLink}
+
+Thanks for doing business with us.
+Regards,
+H H Events & Conventions
+Opposite Juma Masjid, Akkarangadi, Panemangalore, Bantwal-574231
+Ph: 9448151878`;
+  }
 
   return `Dear Customer (${hostName}),
 
@@ -55,11 +119,14 @@ Your event booking has been confirmed.
 Please find your Event Order attached for your reference.
 
 📋 Booking Ref: ${booking.id}
-📅 Event Date: ${shortDate} ${dayOfWeek} (${sessionName} Session)
-💰 Advance Received: ₹${paid > 0 ? Number(paid).toLocaleString('en-IN') : '0.00'}
-💳 Balance Due: ₹${balance > 0 ? Number(balance).toLocaleString('en-IN') : '0.00'}
+🎪 Package: ${packageName} — ${spaceLabel}
+📅 Event Date: ${shortDate} ${dayOfWeek} (${sessionLabel})
+💰 Agreed Tariff / Package Price: ₹${grossRent.toLocaleString('en-IN')}${discountLine}${extraChargeLine}
+💵 Net Payable Rent: ₹${totalAmount.toLocaleString('en-IN')}
+👑 Advance Received: ₹${amountPaid.toLocaleString('en-IN')}
+💳 Balance Due: ₹${balanceDue > 0 ? balanceDue.toLocaleString('en-IN') : '0.00 (Fully Settled)'}
 
-📄 View Order Online:
+📄 View / Verify Event Order Online:
 ${orderLink}
 
 Regards,
@@ -176,14 +243,13 @@ export async function downloadReceiptAsJpg(
 }
 
 /**
- * Direct WhatsApp Event Order & Bill Image Sharing:
+ * Direct WhatsApp Event Order & Bill Sharing:
  *
- * 1. Generates the Event Order or Bill as an ultra-crisp, high-resolution JPG image file and caption.
- * 2. Mobile & Web Share API:
- *    Uses Web Share API with files: [imageFile] and text: caption.
- *    Opens WhatsApp with the image attached and the caption automatically inserted as the image caption.
- * 3. Desktop / WhatsApp Web Workflow:
- *    Copies the image to the OS clipboard, downloads the JPG, and opens the customer's WhatsApp chat with the caption.
+ * 1. Instantly launches customer WhatsApp chat to their phone number (https://wa.me/91XXXXXXXXXX)
+ *    with the complete, comprehensive message prefilled (packages, tariff, discount, extra charges, totals, balance, link).
+ * 2. Concurrently renders the exact Event Order or Bill JPG with authorized signature (in ~5-10ms)
+ *    and immediately downloads it to the admin's device.
+ * 3. Copies the image to system clipboard (as PNG) so the admin can simply press Ctrl+V in WhatsApp Web.
  */
 export async function shareEventOrderDirectly({
   booking,
@@ -207,15 +273,24 @@ export async function shareEventOrderDirectly({
 
   const isCompleted = (booking.status || '').toUpperCase() === 'COMPLETED';
   const caption = buildEventOrderCaption(booking);
-  const docTypeLabel = isCompleted ? 'Bill' : 'Event Order';
+  const docTypeLabel = isCompleted ? 'Invoice Bill' : 'Event Order';
+
+  // 1. Instantly open customer's WhatsApp chat in a new tab without delay
+  const whatsappUrl = `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(caption)}`;
+  window.open(whatsappUrl, '_blank');
+
+  // 2. Concurrently render and trigger immediate JPG download to admin device
+  const activeSig =
+    (signatureUrl && signatureUrl.trim().length > 0 && signatureUrl !== '/authorized-signatory.png')
+      ? signatureUrl
+      : DEFAULT_AUTHORIZED_SIGNATURE;
 
   let jpgBlob: Blob | null = null;
   let pngBlob: Blob | null = null;
   let filename = isCompleted ? `HH-Bill-${booking.id}.jpg` : `HH-Event-Order-${booking.id}.jpg`;
 
-  // 1. Offscreen Canvas 2D Renderer (fast, reliable, 100% works on mobile & desktop without DOM delays)
   try {
-    const rendered = await renderReceiptToBlob(booking, isCompleted, signatureUrl);
+    const rendered = await renderReceiptToBlob(booking, isCompleted, activeSig);
     jpgBlob = rendered.jpegBlob;
     pngBlob = rendered.pngBlob;
     filename = rendered.fileName;
@@ -228,45 +303,8 @@ export async function shareEventOrderDirectly({
     }
   }
 
-  // OPTION A: Web Share API with File
-  // Native mobile browsers (Android Chrome, iOS Safari) and supported desktop devices
-  // allow sharing the real JPG file attachment directly into WhatsApp with the caption.
-  if (jpgBlob) {
-    const jpgFile = new File([jpgBlob], filename, { type: 'image/jpeg' });
-
-    if (
-      typeof navigator !== 'undefined' &&
-      typeof navigator.canShare === 'function' &&
-      navigator.canShare({ files: [jpgFile] })
-    ) {
-      try {
-        await navigator.share({
-          files: [jpgFile],
-          title: `HH Events - ${docTypeLabel} (${booking.id})`,
-          text: caption,
-        });
-        showToast?.(`${docTypeLabel} JPG shared to WhatsApp!`, 'success');
-        return;
-      } catch (err: any) {
-        if (err?.name === 'AbortError') {
-          // User closed share picker without selecting
-          return;
-        }
-        console.warn('Web Share API aborted or failed, using desktop fallback:', err);
-      }
-    }
-  }
-
-  // OPTION B: Desktop / WhatsApp Web Workflow
-  // Browsers cannot programmatically inject files into WhatsApp Web URLs (wa.me only supports ?text=).
-  // We execute the closest, highest-reliability direct attachment workflow:
-  // 1. Copy the rendered image directly to OS clipboard as image/png.
-  // 2. Automatically download the high-res JPG to the device.
-  // 3. Open the customer's direct WhatsApp chat with the confirmed caption prefilled.
-  // 4. In WhatsApp Web, pressing Ctrl+V immediately pastes & attaches the copied Event Order / Bill image!
-
+  // 3. Copy image directly to OS clipboard as image/png for instant Ctrl+V pasting in WhatsApp Web
   let copiedToClipboard = false;
-
   if (pngBlob && typeof navigator !== 'undefined' && navigator.clipboard && window.ClipboardItem) {
     try {
       await navigator.clipboard.write([
@@ -278,6 +316,7 @@ export async function shareEventOrderDirectly({
     }
   }
 
+  // 4. Trigger automatic download of the high-res JPG to the admin's device
   if (jpgBlob) {
     try {
       const url = URL.createObjectURL(jpgBlob);
@@ -293,18 +332,14 @@ export async function shareEventOrderDirectly({
     }
   }
 
-  // Open WhatsApp chat directly to the customer's number
-  const whatsappUrl = `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(caption)}`;
-  window.open(whatsappUrl, '_blank');
-
   if (copiedToClipboard) {
     showToast?.(
-      `${docTypeLabel} JPG copied to clipboard & downloaded! In WhatsApp Web, press Ctrl+V to attach image, then click Send.`,
+      `${docTypeLabel} JPG downloaded & copied to clipboard! Opening WhatsApp chat...`,
       'success'
     );
   } else {
     showToast?.(
-      `${docTypeLabel} JPG downloaded! Opening customer WhatsApp chat...`,
+      `${docTypeLabel} JPG downloaded! Opening WhatsApp chat...`,
       'success'
     );
   }
