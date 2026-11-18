@@ -389,29 +389,30 @@ export function checkSlotAvailability(
   slot: SlotType,
   ignoreBookingId?: string
 ): { available: boolean; conflictReason?: string; booking?: BookingRequest; reason?: string } {
-  // 1. Manager Blackout Override Check
-  // Check if management explicitly created a blackout for this date/slot
-  const overrides = getAvailabilityOverrides();
-  const isManuallyBlackedOut = overrides.some((o) => {
-    if (o.date !== date) return false;
-    if ((o.slot as any) !== 'full_day' && o.slot !== slot) return false;
-    if (o.hall === 'both' || hall === 'both' || o.hall === hall) return true;
-    return false;
-  });
+  // 1. Manager Blackout Override Check (Admins creating direct reservations can override blackouts / past dates)
+  const isAdminDirect = !!(ignoreBookingId && (ignoreBookingId.startsWith('admin') || ignoreBookingId.startsWith('HH-')));
 
-  if (isManuallyBlackedOut) {
-    const hallName = hall === 'hall_1' ? 'Hall 1' : hall === 'hall_2' ? 'Hall 2' : 'Combined Hall';
-    const slotName = slot === 'day' ? 'Day Session (10:00 AM – 3:00 PM)' : 'Evening Session (6:00 PM – 10:00 PM)';
-    const msg = `${hallName} is marked Unavailable by management blackout for ${slotName} on ${date}.`;
-    return {
-      available: false,
-      conflictReason: msg,
-      reason: msg,
-    };
-  }
+  if (!isAdminDirect) {
+    const overrides = getAvailabilityOverrides();
+    const isManuallyBlackedOut = overrides.some((o) => {
+      if (o.date !== date) return false;
+      if ((o.slot as any) !== 'full_day' && o.slot !== slot) return false;
+      if (o.hall === 'both' || hall === 'both' || o.hall === hall) return true;
+      return false;
+    });
 
-  // If this is a new public inquiry without an ignoreBookingId, also respect public slot availability
-  if (!ignoreBookingId) {
+    if (isManuallyBlackedOut) {
+      const hallName = hall === 'hall_1' ? 'Hall 1' : hall === 'hall_2' ? 'Hall 2' : 'Combined Hall';
+      const slotName = slot === 'day' ? 'Day Session (10:00 AM – 3:00 PM)' : 'Evening Session (6:00 PM – 10:00 PM)';
+      const msg = `${hallName} is marked Unavailable by management blackout for ${slotName} on ${date}.`;
+      return {
+        available: false,
+        conflictReason: msg,
+        reason: msg,
+      };
+    }
+
+    // Also respect public slot availability
     const managerOpen = isSlotAvailable(hall, date, slot);
     if (!managerOpen) {
       const hallName = hall === 'hall_1' ? 'Hall 1' : hall === 'hall_2' ? 'Hall 2' : 'Combined Hall';

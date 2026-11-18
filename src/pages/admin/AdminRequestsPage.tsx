@@ -450,8 +450,8 @@ Ph:9448151878`;
     }
 
     const cleanPhone = createForm.phone.replace(/\D/g, '');
-    if (cleanPhone.length < 10) {
-      showToast('Please enter a valid 10-digit phone number', 'error');
+    if (cleanPhone.length < 5) {
+      showToast('Please enter a valid phone number', 'error');
       return;
     }
 
@@ -466,8 +466,8 @@ Ph:9448151878`;
     const advance = Number(createForm.advancePaid) || 0;
     const balanceDue = Math.max(0, netRent - advance);
 
-    // Conflict check
-    const conflict = checkSlotAvailability(createForm.hall, createForm.date, createForm.slot);
+    // Conflict check (admins creating direct reservation only check against existing confirmed bookings)
+    const conflict = checkSlotAvailability(createForm.hall, createForm.date, createForm.slot, 'admin_direct');
     if (!conflict.available) {
       showToast(conflict.conflictReason || conflict.reason || 'Conflict: Slot is already occupied on this date.', 'error');
       return;
@@ -487,7 +487,7 @@ Ph:9448151878`;
     const pending: BookingRequest & any = {
       id: bookingId,
       customerName: createForm.customerName.trim(),
-      phone: cleanPhone.slice(-10),
+      phone: cleanPhone.length >= 10 ? cleanPhone.slice(-10) : cleanPhone,
       email: 'desk@hhevents.in',
       hall: createForm.hall,
       hallSelection: createForm.hall,
@@ -2656,7 +2656,7 @@ Ph:9448151878`;
             isOpen={isCreateModalOpen}
             onClose={handleCloseCreateModal}
             title={createModalStep === 'preview' ? `Preview Event Order — Check & Confirm (${pendingReservation?.id || ''})` : "Direct Manual Reservation"}
-            maxWidth={createModalStep === 'preview' ? "2xl" : "md"}
+            maxWidth={createModalStep === 'preview' ? "4xl" : "md"}
           >
             {createModalStep === 'form' ? (
               <form onSubmit={handleProceedToPreview} className="space-y-4 text-xs">

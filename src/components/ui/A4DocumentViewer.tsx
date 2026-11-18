@@ -16,7 +16,9 @@ export const A4DocumentViewer: React.FC<A4DocumentViewerProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
-  const [containerWidth, setContainerWidth] = useState<number>(820);
+  const [containerWidth, setContainerWidth] = useState<number>(() =>
+    typeof window !== 'undefined' ? window.innerWidth : 820
+  );
   const [contentHeight, setContentHeight] = useState<number>(1123);
   const [mode, setMode] = useState<'fit' | '100'>(defaultMode);
 
@@ -24,34 +26,47 @@ export const A4DocumentViewer: React.FC<A4DocumentViewerProps> = ({
   const A4_WIDTH = 794;
 
   useEffect(() => {
-    const updateDimensions = () => {
+    let animId: number;
+
+    const updateWidth = () => {
       if (containerRef.current) {
         const w = containerRef.current.clientWidth;
-        if (w > 0) setContainerWidth(w);
+        if (w > 0) {
+          setContainerWidth((prev) => (Math.abs(prev - w) > 4 ? Math.round(w) : prev));
+        }
       }
       if (contentRef.current) {
         const h = contentRef.current.offsetHeight;
-        if (h > 0) setContentHeight(h);
+        if (h > 0) {
+          setContentHeight((prev) => (Math.abs(prev - h) > 4 ? Math.round(h) : prev));
+        }
       }
     };
 
-    updateDimensions();
+    updateWidth();
 
-    const resizeObserver = new ResizeObserver(() => {
-      updateDimensions();
-    });
-
-    if (containerRef.current) {
-      resizeObserver.observe(containerRef.current);
+    // Use ResizeObserver safely on container only
+    if (typeof ResizeObserver !== 'undefined' && containerRef.current) {
+      const ro = new ResizeObserver(() => {
+        cancelAnimationFrame(animId);
+        animId = requestAnimationFrame(updateWidth);
+      });
+      ro.observe(containerRef.current);
+      return () => {
+        cancelAnimationFrame(animId);
+        ro.disconnect();
+      };
     }
-    if (contentRef.current) {
-      resizeObserver.observe(contentRef.current);
-    }
 
-    window.addEventListener('resize', updateDimensions);
+    const onResize = () => {
+      cancelAnimationFrame(animId);
+      animId = requestAnimationFrame(updateWidth);
+    };
+
+    window.addEventListener('resize', onResize);
     return () => {
-      resizeObserver.disconnect();
-      window.removeEventListener('resize', updateDimensions);
+      cancelAnimationFrame(animId);
+      window.removeEventListener('resize', onResize);
     };
   }, []);
 
@@ -60,7 +75,7 @@ export const A4DocumentViewer: React.FC<A4DocumentViewerProps> = ({
     ? Math.min(1, Math.max(0.25, (containerWidth - 8) / A4_WIDTH))
     : 1;
   const currentScale = mode === 'fit' && isSmallScreen ? fitScale : 1;
-  const scaledHeight = isSmallScreen && mode === 'fit' ? Math.ceil(contentHeight * fitScale) : 'auto';
+  const scaledHeight = isSmallScreen && mode === 'fit' ? Math.ceil(contentHeight * fitScale) : undefined;
 
   return (
     <div className={`w-full a4-document-viewer ${className}`} ref={containerRef}>
@@ -110,7 +125,7 @@ export const A4DocumentViewer: React.FC<A4DocumentViewerProps> = ({
           mode === '100' && isSmallScreen ? 'overflow-x-auto pb-4' : 'overflow-hidden flex justify-center'
         }`}
         style={{
-          height: scaledHeight !== 'auto' ? `${scaledHeight}px` : undefined,
+          height: scaledHeight ? `${scaledHeight}px` : undefined,
         }}
       >
         <div

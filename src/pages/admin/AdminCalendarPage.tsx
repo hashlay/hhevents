@@ -36,6 +36,7 @@ import {
   getStoredMaintenance,
   updateBookingStatusAsync,
   generateBookingId,
+  checkSlotAvailability,
 } from '../../services/bookingStorage';
 import { syncBookingsFromServer, saveBookingAsync } from '../../services/storageService';
 import {
@@ -489,14 +490,14 @@ Ph:9448151878`;
     }
 
     const cleanPhone = quickBookForm.phone.replace(/\D/g, '');
-    if (cleanPhone.length < 10) {
-      showToast('Please enter a valid 10-digit phone number.', 'error');
+    if (cleanPhone.length < 5) {
+      showToast('Please enter a valid phone number', 'error');
       return;
     }
 
-    const isAvail = isSlotAvailable(quickBookForm.hall, selectedDate, quickBookForm.slot);
-    if (!isAvail) {
-      showToast('Conflict detected: Requested slot is already occupied or blocked on this date.', 'error');
+    const conflict = checkSlotAvailability(quickBookForm.hall, selectedDate, quickBookForm.slot, 'admin_direct');
+    if (!conflict.available) {
+      showToast(conflict.conflictReason || 'Conflict detected: Requested slot is already occupied on this date.', 'error');
       return;
     }
 
@@ -525,7 +526,7 @@ Ph:9448151878`;
     const newBooking: BookingRequest & any = {
       id: bookingId,
       customerName: quickBookForm.customerName.trim(),
-      phone: cleanPhone.slice(-10),
+      phone: cleanPhone.length >= 10 ? cleanPhone.slice(-10) : cleanPhone,
       email: 'desk@hhevents.in',
       hall: quickBookForm.hall as any,
       hallSelection: quickBookForm.hall as any,
@@ -1189,7 +1190,7 @@ Ph:9448151878`;
       {/* Quick Manual Reservation Modal */}
       {isQuickBookModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/50 backdrop-blur-xs">
-          <div className={`bg-white rounded-2xl ${quickBookStep === 'preview' ? 'max-w-3xl' : 'max-w-lg'} w-full p-5 sm:p-6 shadow-2xl border border-slate-200 space-y-4 max-h-[92vh] overflow-y-auto`}>
+          <div className={`bg-white rounded-2xl ${quickBookStep === 'preview' ? 'max-w-4xl' : 'max-w-lg'} w-full p-5 sm:p-6 shadow-2xl border border-slate-200 space-y-4 max-h-[92vh] overflow-y-auto`}>
             <div className="flex items-center justify-between border-b border-slate-100 pb-3 no-print">
               <div>
                 <h4 className="font-bold text-slate-900 text-base font-serif-heading">
