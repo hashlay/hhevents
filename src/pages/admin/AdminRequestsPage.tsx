@@ -1291,18 +1291,23 @@ Ph:9448151878`;
                             })()}
                           </td>
 
-                          <td className="p-2.5 text-slate-900 whitespace-nowrap align-middle">
-                            <div className="flex items-center gap-1.5 text-xs font-price">
-                              <span className="font-semibold text-slate-900">
+                          <td className="p-2.5 text-slate-900 align-middle">
+                            <div className="flex flex-col items-start gap-1 font-price">
+                              <span className="font-bold text-slate-900 text-xs">
                                 ₹{netRent.toLocaleString('en-IN')}
                               </span>
                               {disc > 0 && (
-                                <span className="text-[11px] text-emerald-700 font-medium bg-emerald-50 border border-emerald-200/80 px-1.5 py-0.5 rounded-md">
-                                  Special Discount: ₹{disc.toLocaleString('en-IN')}
+                                <span className="inline-flex items-center text-[10.5px] text-emerald-700 font-medium bg-emerald-50 border border-emerald-200/80 px-1.5 py-0.5 rounded-md leading-tight whitespace-nowrap">
+                                  {(() => {
+                                    const rawDisc = (bObj.discountReason || (bObj.couponCode?.startsWith('DIRECT-') ? bObj.couponCode.replace(/^DIRECT-/, '') : '') || '').trim();
+                                    return rawDisc && rawDisc.toLowerCase() !== 'special discount'
+                                      ? `${rawDisc}: ₹${disc.toLocaleString('en-IN')}`
+                                      : `Special Discount: ₹${disc.toLocaleString('en-IN')}`;
+                                  })()}
                                 </span>
                               )}
                               {extra > 0 && (
-                                <span className="text-[10px] text-amber-800 font-medium bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-md">
+                                <span className="inline-flex items-center text-[10px] text-amber-800 font-medium bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-md leading-tight whitespace-nowrap">
                                   + ₹{extra.toLocaleString('en-IN')} ({extraReason})
                                 </span>
                               )}
