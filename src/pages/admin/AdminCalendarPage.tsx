@@ -59,6 +59,7 @@ import { useAuth } from '../../context/AuthContext';
 import { BookingRequest } from '../../types';
 import { WhatsAppShareModal } from '../../components/ui/WhatsAppShareModal';
 import { EventOrderReceipt } from '../../components/ui/EventOrderReceipt';
+import { A4DocumentViewer } from '../../components/ui/A4DocumentViewer';
 import { shareEventOrderDirectly, downloadReceiptAsJpg } from '../../services/eventOrderShare';
 import { DEFAULT_AUTHORIZED_SIGNATURE } from '../../services/defaultSignature';
 import {
@@ -1547,14 +1548,16 @@ Ph:9448151878`;
 
               {/* Event Order Receipt Preview */}
               {pendingQuickBook && (
-                <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs bg-white">
-                  <EventOrderReceipt
-                    booking={pendingQuickBook}
-                    receiptNumber={pendingQuickBook.id.replace(/\D/g, '')}
-                    signatureUrl={signatureUrl}
-                    signatoryDesignation={signatoryDesignation}
-                    containerRef={quickReceiptRef}
-                  />
+                <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs bg-slate-50/50 p-1 sm:p-2">
+                  <A4DocumentViewer defaultMode="fit" allowToggle={true}>
+                    <EventOrderReceipt
+                      booking={pendingQuickBook}
+                      receiptNumber={pendingQuickBook.id.replace(/\D/g, '')}
+                      signatureUrl={signatureUrl}
+                      signatoryDesignation={signatoryDesignation}
+                      containerRef={quickReceiptRef}
+                    />
+                  </A4DocumentViewer>
                 </div>
               )}
 

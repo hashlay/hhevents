@@ -6,6 +6,7 @@ import { BookingRequest } from '../../types';
 import { VENUE_INFO } from '../../services/hallData';
 import { useToast } from '../../context/ToastContext';
 import { EventOrderReceipt } from './EventOrderReceipt';
+import { A4DocumentViewer } from './A4DocumentViewer';
 import { downloadReceiptAsJpg, shareEventOrderDirectly } from '../../services/eventOrderShare';
 import { DEFAULT_AUTHORIZED_SIGNATURE } from '../../services/defaultSignature';
 
@@ -264,13 +265,15 @@ Ph:9448151878`;
   return (
     <Dialog isOpen={isOpen} onClose={onClose} title={docTitle} maxWidth="2xl">
       <div className="space-y-4 text-slate-900">
-        <EventOrderReceipt
-          booking={booking}
-          receiptNumber={receiptNumber}
-          signatureUrl={signatureUrl}
-          signatoryDesignation={signatoryDesignation}
-          containerRef={receiptRef}
-        />
+        <A4DocumentViewer defaultMode="fit" allowToggle={true}>
+          <EventOrderReceipt
+            booking={booking}
+            receiptNumber={receiptNumber}
+            signatureUrl={signatureUrl}
+            signatoryDesignation={signatoryDesignation}
+            containerRef={receiptRef}
+          />
+        </A4DocumentViewer>
 
         {/* Action Controls (Hidden on Print) */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-2 no-print border-t border-slate-200">

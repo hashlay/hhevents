@@ -177,24 +177,29 @@ export const EventOrderReceipt: React.FC<EventOrderReceiptProps> = ({
     <div
       ref={containerRef as any}
       id="printable-receipt"
-      className={`bg-white p-4 sm:p-7 border border-slate-300 rounded-sm shadow-xs print:border-none print:shadow-none print:p-0 select-text ${className}`}
-      style={{ fontFamily: 'Arial, Helvetica, sans-serif' }}
+      className={`bg-white p-7 border border-slate-300 rounded-sm shadow-md print:border-none print:shadow-none print:p-0 select-text w-[794px] min-w-[794px] max-w-[794px] mx-auto ${className}`}
+      style={{
+        fontFamily: 'Arial, Helvetica, sans-serif',
+        width: '794px',
+        minWidth: '794px',
+        maxWidth: '794px',
+      }}
     >
       {/* Top Banner (Solid Blue with Venue Coordinates) */}
-      <div className="bg-[#0082a6] text-white text-center py-3.5 px-4 sm:px-6">
-        <h1 className="text-xl sm:text-2xl font-bold tracking-wide">
+      <div className="bg-[#0082a6] text-white text-center py-3.5 px-6">
+        <h1 className="text-2xl font-bold tracking-wide">
           H H Events &amp; Conventions
         </h1>
-        <p className="text-[11.5px] sm:text-xs mt-0.5 opacity-95">Opposite Juma Masjid</p>
-        <p className="text-[11.5px] sm:text-xs opacity-95">Akkarangadi, Panemangalore,</p>
-        <p className="text-[11px] sm:text-[11.5px] opacity-95">
+        <p className="text-xs mt-0.5 opacity-95">Opposite Juma Masjid</p>
+        <p className="text-xs opacity-95">Akkarangadi, Panemangalore,</p>
+        <p className="text-[11.5px] opacity-95">
           Bantwal, Dakshina Kannada, Ph. no.: 9448151878 Email: hheventsconvention@gmail.com
         </p>
       </div>
 
       {/* Subheading: "Bill" (Completed) or "Event Order" (Confirmed) */}
       <div className="py-2.5 text-center">
-        <h2 className="text-base sm:text-lg font-bold text-[#0082a6] tracking-wide uppercase">
+        <h2 className="text-lg font-bold text-[#0082a6] tracking-wide uppercase">
           {isBillMode ? 'Bill' : 'Event Order'}
         </h2>
       </div>
@@ -208,7 +213,7 @@ export const EventOrderReceipt: React.FC<EventOrderReceiptProps> = ({
         </div>
 
         {/* Content Details */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 p-3 text-slate-800 leading-relaxed gap-2">
+        <div className="grid grid-cols-2 p-3 text-slate-800 leading-relaxed gap-2">
           <div>
             <div className="font-bold text-sm text-slate-900">
               {evDateShortHeader} {booking.customerName}
@@ -226,7 +231,7 @@ export const EventOrderReceipt: React.FC<EventOrderReceiptProps> = ({
             )}
           </div>
 
-          <div className="text-left sm:text-right space-y-0.5 text-xs">
+          <div className="text-right space-y-0.5 text-xs">
             {isBillMode ? (
               <>
                 <div>
@@ -384,9 +389,9 @@ export const EventOrderReceipt: React.FC<EventOrderReceiptProps> = ({
       )}
 
       {/* Lower Grid (Left: Words & Terms | Right: Amounts & Signatory) */}
-      <div className="grid grid-cols-1 md:grid-cols-12 border border-[#0082a6] border-t-0 text-xs">
+      <div className="grid grid-cols-12 border border-[#0082a6] border-t-0 text-xs">
         {/* Left Column (7 cols) */}
-        <div className="md:col-span-7 border-b md:border-b-0 md:border-r border-[#0082a6] flex flex-col justify-between">
+        <div className="col-span-7 border-r border-[#0082a6] flex flex-col justify-between">
           <div>
             {/* Amount In Words */}
             <div className="bg-[#0082a6] text-white font-bold py-1 px-3 text-[11px]">
@@ -441,7 +446,7 @@ export const EventOrderReceipt: React.FC<EventOrderReceiptProps> = ({
         </div>
 
         {/* Right Column (5 cols: Amounts & Signatory) */}
-        <div className="md:col-span-5 flex flex-col justify-between">
+        <div className="col-span-5 flex flex-col justify-between">
           <div>
             <div className="bg-[#0082a6] text-white font-bold py-1 px-3 text-[11px]">
               Amounts
@@ -538,12 +543,12 @@ export const EventOrderReceipt: React.FC<EventOrderReceiptProps> = ({
           </div>
 
           {/* Authorized Signatory Block (Bottom-Right) */}
-          <div className="p-4 pt-6 text-center sm:text-right space-y-1">
+          <div className="p-4 pt-6 text-right space-y-1">
             <div className="text-[11px] font-medium text-slate-700">
               For : H H Events &amp; Conventions
             </div>
 
-            <div className="h-16 flex items-center justify-center sm:justify-end my-1">
+            <div className="h-16 flex items-center justify-end my-1">
               {activeSignature ? (
                 <img
                   src={activeSignature}

@@ -38,6 +38,7 @@ import { EmptyState } from '../../components/ui/EmptyState';
 import { InvoiceModal } from '../../components/ui/InvoiceModal';
 import { WhatsAppShareModal } from '../../components/ui/WhatsAppShareModal';
 import { EventOrderReceipt } from '../../components/ui/EventOrderReceipt';
+import { A4DocumentViewer } from '../../components/ui/A4DocumentViewer';
 import { shareEventOrderDirectly, downloadReceiptAsJpg } from '../../services/eventOrderShare';
 import { DEFAULT_AUTHORIZED_SIGNATURE } from '../../services/defaultSignature';
 import { useToast } from '../../context/ToastContext';
@@ -2994,14 +2995,16 @@ Ph:9448151878`;
 
               {/* Event Order Receipt Preview */}
               {pendingReservation && (
-                <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs bg-white">
-                  <EventOrderReceipt
-                    booking={pendingReservation}
-                    receiptNumber={pendingReservation.id.replace(/\D/g, '')}
-                    signatureUrl={signatureUrl}
-                    signatoryDesignation={signatoryDesignation}
-                    containerRef={previewReceiptRef}
-                  />
+                <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs bg-slate-50/50 p-1 sm:p-2">
+                  <A4DocumentViewer defaultMode="fit" allowToggle={true}>
+                    <EventOrderReceipt
+                      booking={pendingReservation}
+                      receiptNumber={pendingReservation.id.replace(/\D/g, '')}
+                      signatureUrl={signatureUrl}
+                      signatoryDesignation={signatoryDesignation}
+                      containerRef={previewReceiptRef}
+                    />
+                  </A4DocumentViewer>
                 </div>
               )}
 

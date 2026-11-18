@@ -11,6 +11,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { EventOrderReceipt } from '../../components/ui/EventOrderReceipt';
+import { A4DocumentViewer } from '../../components/ui/A4DocumentViewer';
 import { BookingRequest } from '../../types';
 import { Button } from '../../components/ui/Button';
 import { useToast } from '../../context/ToastContext';
@@ -254,13 +255,15 @@ export const PublicOrderPage: React.FC<PublicOrderPageProps> = ({ navigate }) =>
 
         {/* Event Order Document Container */}
         {!isLoading && booking && (
-          <div className="bg-white shadow-xl rounded-sm border border-slate-300 p-2 sm:p-6 overflow-hidden">
-            <EventOrderReceipt
-              booking={booking}
-              signatureUrl={signatureUrl}
-              signatoryDesignation={signatoryDesignation}
-              containerRef={receiptRef}
-            />
+          <div className="bg-white/80 shadow-xl rounded-2xl border border-slate-200/80 p-2 sm:p-5 overflow-hidden">
+            <A4DocumentViewer defaultMode="fit" allowToggle={true}>
+              <EventOrderReceipt
+                booking={booking}
+                signatureUrl={signatureUrl}
+                signatoryDesignation={signatoryDesignation}
+                containerRef={receiptRef}
+              />
+            </A4DocumentViewer>
           </div>
         )}
       </div>
