@@ -37,6 +37,65 @@ export {
   generateBookingId,
 };
 
+/**
+ * Strict Indian Phone Number Validation:
+ * Accepts:
+ * - 10-digit Indian numbers (e.g., 9876543210)
+ * - +91 followed by 10 digits (e.g., +91 9876543210, +919876543210)
+ * - 91 followed by 10 digits (e.g., 919876543210)
+ * - 0 followed by 10 digits (e.g., 09876543210)
+ *
+ * Rejects numbers with incorrect length (e.g. 9 digits like 645645455).
+ */
+export interface PhoneValidationResult {
+  isValid: boolean;
+  clean10: string; // Exactly 10 digits e.g. "9876543210"
+  fullWithCountryCode: string; // "+919876543210"
+  formattedDisplay: string; // "+91 98765 43210"
+  errorMessage?: string;
+}
+
+export function validateIndianPhone(input: string): PhoneValidationResult {
+  const trimmed = (input || '').trim();
+  if (!trimmed) {
+    return {
+      isValid: false,
+      clean10: '',
+      fullWithCountryCode: '',
+      formattedDisplay: '',
+      errorMessage: 'Phone number is required.',
+    };
+  }
+
+  // Extract all numeric digits
+  const digitsOnly = trimmed.replace(/\D/g, '');
+
+  let clean10 = '';
+
+  if (digitsOnly.length === 10) {
+    clean10 = digitsOnly;
+  } else if (digitsOnly.length === 11 && digitsOnly.startsWith('0')) {
+    clean10 = digitsOnly.slice(1);
+  } else if (digitsOnly.length === 12 && digitsOnly.startsWith('91')) {
+    clean10 = digitsOnly.slice(2);
+  } else {
+    return {
+      isValid: false,
+      clean10: '',
+      fullWithCountryCode: '',
+      formattedDisplay: '',
+      errorMessage: 'Please enter a valid 10-digit Indian phone number (or +91 with 10 digits).',
+    };
+  }
+
+  return {
+    isValid: true,
+    clean10,
+    fullWithCountryCode: `+91${clean10}`,
+    formattedDisplay: `+91 ${clean10.slice(0, 5)} ${clean10.slice(5)}`,
+  };
+}
+
 export function trackBooking(query: string): BookingRequest | null {
   const clean = (query || '').trim().toLowerCase();
   if (!clean) return null;

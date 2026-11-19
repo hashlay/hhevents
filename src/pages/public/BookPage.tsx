@@ -33,7 +33,7 @@ import { Button } from '../../components/ui/Button';
 import { BackButton } from '../../components/ui/BackButton';
 import { useToast } from '../../context/ToastContext';
 import { VENUE_INFO, TIMING_SLOTS, OFFICIAL_TARIFF_SCHEDULE, DEFAULT_BOOKING_PACKAGES, BookingPackage } from '../../services/hallData';
-import { checkSlotAvailability } from '../../services/bookingStorage';
+import { checkSlotAvailability, validateIndianPhone } from '../../services/bookingStorage';
 import { saveBooking, getBookings, syncBookingsFromServer } from '../../services/storageService';
 import {
   isSlotAvailable,
@@ -515,12 +515,17 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
     } else if (currentStep === 'space') {
       setCurrentStep('details');
     } else if (currentStep === 'details') {
-      if (!customerName.trim() || !phone.trim()) {
-        showToast('Full name and mobile phone number are required.', 'error');
+      if (!customerName.trim()) {
+        showToast('Full name is required.', 'error');
         return;
       }
-      if (phone.replace(/\D/g, '').length < 10) {
-        showToast('Please enter a valid 10-digit mobile phone number.', 'error');
+      if (!phone.trim()) {
+        showToast('Please enter a 10-digit Indian mobile number (or +91).', 'error');
+        return;
+      }
+      const phoneValidation = validateIndianPhone(phone);
+      if (!phoneValidation.isValid) {
+        showToast(phoneValidation.errorMessage || 'Please enter a valid 10-digit Indian mobile phone number (or +91 with 10 digits).', 'error');
         return;
       }
       setCurrentStep('summary');
@@ -542,9 +547,10 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
     }
 
     setIsSubmitting(true);
+    const validPhone = validateIndianPhone(phone);
     const bookingPayload = {
       customerName: customerName.trim(),
-      phone: phone.trim(),
+      phone: validPhone.clean10 || phone.trim(),
       email: email.trim(),
       packageId: currentPackage?.id || selectedPackageId,
       hallSelection: hallPreference,

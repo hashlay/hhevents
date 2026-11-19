@@ -37,6 +37,7 @@ import {
   updateBookingStatusAsync,
   generateBookingId,
   checkSlotAvailability,
+  validateIndianPhone,
 } from '../../services/bookingStorage';
 import { syncBookingsFromServer, saveBookingAsync } from '../../services/storageService';
 import {
@@ -96,10 +97,13 @@ export const AdminCalendarPage: React.FC<AdminCalendarPageProps> = ({ navigate }
   const [isDownloadingQuickJpg, setIsDownloadingQuickJpg] = useState(false);
   const quickReceiptRef = React.useRef<HTMLDivElement>(null);
 
+  const [quickPhoneError, setQuickPhoneError] = useState<string | null>(null);
+
   const handleCloseQuickBook = () => {
     setIsQuickBookModalOpen(false);
     setQuickBookStep('form');
     setPendingQuickBook(null);
+    setQuickPhoneError(null);
   };
   const [quickBookForm, setQuickBookForm] = useState<{
     customerName: string;
@@ -484,16 +488,23 @@ Ph:9448151878`;
   // Proceed to Event Order Preview before confirming quick manual reservation
   const handleProceedToQuickPreview = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!quickBookForm.customerName.trim() || !quickBookForm.phone.trim()) {
-      showToast('Please enter both customer name and phone number.', 'error');
+    if (!quickBookForm.customerName.trim()) {
+      showToast('Please enter Customer / Organizer Name.', 'error', 'Missing Information');
+      return;
+    }
+    if (!quickBookForm.phone.trim()) {
+      setQuickPhoneError('Please enter a 10-digit Indian phone number (or +91)');
+      showToast('Please enter a valid 10-digit Indian phone number (or +91 with 10 digits)', 'error', 'Phone Number Required');
       return;
     }
 
-    const cleanPhone = quickBookForm.phone.replace(/\D/g, '');
-    if (cleanPhone.length < 5) {
-      showToast('Please enter a valid phone number', 'error');
+    const phoneValidation = validateIndianPhone(quickBookForm.phone);
+    if (!phoneValidation.isValid) {
+      setQuickPhoneError(phoneValidation.errorMessage || 'Please enter a valid 10-digit Indian phone number (or +91 with 10 digits)');
+      showToast(phoneValidation.errorMessage || 'Please enter a valid 10-digit Indian phone number (or +91 with 10 digits)', 'error', 'Invalid Phone Number');
       return;
     }
+    setQuickPhoneError(null);
 
     const conflict = checkSlotAvailability(quickBookForm.hall, selectedDate, quickBookForm.slot, 'admin_direct');
     if (!conflict.available) {
@@ -526,7 +537,7 @@ Ph:9448151878`;
     const newBooking: BookingRequest & any = {
       id: bookingId,
       customerName: quickBookForm.customerName.trim(),
-      phone: cleanPhone.length >= 10 ? cleanPhone.slice(-10) : cleanPhone,
+      phone: phoneValidation.clean10,
       email: 'desk@hhevents.in',
       hall: quickBookForm.hall as any,
       hallSelection: quickBookForm.hall as any,
@@ -1292,16 +1303,44 @@ Ph:9448151878`;
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Phone Number (10 digits) *
+                  Phone Number (10 digits or +91) *
                 </label>
-                <input
-                  type="tel"
-                  required
-                  placeholder="e.g. 9876543210"
-                  value={quickBookForm.phone}
-                  onChange={(e) => setQuickBookForm({ ...quickBookForm, phone: e.target.value })}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#173D35]"
-                />
+                <div className="relative">
+                  <input
+                    type="tel"
+                    required
+                    placeholder="e.g. 9876543210 or +91 98765 43210"
+                    value={quickBookForm.phone}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setQuickBookForm({ ...quickBookForm, phone: val });
+                      if (quickPhoneError) {
+                        const res = validateIndianPhone(val);
+                        if (res.isValid) setQuickPhoneError(null);
+                      }
+                    }}
+                    className={`w-full px-3 py-2 text-xs rounded-xl border font-mono transition-colors focus:outline-none focus:ring-2 ${
+                      quickPhoneError
+                        ? 'border-rose-500 bg-rose-50/50 text-rose-950 focus:ring-rose-500 focus:border-rose-500'
+                        : 'border-slate-300 focus:ring-[#173D35]'
+                    }`}
+                  />
+                  {quickBookForm.phone && validateIndianPhone(quickBookForm.phone).isValid && (
+                    <span className="absolute right-2.5 top-2 text-[11px] font-bold text-emerald-600 pointer-events-none">
+                      ✓ Valid
+                    </span>
+                  )}
+                </div>
+                {quickPhoneError ? (
+                  <p className="text-[11px] font-semibold text-rose-600 mt-1 flex items-center gap-1 animate-in fade-in">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    <span>{quickPhoneError}</span>
+                  </p>
+                ) : (
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    Accepts 10-digit Indian mobile number or +91 followed by 10 digits
+                  </p>
+                )}
               </div>
 
               {(() => {
