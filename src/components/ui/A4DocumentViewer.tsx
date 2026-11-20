@@ -26,56 +26,85 @@ export const A4DocumentViewer: React.FC<A4DocumentViewerProps> = ({
   const A4_WIDTH = 794;
 
   useEffect(() => {
-    let animId: number;
-
-    const updateWidth = () => {
+    const measureWidth = () => {
       if (containerRef.current) {
         const w = containerRef.current.clientWidth;
         if (w > 0) {
-          setContainerWidth((prev) => (Math.abs(prev - w) > 4 ? Math.round(w) : prev));
-        }
-      }
-      if (contentRef.current) {
-        const h = contentRef.current.offsetHeight;
-        if (h > 0) {
-          setContentHeight((prev) => (Math.abs(prev - h) > 4 ? Math.round(h) : prev));
+          setContainerWidth((prev) => (Math.abs(prev - w) > 2 ? w : prev));
         }
       }
     };
 
-    updateWidth();
+    const measureHeight = () => {
+      if (contentRef.current) {
+        // Read natural unscaled content height
+        const h = contentRef.current.scrollHeight || contentRef.current.offsetHeight;
+        if (h && h > 100) {
+          setContentHeight((prev) => (Math.abs(prev - h) > 4 ? h : prev));
+        }
+      }
+    };
 
-    // Use ResizeObserver safely on container only
+    measureWidth();
+    measureHeight();
+
+    // Use ResizeObserver on container to observe WIDTH changes only
+    let ro: ResizeObserver | null = null;
     if (typeof ResizeObserver !== 'undefined' && containerRef.current) {
-      const ro = new ResizeObserver(() => {
-        cancelAnimationFrame(animId);
-        animId = requestAnimationFrame(updateWidth);
+      ro = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          const w = Math.round(entry.contentRect.width);
+          if (w > 0) {
+            setContainerWidth((prev) => (Math.abs(prev - w) > 2 ? w : prev));
+          }
+        }
       });
       ro.observe(containerRef.current);
-      return () => {
-        cancelAnimationFrame(animId);
-        ro.disconnect();
-      };
+    }
+
+    // Use ResizeObserver on content to observe natural unscaled content height changes only
+    let contentRo: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined' && contentRef.current) {
+      contentRo = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          const h = Math.round(entry.contentRect.height);
+          if (h && h > 100) {
+            setContentHeight((prev) => (Math.abs(prev - h) > 4 ? h : prev));
+          }
+        }
+      });
+      contentRo.observe(contentRef.current);
     }
 
     const onResize = () => {
-      cancelAnimationFrame(animId);
-      animId = requestAnimationFrame(updateWidth);
+      measureWidth();
+      measureHeight();
     };
 
     window.addEventListener('resize', onResize);
+
+    const t1 = setTimeout(measureHeight, 150);
+    const t2 = setTimeout(measureHeight, 600);
+
     return () => {
-      cancelAnimationFrame(animId);
+      ro?.disconnect();
+      contentRo?.disconnect();
       window.removeEventListener('resize', onResize);
+      clearTimeout(t1);
+      clearTimeout(t2);
     };
   }, []);
 
-  const isSmallScreen = containerWidth < A4_WIDTH + 16;
+  const isSmallScreen = containerWidth < A4_WIDTH + 8;
   const fitScale = isSmallScreen
-    ? Math.min(1, Math.max(0.25, (containerWidth - 8) / A4_WIDTH))
+    ? Math.min(1, Math.max(0.2, (containerWidth - 4) / A4_WIDTH))
     : 1;
-  const currentScale = mode === 'fit' && isSmallScreen ? fitScale : 1;
-  const scaledHeight = isSmallScreen && mode === 'fit' ? Math.ceil(contentHeight * fitScale) : undefined;
+  const isFitMode = mode === 'fit' && isSmallScreen;
+  const currentScale = isFitMode ? fitScale : 1;
+
+  const safeContentHeight = Math.max(1123, contentHeight);
+  const scaledWidth = Math.round(A4_WIDTH * currentScale);
+  const scaledHeight = Math.ceil(safeContentHeight * currentScale);
 
   return (
     <div className={`w-full a4-document-viewer ${className}`} ref={containerRef}>
@@ -95,7 +124,7 @@ export const A4DocumentViewer: React.FC<A4DocumentViewerProps> = ({
               type="button"
               onClick={() => setMode('fit')}
               className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
-                mode === 'fit'
+                isFitMode
                   ? 'bg-[#0082a6] text-white shadow-2xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
@@ -107,7 +136,7 @@ export const A4DocumentViewer: React.FC<A4DocumentViewerProps> = ({
               type="button"
               onClick={() => setMode('100')}
               className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
-                mode === '100'
+                !isFitMode
                   ? 'bg-[#0082a6] text-white shadow-2xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
@@ -122,31 +151,62 @@ export const A4DocumentViewer: React.FC<A4DocumentViewerProps> = ({
       {/* Document Viewport Wrapper */}
       <div
         className={`w-full a4-document-viewport ${
-          mode === '100' && isSmallScreen ? 'overflow-x-auto pb-4' : 'overflow-hidden flex justify-center'
+          !isFitMode && isSmallScreen
+            ? 'overflow-x-auto pb-4 pt-1'
+            : 'overflow-hidden flex justify-center items-start'
         }`}
         style={{
-          height: scaledHeight ? `${scaledHeight}px` : undefined,
+          minHeight: isFitMode ? `${scaledHeight}px` : undefined,
+          height: isFitMode ? `${scaledHeight}px` : undefined,
         }}
       >
         <div
-          ref={contentRef}
-          style={{
-            width: `${A4_WIDTH}px`,
-            minWidth: `${A4_WIDTH}px`,
-            maxWidth: `${A4_WIDTH}px`,
-            transform: currentScale !== 1 ? `scale(${currentScale})` : undefined,
-            transformOrigin: 'top center',
-            transition: 'transform 0.15s ease-out',
-          }}
-          onClick={() => {
-            if (isSmallScreen && allowToggle) {
-              setMode((prev) => (prev === 'fit' ? '100' : 'fit'));
-            }
-          }}
-          className={`${isSmallScreen ? 'cursor-pointer' : ''}`}
-          title={isSmallScreen ? 'Click to toggle between Fit Screen and 100% Zoom' : undefined}
+          className="a4-document-inner"
+          style={
+            isFitMode
+              ? {
+                  width: `${scaledWidth}px`,
+                  minWidth: `${scaledWidth}px`,
+                  maxWidth: `${scaledWidth}px`,
+                  height: `${scaledHeight}px`,
+                  position: 'relative',
+                  overflow: 'hidden',
+                  flexShrink: 0,
+                }
+              : {
+                  width: `${A4_WIDTH}px`,
+                  minWidth: `${A4_WIDTH}px`,
+                  maxWidth: `${A4_WIDTH}px`,
+                  margin: '0 auto',
+                  position: 'relative',
+                }
+          }
         >
-          {children}
+          <div
+            ref={contentRef}
+            className="a4-document-content"
+            style={
+              isFitMode
+                ? {
+                    width: `${A4_WIDTH}px`,
+                    minWidth: `${A4_WIDTH}px`,
+                    maxWidth: `${A4_WIDTH}px`,
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    transform: `scale(${currentScale})`,
+                    transformOrigin: 'top left',
+                  }
+                : {
+                    width: `${A4_WIDTH}px`,
+                    minWidth: `${A4_WIDTH}px`,
+                    maxWidth: `${A4_WIDTH}px`,
+                    position: 'relative',
+                  }
+            }
+          >
+            {children}
+          </div>
         </div>
       </div>
     </div>

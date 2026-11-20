@@ -292,7 +292,9 @@
   .fixed,
   .relative,
   .a4-document-viewer,
-  .a4-document-viewport {
+  .a4-document-viewport,
+  .a4-document-inner,
+  .a4-document-content {
     position: static !important;
     transform: none !important;
     max-height: none !important;
