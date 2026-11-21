@@ -920,10 +920,10 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
                     statusColor = 'text-rose-700';
                     dotColor = 'bg-rose-500';
                   } else if (isBlocked) {
-                    cellBg = 'bg-blue-50/90 border-blue-300 text-blue-900 cursor-not-allowed shadow-none';
+                    cellBg = 'bg-amber-50/90 border-amber-300 text-amber-950 cursor-not-allowed shadow-none';
                     statusBadge = 'Blocked';
-                    statusColor = 'text-blue-700';
-                    dotColor = 'bg-blue-600';
+                    statusColor = 'text-amber-800 font-bold';
+                    dotColor = 'bg-amber-400 ring-1 ring-amber-500/50';
                   } else {
                     // Available
                     cellBg = 'bg-emerald-50/70 border-emerald-300 hover:border-emerald-500 hover:bg-emerald-100/90 text-emerald-950 cursor-pointer shadow-xs';
@@ -960,7 +960,7 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
                               : isBooked
                               ? 'text-rose-900'
                               : isBlocked
-                              ? 'text-blue-900'
+                              ? 'text-amber-950 font-bold'
                               : 'text-emerald-950'
                           }`}
                         >
@@ -1002,8 +1002,8 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
                     <span className="font-semibold text-emerald-950">Available (Selectable)</span>
                   </span>
                   <span className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-blue-600 shrink-0" />
-                    <span className="font-semibold text-blue-900">Blocked (Hold / Maintenance)</span>
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-400 ring-1 ring-amber-500/50 shrink-0" />
+                    <span className="font-semibold text-amber-950">Blocked (Hold / Maintenance)</span>
                   </span>
                   <span className="flex items-center gap-1.5">
                     <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0" />
@@ -1064,13 +1064,13 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
               <div
                 className={`p-4 sm:p-5 rounded-2xl flex items-start gap-3 border ${
                   conflictReason.toLowerCase().includes('blocked')
-                    ? 'bg-blue-50/90 border-blue-300 text-blue-900 shadow-2xs'
+                    ? 'bg-amber-50/90 border-amber-300 text-amber-950 shadow-2xs'
                     : 'bg-rose-50 border border-rose-200 text-rose-800'
                 }`}
               >
                 <AlertCircle
                   className={`w-5 h-5 shrink-0 mt-0.5 ${
-                    conflictReason.toLowerCase().includes('blocked') ? 'text-blue-600' : 'text-rose-600'
+                    conflictReason.toLowerCase().includes('blocked') ? 'text-amber-600' : 'text-rose-600'
                   }`}
                 />
                 <div>
@@ -1081,14 +1081,14 @@ export const BookPage: React.FC<BookPageProps> = ({ navigate }) => {
                   </strong>
                   <p
                     className={`text-xs mt-0.5 ${
-                      conflictReason.toLowerCase().includes('blocked') ? 'text-blue-800' : 'text-rose-700'
+                      conflictReason.toLowerCase().includes('blocked') ? 'text-amber-900 font-medium' : 'text-rose-700'
                     }`}
                   >
                     {conflictReason}
                   </p>
                   <p
                     className={`text-xs font-semibold mt-1 ${
-                      conflictReason.toLowerCase().includes('blocked') ? 'text-blue-700' : 'text-rose-600'
+                      conflictReason.toLowerCase().includes('blocked') ? 'text-amber-800' : 'text-rose-600'
                     }`}
                   >
                     {conflictReason.toLowerCase().includes('blocked')

@@ -796,8 +796,8 @@ Ph:9448151878`;
                         RESERVED
                       </span>
                     ) : dayBlackout ? (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-900 border border-blue-200 flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
                         {dayBlackout.blockType === 'customer_hold'
                           ? 'CUSTOMER HOLD'
                           : dayBlackout.blockType === 'maintenance'
@@ -810,8 +810,8 @@ Ph:9448151878`;
                         AVAILABLE
                       </span>
                     ) : (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-900 border border-blue-200 flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
                         BLOCKED
                       </span>
                     )}
@@ -878,28 +878,28 @@ Ph:9448151878`;
                       </div>
                     </div>
                   ) : dayBlackout ? (
-                    /* 2. Manager / Customer Hold Blackout View (Blue Theme) */
-                    <div className="p-3 bg-blue-50/70 rounded-lg border border-blue-200 text-xs space-y-2 text-blue-950">
+                    /* 2. Manager / Customer Hold Blackout View (Yellow/Amber Theme) */
+                    <div className="p-3 bg-amber-50/80 rounded-lg border border-amber-300 text-xs space-y-2 text-amber-950">
                       <div className="flex items-center justify-between">
-                        <span className="font-bold uppercase tracking-wider text-[10px] bg-blue-100 text-blue-900 px-2 py-0.5 rounded-full border border-blue-200">
+                        <span className="font-bold uppercase tracking-wider text-[10px] bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full border border-amber-300">
                           {dayBlackout.blockType === 'customer_hold'
                             ? 'Customer Hold'
                             : dayBlackout.blockType === 'maintenance'
                             ? 'Venue Maintenance'
                             : 'Manager Administrative Hold'}
                         </span>
-                        <span className="text-[10px] text-blue-600 font-mono">
+                        <span className="text-[10px] text-amber-700 font-mono">
                           {dayBlackout.createdAt ? new Date(dayBlackout.createdAt).toLocaleDateString('en-IN') : ''}
                         </span>
                       </div>
 
                       {dayBlackout.customerName && (
                         <div>
-                          <span className="text-[10px] text-blue-700 font-semibold uppercase block">Customer Details</span>
-                          <div className="font-bold text-sm text-blue-950">{dayBlackout.customerName}</div>
+                          <span className="text-[10px] text-amber-800 font-semibold uppercase block">Customer Details</span>
+                          <div className="font-bold text-sm text-amber-950">{dayBlackout.customerName}</div>
                           {dayBlackout.customerPhone && (
-                            <div className="text-xs font-mono text-blue-800 flex items-center gap-1 mt-0.5">
-                              <Phone className="w-3 h-3 text-blue-600" />
+                            <div className="text-xs font-mono text-amber-900 flex items-center gap-1 mt-0.5">
+                              <Phone className="w-3 h-3 text-amber-600" />
                               <a href={`tel:${dayBlackout.customerPhone}`} className="hover:underline">
                                 {dayBlackout.customerPhone}
                               </a>
@@ -910,21 +910,21 @@ Ph:9448151878`;
 
                       {(dayBlackout.notes || dayBlackout.reason) && (
                         <div>
-                          <span className="text-[10px] text-blue-700 font-semibold uppercase block">Reason / Details</span>
-                          <p className="text-[11.5px] text-blue-950 bg-white/80 p-2 rounded-lg border border-blue-100 leading-relaxed">
+                          <span className="text-[10px] text-amber-800 font-semibold uppercase block">Reason / Details</span>
+                          <p className="text-[11.5px] text-amber-950 bg-white/90 p-2 rounded-lg border border-amber-200 leading-relaxed">
                             {dayBlackout.notes || dayBlackout.reason}
                           </p>
                         </div>
                       )}
 
                       {dayBlackout.blockedBy && (
-                        <div className="text-[10px] text-blue-600">
+                        <div className="text-[10px] text-amber-700">
                           Blocked by: <strong>{dayBlackout.blockedBy}</strong>
                         </div>
                       )}
 
-                      <div className="pt-2 border-t border-blue-200/60 flex items-center justify-between">
-                        <span className="text-[11px] text-blue-800 italic">Not available for public</span>
+                      <div className="pt-2 border-t border-amber-200 flex items-center justify-between">
+                        <span className="text-[11px] text-amber-800 italic">Not available for public</span>
                         <button
                           type="button"
                           onClick={() => handleMakeSlotAvailable('day')}
@@ -942,10 +942,10 @@ Ph:9448151878`;
                       <button
                         type="button"
                         onClick={() => openBlockModal('day')}
-                        className="flex-1 py-2 px-3 rounded-lg text-xs font-bold border transition-all flex items-center justify-center gap-1.5 bg-white hover:bg-blue-50 text-blue-700 border-blue-200 shadow-2xs cursor-pointer"
+                        className="flex-1 py-2 px-3 rounded-lg text-xs font-bold border transition-all flex items-center justify-center gap-1.5 bg-white hover:bg-amber-50 text-amber-800 border-amber-300 shadow-2xs cursor-pointer"
                         title="Block slot with customer hold or maintenance details"
                       >
-                        <Lock className="w-3.5 h-3.5 text-blue-600" />
+                        <Lock className="w-3.5 h-3.5 text-amber-600" />
                         <span>Block Slot</span>
                       </button>
 
@@ -981,8 +981,8 @@ Ph:9448151878`;
                         RESERVED
                       </span>
                     ) : eveningBlackout ? (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-900 border border-blue-200 flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
                         {eveningBlackout.blockType === 'customer_hold'
                           ? 'CUSTOMER HOLD'
                           : eveningBlackout.blockType === 'maintenance'
@@ -995,8 +995,8 @@ Ph:9448151878`;
                         AVAILABLE
                       </span>
                     ) : (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-900 border border-blue-200 flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
                         BLOCKED
                       </span>
                     )}
@@ -1063,28 +1063,28 @@ Ph:9448151878`;
                       </div>
                     </div>
                   ) : eveningBlackout ? (
-                    /* 2. Manager / Customer Hold Blackout View (Blue Theme) */
-                    <div className="p-3 bg-blue-50/70 rounded-lg border border-blue-200 text-xs space-y-2 text-blue-950">
+                    /* 2. Manager / Customer Hold Blackout View (Yellow/Amber Theme) */
+                    <div className="p-3 bg-amber-50/80 rounded-lg border border-amber-300 text-xs space-y-2 text-amber-950">
                       <div className="flex items-center justify-between">
-                        <span className="font-bold uppercase tracking-wider text-[10px] bg-blue-100 text-blue-900 px-2 py-0.5 rounded-full border border-blue-200">
+                        <span className="font-bold uppercase tracking-wider text-[10px] bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full border border-amber-300">
                           {eveningBlackout.blockType === 'customer_hold'
                             ? 'Customer Hold'
                             : eveningBlackout.blockType === 'maintenance'
                             ? 'Venue Maintenance'
                             : 'Manager Administrative Hold'}
                         </span>
-                        <span className="text-[10px] text-blue-600 font-mono">
+                        <span className="text-[10px] text-amber-700 font-mono">
                           {eveningBlackout.createdAt ? new Date(eveningBlackout.createdAt).toLocaleDateString('en-IN') : ''}
                         </span>
                       </div>
 
                       {eveningBlackout.customerName && (
                         <div>
-                          <span className="text-[10px] text-blue-700 font-semibold uppercase block">Customer Details</span>
-                          <div className="font-bold text-sm text-blue-950">{eveningBlackout.customerName}</div>
+                          <span className="text-[10px] text-amber-800 font-semibold uppercase block">Customer Details</span>
+                          <div className="font-bold text-sm text-amber-950">{eveningBlackout.customerName}</div>
                           {eveningBlackout.customerPhone && (
-                            <div className="text-xs font-mono text-blue-800 flex items-center gap-1 mt-0.5">
-                              <Phone className="w-3 h-3 text-blue-600" />
+                            <div className="text-xs font-mono text-amber-900 flex items-center gap-1 mt-0.5">
+                              <Phone className="w-3 h-3 text-amber-600" />
                               <a href={`tel:${eveningBlackout.customerPhone}`} className="hover:underline">
                                 {eveningBlackout.customerPhone}
                               </a>
@@ -1095,21 +1095,21 @@ Ph:9448151878`;
 
                       {(eveningBlackout.notes || eveningBlackout.reason) && (
                         <div>
-                          <span className="text-[10px] text-blue-700 font-semibold uppercase block">Reason / Details</span>
-                          <p className="text-[11.5px] text-blue-950 bg-white/80 p-2 rounded-lg border border-blue-100 leading-relaxed">
+                          <span className="text-[10px] text-amber-800 font-semibold uppercase block">Reason / Details</span>
+                          <p className="text-[11.5px] text-amber-950 bg-white/90 p-2 rounded-lg border border-amber-200 leading-relaxed">
                             {eveningBlackout.notes || eveningBlackout.reason}
                           </p>
                         </div>
                       )}
 
                       {eveningBlackout.blockedBy && (
-                        <div className="text-[10px] text-blue-600">
+                        <div className="text-[10px] text-amber-700">
                           Blocked by: <strong>{eveningBlackout.blockedBy}</strong>
                         </div>
                       )}
 
-                      <div className="pt-2 border-t border-blue-200/60 flex items-center justify-between">
-                        <span className="text-[11px] text-blue-800 italic">Not available for public</span>
+                      <div className="pt-2 border-t border-amber-200 flex items-center justify-between">
+                        <span className="text-[11px] text-amber-800 italic">Not available for public</span>
                         <button
                           type="button"
                           onClick={() => handleMakeSlotAvailable('evening')}
@@ -1127,10 +1127,10 @@ Ph:9448151878`;
                       <button
                         type="button"
                         onClick={() => openBlockModal('evening')}
-                        className="flex-1 py-2 px-3 rounded-lg text-xs font-bold border transition-all flex items-center justify-center gap-1.5 bg-white hover:bg-blue-50 text-blue-700 border-blue-200 shadow-2xs cursor-pointer"
+                        className="flex-1 py-2 px-3 rounded-lg text-xs font-bold border transition-all flex items-center justify-center gap-1.5 bg-white hover:bg-amber-50 text-amber-800 border-amber-300 shadow-2xs cursor-pointer"
                         title="Block slot with customer hold or maintenance details"
                       >
-                        <Lock className="w-3.5 h-3.5 text-blue-600" />
+                        <Lock className="w-3.5 h-3.5 text-amber-600" />
                         <span>Block Slot</span>
                       </button>
 
@@ -1165,7 +1165,7 @@ Ph:9448151878`;
                 <button
                   type="button"
                   onClick={() => openBlockModal('full_day')}
-                  className="py-2 px-2.5 rounded-lg text-xs font-semibold bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 transition-all text-center cursor-pointer shadow-2xs"
+                  className="py-2 px-2.5 rounded-lg text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 transition-all text-center cursor-pointer shadow-2xs"
                 >
                   Block Whole Day
                 </button>
@@ -1663,15 +1663,15 @@ Ph:9448151878`;
           <div className="bg-white rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-2xl border border-slate-200 space-y-4 max-h-[92vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
-                <div className="flex items-center gap-1.5 text-blue-700 font-bold text-xs uppercase tracking-wider mb-0.5">
-                  <Lock className="w-3.5 h-3.5" />
+                <div className="flex items-center gap-1.5 text-amber-700 font-bold text-xs uppercase tracking-wider mb-0.5">
+                  <Lock className="w-3.5 h-3.5 text-amber-600" />
                   <span>Administrative Slot Block</span>
                 </div>
                 <h4 className="font-bold text-slate-900 text-base font-serif-heading">
                   Block {blockSlotTarget === 'full_day' ? 'Full Day' : `${blockSlotTarget.toUpperCase()} Session`} — {selectedDate}
                 </h4>
                 <p className="text-xs text-slate-500">
-                  Holds this slot. It will appear as Blue (Blocked) in management and will be completely unavailable for public reservations.
+                  Holds this slot. It will appear as Yellow (Blocked) in management and will be completely unavailable for public reservations.
                 </p>
               </div>
               <button
@@ -1695,12 +1695,12 @@ Ph:9448151878`;
                     onClick={() => setBlockForm({ ...blockForm, blockType: 'customer_hold' })}
                     className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
                       blockForm.blockType === 'customer_hold'
-                        ? 'bg-blue-50 border-blue-600 ring-2 ring-blue-600/20 text-blue-950 font-bold'
+                        ? 'bg-amber-50 border-amber-500 ring-2 ring-amber-500/20 text-amber-950 font-bold'
                         : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50'
                     }`}
                   >
                     <div className="flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-blue-600" />
+                      <span className="w-2 h-2 rounded-full bg-amber-500" />
                       <span className="text-xs">Customer Hold</span>
                     </div>
                     <p className="text-[10px] text-slate-500 font-normal mt-1 leading-tight">
@@ -1713,7 +1713,7 @@ Ph:9448151878`;
                     onClick={() => setBlockForm({ ...blockForm, blockType: 'maintenance' })}
                     className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
                       blockForm.blockType === 'maintenance'
-                        ? 'bg-blue-50 border-blue-600 ring-2 ring-blue-600/20 text-blue-950 font-bold'
+                        ? 'bg-amber-50 border-amber-500 ring-2 ring-amber-500/20 text-amber-950 font-bold'
                         : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50'
                     }`}
                   >
@@ -1731,7 +1731,7 @@ Ph:9448151878`;
                     onClick={() => setBlockForm({ ...blockForm, blockType: 'manager_hold' })}
                     className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
                       blockForm.blockType === 'manager_hold'
-                        ? 'bg-blue-50 border-blue-600 ring-2 ring-blue-600/20 text-blue-950 font-bold'
+                        ? 'bg-amber-50 border-amber-500 ring-2 ring-amber-500/20 text-amber-950 font-bold'
                         : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50'
                     }`}
                   >
@@ -1748,8 +1748,8 @@ Ph:9448151878`;
 
               {/* Customer Hold Fields */}
               {blockForm.blockType === 'customer_hold' && (
-                <div className="p-3 bg-blue-50/60 rounded-xl border border-blue-200 space-y-3">
-                  <div className="text-[11px] font-bold text-blue-900 uppercase tracking-wider">
+                <div className="p-3 bg-amber-50/70 rounded-xl border border-amber-200 space-y-3">
+                  <div className="text-[11px] font-bold text-amber-900 uppercase tracking-wider">
                     Customer Contact Information
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1763,7 +1763,7 @@ Ph:9448151878`;
                         placeholder="e.g. Mohammed Iqbal"
                         value={blockForm.customerName}
                         onChange={(e) => setBlockForm({ ...blockForm, customerName: e.target.value })}
-                        className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-600 bg-white"
+                        className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white"
                       />
                     </div>
                     <div>
@@ -1775,7 +1775,7 @@ Ph:9448151878`;
                         placeholder="e.g. 9611810386"
                         value={blockForm.customerPhone}
                         onChange={(e) => setBlockForm({ ...blockForm, customerPhone: e.target.value })}
-                        className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-600 bg-white font-mono"
+                        className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white font-mono"
                       />
                     </div>
                   </div>
@@ -1803,7 +1803,7 @@ Ph:9448151878`;
                   }
                   value={blockForm.notes}
                   onChange={(e) => setBlockForm({ ...blockForm, notes: e.target.value })}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-600 bg-white"
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white"
                 />
               </div>
 
@@ -1830,7 +1830,7 @@ Ph:9448151878`;
                   size="sm"
                   isLoading={isSavingBlock}
                   leftIcon={<Lock className="w-3.5 h-3.5" />}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold border-blue-600"
+                  className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold border-amber-500 shadow-sm cursor-pointer"
                 >
                   Confirm &amp; Block Slot
                 </Button>
