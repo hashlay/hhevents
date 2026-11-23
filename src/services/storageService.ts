@@ -227,6 +227,63 @@ export function updateBooking(id: string, updates: Partial<BookingRequest>): boo
   return false;
 }
 
+export async function updateAdvancePaymentAsync(
+  id: string,
+  amountPaid: number,
+  reason?: string,
+  paymentMethod?: string
+): Promise<{ success: boolean; booking?: BookingRequest; error?: string }> {
+  const cleanAmount = Math.max(0, Number(amountPaid) || 0);
+  try {
+    const res = await fetch(`/api/bookings/${encodeURIComponent(id)}/advance`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeader(),
+      },
+      body: JSON.stringify({
+        amountPaid: cleanAmount,
+        reason: reason?.trim() || undefined,
+        paymentMethod: paymentMethod || undefined,
+      }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.booking) {
+      await syncBookingsFromServer();
+      return { success: true, booking: data.booking };
+    }
+    if (!res.ok) {
+      return { success: false, error: data.error || 'Failed to update advance payment on server.' };
+    }
+  } catch (err: any) {
+    console.warn('Server advance update error, falling back locally:', err);
+  }
+
+  // Local fallback
+  const idx = cachedBookings.findIndex((b) => (b.id || '').trim().toLowerCase() === (id || '').trim().toLowerCase());
+  if (idx !== -1) {
+    const b = cachedBookings[idx] as any;
+    const netRent = Number(b.totalAmount || b.totalEstimate || b.estimatedAmount || b.packagePrice || 0);
+    const newBalance = Math.max(0, netRent - cleanAmount);
+    const newStatus = newBalance === 0 && (cleanAmount > 0 || netRent === 0) ? 'fully_paid' : cleanAmount > 0 ? 'advance_paid' : 'unpaid';
+    cachedBookings[idx] = {
+      ...cachedBookings[idx],
+      amountPaid: cleanAmount,
+      balanceDue: newBalance,
+      advancePaymentStatus: newStatus as any,
+      paymentStatus: newStatus as any,
+      updatedAt: new Date().toISOString(),
+    };
+    try {
+      localStorage.setItem(BOOKINGS_KEY, JSON.stringify(cachedBookings));
+    } catch {}
+    return { success: true, booking: cachedBookings[idx] };
+  }
+
+  return { success: false, error: 'Booking not found.' };
+}
+
 export async function deleteBookingAsync(id: string): Promise<boolean> {
   const cleanId = (id || '').trim().toLowerCase();
   try {

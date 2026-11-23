@@ -15,7 +15,8 @@ import {
   TrendingUp,
   Download,
   Eye,
-  FileText
+  FileText,
+  Edit2
 } from 'lucide-react';
 import { AdminLayout } from '../../components/layout/AdminLayout';
 import { Card } from '../../components/ui/Card';
@@ -25,6 +26,7 @@ import { InvoiceModal } from '../../components/ui/InvoiceModal';
 import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../context/AuthContext';
 import { BookingRequest } from '../../types';
+import { updateAdvancePaymentAsync } from '../../services/bookingStorage';
 
 interface ExtendedPaymentTransaction {
   id: string;
@@ -69,6 +71,13 @@ export const AdminPaymentsPage: React.FC<{ navigate: (path: string) => void }> =
   const [payRefNo, setPayRefNo] = useState('');
   const [payNotes, setPayNotes] = useState('');
   const [isRecording, setIsRecording] = useState(false);
+
+  // Edit Advance Payment State
+  const [editAdvanceBooking, setEditAdvanceBooking] = useState<BookingRequest | null>(null);
+  const [editAdvanceAmount, setEditAdvanceAmount] = useState<number>(0);
+  const [editAdvanceReason, setEditAdvanceReason] = useState<string>('');
+  const [editAdvanceMethod, setEditAdvanceMethod] = useState<'cash' | 'upi' | 'bank_transfer' | 'other'>('cash');
+  const [isSavingAdvance, setIsSavingAdvance] = useState(false);
 
   const loadData = async () => {
     setIsLoading(true);
@@ -255,6 +264,58 @@ export const AdminPaymentsPage: React.FC<{ navigate: (path: string) => void }> =
       showToast('Network error while recording payment transaction', 'error');
     } finally {
       setIsRecording(false);
+    }
+  };
+
+  const handleOpenEditAdvance = (b: BookingRequest) => {
+    const bObj = b as any;
+    const currentPaid = bObj.amountPaid !== undefined
+      ? Number(bObj.amountPaid)
+      : (b.advancePaymentStatus === 'fully_paid'
+          ? Number(bObj.totalAmount || b.totalEstimate || b.estimatedAmount || 0)
+          : b.advancePaymentStatus === 'advance_paid'
+          ? Math.round(Number(bObj.totalAmount || b.totalEstimate || b.estimatedAmount || 0) * 0.25)
+          : 0);
+
+    setEditAdvanceBooking(b);
+    setEditAdvanceAmount(currentPaid);
+    setEditAdvanceReason('');
+    const firstPayment = bObj.payments && Array.isArray(bObj.payments) && bObj.payments[0];
+    setEditAdvanceMethod(firstPayment?.paymentMethod || 'cash');
+  };
+
+  const handleSaveAdvanceCorrection = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editAdvanceBooking) return;
+
+    if (isNaN(editAdvanceAmount) || editAdvanceAmount < 0) {
+      showToast('Please enter a valid non-negative advance amount (₹0 or more).', 'error');
+      return;
+    }
+
+    setIsSavingAdvance(true);
+    try {
+      const res = await updateAdvancePaymentAsync(
+        editAdvanceBooking.id,
+        editAdvanceAmount,
+        editAdvanceReason.trim() || 'Advance payment amount corrected by manager',
+        editAdvanceMethod
+      );
+
+      if (res.success && res.booking) {
+        showToast(
+          `Advance payment for #${editAdvanceBooking.id} successfully updated to ₹${editAdvanceAmount.toLocaleString('en-IN')}. Remaining balance: ₹${(Number(res.booking.balanceDue) || 0).toLocaleString('en-IN')}`,
+          'success'
+        );
+        setEditAdvanceBooking(null);
+        await loadData();
+      } else {
+        showToast(res.error || 'Failed to update advance payment', 'error');
+      }
+    } catch {
+      showToast('Error updating advance payment', 'error');
+    } finally {
+      setIsSavingAdvance(false);
     }
   };
 
@@ -704,15 +765,27 @@ export const AdminPaymentsPage: React.FC<{ navigate: (path: string) => void }> =
                   </div>
 
                   {/* Card Actions */}
-                  <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setReceiptBooking(acc.booking)}
-                      className="text-xs font-semibold text-amber-800 hover:text-amber-900 flex items-center gap-1 cursor-pointer"
-                    >
-                      <FileText className="w-3.5 h-3.5" />
-                      Receipt / Invoice
-                    </button>
+                  <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2 flex-wrap">
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setReceiptBooking(acc.booking)}
+                        className="text-xs font-semibold text-amber-800 hover:text-amber-900 flex items-center gap-1 cursor-pointer"
+                      >
+                        <FileText className="w-3.5 h-3.5" />
+                        Receipt
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEditAdvance(acc.booking)}
+                        className="text-xs font-semibold text-emerald-800 hover:text-emerald-950 flex items-center gap-1 cursor-pointer bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded-md border border-emerald-200 transition-colors"
+                        title="Edit or correct recorded advance payment"
+                      >
+                        <Edit2 className="w-3.5 h-3.5 text-emerald-600" />
+                        Edit Advance
+                      </button>
+                    </div>
 
                     <Button
                       variant={isSettled ? 'outline' : 'gold'}
@@ -754,7 +827,21 @@ export const AdminPaymentsPage: React.FC<{ navigate: (path: string) => void }> =
                       <strong className="text-slate-900 text-xs font-mono block">₹{total.toLocaleString('en-IN')}</strong>
                     </div>
                     <div>
-                      <span className="text-[10px] uppercase font-bold text-emerald-600 block tracking-wider">Total Paid</span>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] uppercase font-bold text-emerald-600 block tracking-wider">Total Paid</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const b = payingBooking;
+                            setPayingBooking(null);
+                            handleOpenEditAdvance(b);
+                          }}
+                          className="text-[10px] font-bold text-emerald-700 underline hover:text-emerald-900 cursor-pointer ml-1"
+                          title="Correct advance or payment"
+                        >
+                          Edit
+                        </button>
+                      </div>
                       <strong className="text-emerald-700 text-xs font-mono block">₹{paid.toLocaleString('en-IN')}</strong>
                     </div>
                     <div>
@@ -840,6 +927,246 @@ export const AdminPaymentsPage: React.FC<{ navigate: (path: string) => void }> =
                   leftIcon={<CreditCard className="w-4 h-4" />}
                 >
                   {isRecording ? 'Recording...' : 'Record Payment & Save'}
+                </Button>
+              </div>
+            </form>
+          </Dialog>
+        )}
+
+        {/* EDIT / CORRECT ADVANCE PAYMENT DIALOG */}
+        {editAdvanceBooking && (
+          <Dialog
+            isOpen={!!editAdvanceBooking}
+            onClose={() => setEditAdvanceBooking(null)}
+            title={`Edit / Correct Advance Payment — ${editAdvanceBooking.id}`}
+            maxWidth="md"
+          >
+            <form onSubmit={handleSaveAdvanceCorrection} className="space-y-4 text-xs">
+              {(() => {
+                const bObj = editAdvanceBooking as any;
+                const netRent = bObj.totalAmount !== undefined
+                  ? Number(bObj.totalAmount)
+                  : (bObj.totalEstimate || bObj.estimatedAmount || bObj.packagePrice || 0);
+                const currentPaid = bObj.amountPaid !== undefined
+                  ? Number(bObj.amountPaid)
+                  : (editAdvanceBooking.advancePaymentStatus === 'fully_paid'
+                      ? netRent
+                      : editAdvanceBooking.advancePaymentStatus === 'advance_paid'
+                      ? Math.round(netRent * 0.25)
+                      : 0);
+                const currentBalance = bObj.balanceDue !== undefined
+                  ? Number(bObj.balanceDue)
+                  : Math.max(0, netRent - currentPaid);
+
+                const newPaid = Math.max(0, Number(editAdvanceAmount) || 0);
+                const newBalance = Math.max(0, netRent - newPaid);
+                const newStatus = newBalance === 0 && (newPaid > 0 || netRent === 0)
+                  ? 'fully_paid'
+                  : newPaid > 0
+                  ? 'advance_paid'
+                  : 'unpaid';
+
+                return (
+                  <div className="space-y-3">
+                    {/* Header info card */}
+                    <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <div className="col-span-2 sm:col-span-1">
+                        <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Customer</span>
+                        <strong className="text-slate-900 text-xs truncate block">{editAdvanceBooking.customerName || (editAdvanceBooking as any).applicantName}</strong>
+                      </div>
+                      <div>
+                        <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Net Payable Rent</span>
+                        <strong className="text-slate-900 text-xs font-mono block">₹{netRent.toLocaleString('en-IN')}</strong>
+                      </div>
+                      <div>
+                        <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Current Advance</span>
+                        <strong className="text-emerald-700 text-xs font-mono block">₹{currentPaid.toLocaleString('en-IN')}</strong>
+                      </div>
+                      <div>
+                        <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Current Balance</span>
+                        <strong className="text-amber-800 text-xs font-mono block">₹{currentBalance.toLocaleString('en-IN')}</strong>
+                      </div>
+                    </div>
+
+                    {/* Input Field for Corrected Amount */}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-bold text-slate-800 uppercase flex items-center gap-1.5">
+                          <span>Corrected Advance Amount (₹) *</span>
+                          <span className="text-[10px] font-normal text-slate-500 lowercase">(enter exact advance received)</span>
+                        </label>
+                        {newPaid !== currentPaid && (
+                          <span className={`text-[11px] font-bold px-2 py-0.5 rounded border ${
+                            newPaid > currentPaid
+                              ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                              : 'text-amber-700 bg-amber-50 border-amber-200'
+                          }`}>
+                            {newPaid > currentPaid ? `+₹${(newPaid - currentPaid).toLocaleString('en-IN')}` : `-₹${(currentPaid - newPaid).toLocaleString('en-IN')}`} difference
+                          </span>
+                        )}
+                      </div>
+                      <div className="relative">
+                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 font-bold text-base">₹</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="1"
+                          autoFocus
+                          value={editAdvanceAmount === 0 ? '' : editAdvanceAmount}
+                          onChange={(e) => setEditAdvanceAmount(e.target.value === '' ? 0 : Math.max(0, Number(e.target.value)))}
+                          placeholder="0"
+                          className="w-full pl-8 pr-3.5 py-2.5 rounded-xl border border-slate-300 text-base font-mono font-bold text-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-600 bg-white"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    {/* Quick Presets */}
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-slate-500 uppercase">Quick Presets</label>
+                      <div className="flex flex-wrap gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setEditAdvanceAmount(0)}
+                          className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 cursor-pointer transition-colors"
+                        >
+                          ₹0 (Unpaid)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditAdvanceAmount(5000)}
+                          className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200 cursor-pointer transition-colors"
+                        >
+                          ₹5,000
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditAdvanceAmount(10000)}
+                          className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200 cursor-pointer transition-colors"
+                        >
+                          ₹10,000
+                        </button>
+                        {netRent > 0 && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => setEditAdvanceAmount(Math.round(netRent * 0.25))}
+                              className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 cursor-pointer transition-colors"
+                            >
+                              25% (₹{Math.round(netRent * 0.25).toLocaleString('en-IN')})
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEditAdvanceAmount(Math.round(netRent * 0.5))}
+                              className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 cursor-pointer transition-colors"
+                            >
+                              50% (₹{Math.round(netRent * 0.5).toLocaleString('en-IN')})
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEditAdvanceAmount(netRent)}
+                              className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-50 text-amber-900 border border-amber-300 hover:bg-amber-100 cursor-pointer transition-colors"
+                            >
+                              Full Rent (₹{netRent.toLocaleString('en-IN')})
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Payment Method */}
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-700 uppercase">Payment Method</label>
+                      <select
+                        value={editAdvanceMethod}
+                        onChange={(e) => setEditAdvanceMethod(e.target.value as any)}
+                        className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs bg-white font-medium"
+                      >
+                        <option value="cash">Cash in Office</option>
+                        <option value="upi">UPI / QR Code</option>
+                        <option value="bank_transfer">Bank Transfer / NEFT</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
+
+                    {/* Correction Reason & Quick Chips */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-700 uppercase">
+                        Reason for Correction / Notes (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        value={editAdvanceReason}
+                        onChange={(e) => setEditAdvanceReason(e.target.value)}
+                        placeholder="e.g. Typo correction: entered 8000 instead of 5000"
+                        className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs"
+                      />
+                      <div className="flex flex-wrap gap-1 pt-0.5">
+                        {[
+                          'Typo correction (wrong digit)',
+                          'Extra zero (0) entered by mistake',
+                          'Customer adjusted advance token',
+                          'Cash advance received at office',
+                        ].map((chip) => (
+                          <button
+                            key={chip}
+                            type="button"
+                            onClick={() => setEditAdvanceReason(chip)}
+                            className="text-[10px] px-2 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 cursor-pointer transition-colors"
+                          >
+                            + {chip}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Real-time Calculation Breakdown Preview */}
+                    <div className="p-3.5 rounded-xl bg-emerald-50/70 border border-emerald-200 space-y-2">
+                      <div className="flex justify-between items-center text-xs text-slate-700">
+                        <span>Net Payable Rent:</span>
+                        <strong className="font-mono text-xs text-slate-900">₹{netRent.toLocaleString('en-IN')}</strong>
+                      </div>
+                      <div className="flex justify-between items-center text-xs text-emerald-800 font-semibold">
+                        <span>New Advance / Paid Amount:</span>
+                        <span className="font-mono text-sm font-bold text-emerald-700">
+                          ₹{newPaid.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center text-xs pt-1.5 border-t border-emerald-200">
+                        <span className="font-bold text-slate-800">New Outstanding Balance Due:</span>
+                        <span className={`font-mono text-sm font-bold ${newBalance > 0 ? 'text-amber-800' : 'text-emerald-700'}`}>
+                          {newBalance > 0 ? `₹${newBalance.toLocaleString('en-IN')}` : 'Fully Settled (₹0)'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center text-[11px] pt-1">
+                        <span className="text-slate-600">New Payment Status:</span>
+                        <span className={`px-2 py-0.5 rounded font-bold uppercase text-[10px] ${
+                          newStatus === 'fully_paid'
+                            ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                            : newStatus === 'advance_paid'
+                            ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                            : 'bg-rose-100 text-rose-800 border border-rose-300'
+                        }`}>
+                          {newStatus === 'fully_paid' ? 'Fully Paid' : newStatus === 'advance_paid' ? 'Advance Paid' : 'Unpaid'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
+                <Button type="button" variant="outline" size="sm" onClick={() => setEditAdvanceBooking(null)}>
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  variant="gold"
+                  size="sm"
+                  disabled={isSavingAdvance}
+                  leftIcon={<Edit2 className="w-4 h-4" />}
+                >
+                  {isSavingAdvance ? 'Updating...' : 'Save & Update Advance Payment'}
                 </Button>
               </div>
             </form>

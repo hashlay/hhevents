@@ -1512,6 +1512,103 @@ apiRouter.post("/bookings/:id/payment", requireAdminAuth, async (req, res) => {
     payment: newPayment
   });
 });
+apiRouter.patch("/bookings/:id/advance", requireAdminAuth, async (req, res) => {
+  const { id } = req.params;
+  const cleanId = (id || "").trim().toLowerCase();
+  const { amountPaid, reason, paymentMethod } = req.body;
+  if (amountPaid === void 0 || isNaN(Number(amountPaid)) || Number(amountPaid) < 0) {
+    return res.status(400).json({ error: "A valid non-negative advance amount is required (>= 0)." });
+  }
+  const newAmountPaid = Number(amountPaid);
+  const db = await getDb(true);
+  const booking = db.bookings.find((b) => (b.id || "").trim().toLowerCase() === cleanId);
+  if (!booking) {
+    return res.status(404).json({ error: `Booking reference #${id} not found in database.` });
+  }
+  const oldAmountPaid = Number(booking.amountPaid) || 0;
+  const netRent = booking.totalAmount !== void 0 ? Number(booking.totalAmount) : booking.totalEstimate || booking.packagePrice || 0;
+  const newBalanceDue = Math.max(0, netRent - newAmountPaid);
+  let newPaymentStatus = "unpaid";
+  if (newBalanceDue === 0 && (newAmountPaid > 0 || netRent === 0)) {
+    newPaymentStatus = "fully_paid";
+  } else if (newAmountPaid > 0) {
+    newPaymentStatus = "advance_paid";
+  } else {
+    newPaymentStatus = "unpaid";
+  }
+  booking.amountPaid = newAmountPaid;
+  booking.balanceDue = newBalanceDue;
+  booking.paymentStatus = newPaymentStatus;
+  booking.advancePaymentStatus = newPaymentStatus;
+  booking.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+  const admin = req.adminSession;
+  const editReason = (reason || "").trim() || "Advance payment amount corrected by manager";
+  const logMsg = `Advance payment corrected from \u20B9${oldAmountPaid.toLocaleString("en-IN")} to \u20B9${newAmountPaid.toLocaleString("en-IN")} (Balance: \u20B9${newBalanceDue.toLocaleString("en-IN")}). Reason: ${editReason}`;
+  booking.adminRemarks = `${booking.adminRemarks || ""}
+[${(/* @__PURE__ */ new Date()).toLocaleDateString("en-IN")}] ${logMsg}`.trim();
+  if (!Array.isArray(booking.payments)) {
+    booking.payments = [];
+  }
+  if (booking.payments.length === 0 && newAmountPaid > 0) {
+    booking.payments.push({
+      id: `PAY-CORRECT-${Date.now()}`,
+      bookingId: booking.id,
+      amount: newAmountPaid,
+      paymentType: newBalanceDue === 0 ? "full" : "advance",
+      paymentMethod: paymentMethod || "cash",
+      referenceNo: `CORRECT-${Date.now()}`,
+      receivedBy: admin?.email || "venue_desk",
+      receiptNumber: `RCP-${booking.id.slice(-6)}`,
+      notes: `Advance payment recorded/corrected: ${editReason}`,
+      createdAt: (/* @__PURE__ */ new Date()).toISOString()
+    });
+  } else if (booking.payments.length > 0) {
+    const advanceTx = booking.payments.find((p) => p.paymentType === "advance" || p.id.startsWith("PAY-INIT-") || p.id.startsWith("LEGACY-") || p.id.startsWith("PAY-CORRECT-"));
+    if (advanceTx) {
+      advanceTx.amount = newAmountPaid;
+      if (paymentMethod) advanceTx.paymentMethod = paymentMethod;
+      advanceTx.notes = `Updated: ${editReason}`;
+    } else if (booking.payments.length === 1) {
+      booking.payments[0].amount = newAmountPaid;
+      if (paymentMethod) booking.payments[0].paymentMethod = paymentMethod;
+      booking.payments[0].notes = `Updated: ${editReason}`;
+    } else {
+      const currentSum = booking.payments.reduce((sum, p) => sum + (p.paymentType === "refund" ? -p.amount : p.amount), 0);
+      const diff = newAmountPaid - currentSum;
+      if (diff !== 0) {
+        booking.payments.push({
+          id: `PAY-ADJ-${Date.now()}`,
+          bookingId: booking.id,
+          amount: Math.abs(diff),
+          paymentType: diff > 0 ? "advance" : "refund",
+          paymentMethod: paymentMethod || "other",
+          referenceNo: `ADJUST-${Date.now()}`,
+          receivedBy: admin?.email || "venue_desk",
+          receiptNumber: `ADJ-${Date.now().toString().slice(-6)}`,
+          notes: `Adjustment to correct total advance to \u20B9${newAmountPaid.toLocaleString("en-IN")}. ${editReason}`,
+          createdAt: (/* @__PURE__ */ new Date()).toISOString()
+        });
+      }
+    }
+  }
+  await persistDb();
+  await logAudit(
+    "ADVANCE_PAYMENT_CORRECTED",
+    admin?.email || "admin@hhevents.in",
+    "booking",
+    booking.id,
+    logMsg
+  );
+  res.json({
+    success: true,
+    booking,
+    message: `Advance payment successfully updated to \u20B9${newAmountPaid.toLocaleString("en-IN")}`
+  });
+});
+apiRouter.put("/bookings/:id/advance", requireAdminAuth, async (req, res) => {
+  req.url = `/bookings/${req.params.id}/advance`;
+  return apiRouter.handle(req, res);
+});
 apiRouter.delete("/bookings/:id", requireAdminAuth, async (req, res) => {
   const { id } = req.params;
   const db = await getDb(true);
