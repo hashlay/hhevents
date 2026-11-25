@@ -287,6 +287,7 @@ Ph:9448151878`;
     date: '',
     slot: 'day' as 'day' | 'evening',
     packageId: '',
+    hall: 'both' as 'both' | 'hall_1' | 'hall_2',
     reason: '',
     discountAmount: 0,
     discountReason: '',
@@ -298,6 +299,7 @@ Ph:9448151878`;
     const rawSlot = (booking.slot || (booking as any).timeSlot || 'day').toLowerCase();
     const currentSlot: 'day' | 'evening' = rawSlot === 'evening' ? 'evening' : 'day';
     const currentDate = booking.date || booking.eventDate || '';
+    const currentHall = ((booking.hall || (booking as any).hallSelection || 'hall_1') as 'both' | 'hall_1' | 'hall_2');
 
     let currentPkgId = booking.packageId || '';
     if (!currentPkgId) {
@@ -326,6 +328,7 @@ Ph:9448151878`;
       date: currentDate,
       slot: currentSlot,
       packageId: currentPkgId,
+      hall: currentHall,
       reason: '',
       discountAmount: existingDisc,
       discountReason: existingDiscReason || (existingDisc > 0 ? 'Special Discount' : ''),
@@ -343,8 +346,13 @@ Ph:9448151878`;
     }
 
     const selectedPkg = packageOptions.find((p) => p.id === editScheduleForm.packageId);
-    const targetHall = selectedPkg ? selectedPkg.hall : (selectedBooking.hall || 'hall_1');
-    const targetPkgName = selectedPkg ? selectedPkg.name : (selectedBooking.packageName || '');
+    const isSingle = selectedPkg ? selectedPkg.hall !== 'both' : editScheduleForm.hall !== 'both';
+    const targetHall = isSingle ? (editScheduleForm.hall === 'hall_2' ? 'hall_2' : 'hall_1') : 'both';
+    const basePkgName = selectedPkg ? selectedPkg.name : (selectedBooking.packageName || '');
+    const cleanBase = basePkgName.replace(/\s*\(Hall 1\s*\/\s*Hall 2\)/i, '').replace(/\s*-\s*Hall\s*[12]\s*\([^)]*\)/i, '').trim();
+    const targetPkgName = isSingle
+      ? `${cleanBase} - ${targetHall === 'hall_2' ? 'Hall 2 (Ladies Wing)' : 'Hall 1 (Gents Wing)'}`
+      : basePkgName;
     const targetRent = selectedPkg ? selectedPkg.rent : ((selectedBooking as any).packagePrice || 30000);
     const targetAc = selectedPkg?.name.toLowerCase().includes('non ac') || selectedPkg?.name.toLowerCase().includes('non-ac') ? 'non_ac' : 'ac';
 
@@ -363,6 +371,7 @@ Ph:9448151878`;
           packageId: selectedPkg ? selectedPkg.id : selectedBooking.packageId,
           packageName: targetPkgName,
           hallSelection: targetHall,
+          hall: targetHall,
           acOption: targetAc,
           packagePrice: targetRent,
           reason: editScheduleForm.reason || 'Manager schedule & pricing update',
@@ -1619,15 +1628,23 @@ Ph:9448151878`;
                   </div>
 
                   {/* 3. Package Selection */}
-                  <div>
-                    <label className="block text-xs font-bold text-slate-800 mb-1">
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-slate-800">
                       Package &amp; Spaces *
                     </label>
                     <select
                       value={editScheduleForm.packageId}
-                      onChange={(e) =>
-                        setEditScheduleForm({ ...editScheduleForm, packageId: e.target.value })
-                      }
+                      onChange={(e) => {
+                        const selId = e.target.value;
+                        const selPkg = packageOptions.find((p) => p.id === selId);
+                        const isSingle = selPkg ? selPkg.hall !== 'both' : editScheduleForm.hall !== 'both';
+                        const targetHall = isSingle ? (editScheduleForm.hall === 'hall_2' ? 'hall_2' : 'hall_1') : 'both';
+                        setEditScheduleForm({
+                          ...editScheduleForm,
+                          packageId: selId,
+                          hall: targetHall,
+                        });
+                      }}
                       className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#173D35] bg-white font-medium text-slate-800"
                     >
                       {packageOptions.map((pkg) => (
@@ -1639,16 +1656,60 @@ Ph:9448151878`;
 
                     {(() => {
                       const selPkg = packageOptions.find((p) => p.id === editScheduleForm.packageId);
-                      return selPkg ? (
-                        <div className="flex items-center justify-between text-[11px] text-slate-600 mt-1 px-1">
-                          <span>
-                            Space: <strong>{selPkg.hall === 'both' ? 'Combined Campus (Full Hall)' : selPkg.hall === 'hall_2' ? 'Hall 2 (Ladies Wing)' : 'Hall 1 (Gents Wing)'}</strong>
-                          </span>
-                          <span>
-                            Tariff: <strong className="text-emerald-700 font-mono font-bold">₹{selPkg.rent.toLocaleString('en-IN')}</strong>
-                          </span>
+                      const isSingle = selPkg ? selPkg.hall !== 'both' : editScheduleForm.hall !== 'both';
+
+                      return (
+                        <div className="mt-1.5 space-y-1">
+                          {isSingle ? (
+                            <div className="p-2 rounded-xl bg-amber-50/70 border border-amber-200/90 space-y-1">
+                              <div className="flex items-center justify-between text-[11px]">
+                                <span className="font-bold text-slate-800 uppercase tracking-wider">
+                                  Choose Hall Wing:
+                                </span>
+                                <span className="font-semibold text-emerald-800">
+                                  {editScheduleForm.hall === 'hall_2' ? 'Hall 2 (Ladies Wing)' : 'Hall 1 (Gents Wing)'}
+                                </span>
+                              </div>
+                              <div className="grid grid-cols-2 gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => setEditScheduleForm({ ...editScheduleForm, hall: 'hall_1' })}
+                                  className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all border cursor-pointer flex items-center justify-center gap-1 ${
+                                    editScheduleForm.hall === 'hall_1'
+                                      ? 'bg-[#173D35] text-white border-[#173D35] shadow-xs ring-1 ring-[#173D35]'
+                                      : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+                                  }`}
+                                >
+                                  <span>👔 Gents Wing (Hall 1)</span>
+                                  {editScheduleForm.hall === 'hall_1' && <span className="text-amber-300 text-xs font-black">✓</span>}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setEditScheduleForm({ ...editScheduleForm, hall: 'hall_2' })}
+                                  className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all border cursor-pointer flex items-center justify-center gap-1 ${
+                                    editScheduleForm.hall === 'hall_2'
+                                      ? 'bg-[#173D35] text-white border-[#173D35] shadow-xs ring-1 ring-[#173D35]'
+                                      : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+                                  }`}
+                                >
+                                  <span>🧕 Ladies Wing (Hall 2)</span>
+                                  {editScheduleForm.hall === 'hall_2' && <span className="text-amber-300 text-xs font-black">✓</span>}
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="p-2 rounded-xl bg-amber-50/70 border border-amber-200/90 flex items-center justify-between text-xs font-bold text-amber-900">
+                              <span>🏛️ Combined Campus (Both Wings)</span>
+                              <span className="text-[10px] font-semibold text-amber-700 uppercase">Gents &amp; Ladies Halls</span>
+                            </div>
+                          )}
+
+                          <div className="flex items-center justify-between text-[11px] text-slate-600 mt-1 px-1">
+                            <span>Selected Space: <strong className="text-slate-800">{editScheduleForm.hall === 'both' ? 'Combined Campus (Full Hall)' : editScheduleForm.hall === 'hall_2' ? 'Hall 2 (Ladies Wing)' : 'Hall 1 (Gents Wing)'}</strong></span>
+                            <span>Tariff: <strong className="text-emerald-700 font-mono font-bold">₹{selPkg ? selPkg.rent.toLocaleString('en-IN') : '0'}</strong></span>
+                          </div>
                         </div>
-                      ) : null;
+                      );
                     })()}
                   </div>
 
@@ -3028,8 +3089,8 @@ Ph:9448151878`;
 
               {/* Hall & Slot */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-slate-700">
                     Select Package &amp; Hall Space *
                   </label>
                   <select
@@ -3038,11 +3099,18 @@ Ph:9448151878`;
                       const selId = e.target.value;
                       const pkg = packageOptions.find((p) => p.id === selId);
                       if (pkg) {
+                        const isSingle = pkg.hall !== 'both';
+                        const targetHall = isSingle ? (createForm.hall === 'hall_2' ? 'hall_2' : 'hall_1') : 'both';
+                        const cleanBase = pkg.name.replace(/\s*\(Hall 1\s*\/\s*Hall 2\)/i, '').replace(/\s*-\s*Hall\s*[12]\s*\([^)]*\)/i, '').trim();
+                        const finalPkgName = isSingle
+                          ? `${cleanBase} - ${targetHall === 'hall_2' ? 'Hall 2 (Ladies Wing)' : 'Hall 1 (Gents Wing)'}`
+                          : pkg.name;
+
                         setCreateForm({
                           ...createForm,
                           packageId: pkg.id,
-                          packageName: pkg.name,
-                          hall: pkg.hall,
+                          packageName: finalPkgName,
+                          hall: targetHall,
                           estimatedRent: pkg.rent,
                         });
                       }
@@ -3055,8 +3123,76 @@ Ph:9448151878`;
                       </option>
                     ))}
                   </select>
+
+                  {/* Dedicated Wing Selection Option Below Package */}
+                  {(() => {
+                    const selPkg = packageOptions.find((p) => p.id === createForm.packageId);
+                    const isSingle = selPkg ? selPkg.hall !== 'both' : createForm.hall !== 'both';
+
+                    return isSingle ? (
+                      <div className="p-2 rounded-xl bg-amber-50/70 border border-amber-200/90 space-y-1 mt-1">
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="font-bold text-slate-800 uppercase tracking-wider">
+                            Choose Hall Wing:
+                          </span>
+                          <span className="font-semibold text-emerald-800">
+                            {createForm.hall === 'hall_2' ? 'Hall 2 (Ladies Wing)' : 'Hall 1 (Gents Wing)'}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const base = selPkg ? selPkg.name : createForm.packageName;
+                              const cleanBase = base.replace(/\s*\(Hall 1\s*\/\s*Hall 2\)/i, '').replace(/\s*-\s*Hall\s*[12]\s*\([^)]*\)/i, '').trim();
+                              setCreateForm({
+                                ...createForm,
+                                hall: 'hall_1',
+                                packageName: `${cleanBase} - Hall 1 (Gents Wing)`,
+                              });
+                            }}
+                            className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all border cursor-pointer flex items-center justify-center gap-1 ${
+                              createForm.hall === 'hall_1'
+                                ? 'bg-[#173D35] text-white border-[#173D35] shadow-xs ring-1 ring-[#173D35]'
+                                : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+                            }`}
+                          >
+                            <span>👔 Gents Wing (Hall 1)</span>
+                            {createForm.hall === 'hall_1' && <span className="text-amber-300 text-xs font-black">✓</span>}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const base = selPkg ? selPkg.name : createForm.packageName;
+                              const cleanBase = base.replace(/\s*\(Hall 1\s*\/\s*Hall 2\)/i, '').replace(/\s*-\s*Hall\s*[12]\s*\([^)]*\)/i, '').trim();
+                              setCreateForm({
+                                ...createForm,
+                                hall: 'hall_2',
+                                packageName: `${cleanBase} - Hall 2 (Ladies Wing)`,
+                              });
+                            }}
+                            className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all border cursor-pointer flex items-center justify-center gap-1 ${
+                              createForm.hall === 'hall_2'
+                                ? 'bg-[#173D35] text-white border-[#173D35] shadow-xs ring-1 ring-[#173D35]'
+                                : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+                            }`}
+                          >
+                            <span>🧕 Ladies Wing (Hall 2)</span>
+                            {createForm.hall === 'hall_2' && <span className="text-amber-300 text-xs font-black">✓</span>}
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-2 rounded-xl bg-amber-50/70 border border-amber-200/90 flex items-center justify-between text-xs font-bold text-amber-900 mt-1">
+                        <span>🏛️ Combined Campus (Both Wings)</span>
+                        <span className="text-[10px] font-semibold text-amber-700 uppercase">Gents &amp; Ladies Halls</span>
+                      </div>
+                    );
+                  })()}
+
                   <div className="flex items-center justify-between text-[11px] text-slate-500 mt-1 px-0.5">
-                    <span>Wing: <strong className="text-slate-700">{createForm.hall === 'both' ? 'Combined Campus (Full Hall)' : createForm.hall === 'hall_1' ? 'Hall 1 (Gents Wing)' : 'Hall 2 (Ladies Wing)'}</strong></span>
+                    <span>Selected Space: <strong className="text-slate-800">{createForm.hall === 'both' ? 'Combined Campus (Full Hall)' : createForm.hall === 'hall_2' ? 'Hall 2 (Ladies Wing)' : 'Hall 1 (Gents Wing)'}</strong></span>
                     <span>Tariff: <strong className="text-emerald-700 font-mono">₹{Number(createForm.estimatedRent).toLocaleString('en-IN')}</strong></span>
                   </div>
                 </div>

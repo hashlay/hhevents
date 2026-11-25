@@ -988,7 +988,8 @@ apiRouter.post("/bookings", async (req, res) => {
       phone,
       email,
       packageId,
-      hallSelection = "hall_1",
+      hallSelection: rawHallSelection,
+      hall: rawHall,
       acOption = "ac",
       date,
       slot,
@@ -996,6 +997,7 @@ apiRouter.post("/bookings", async (req, res) => {
       additionalInfo,
       eventType
     } = req.body;
+    const hallSelection = rawHallSelection || rawHall || "hall_1";
     if (!customerName || !phone || !date || !slot) {
       return res.status(400).json({ error: "Customer name, phone, date, and session slot are mandatory." });
     }
@@ -1013,7 +1015,7 @@ apiRouter.post("/bookings", async (req, res) => {
     }
     const matchedPkg = db.packages.find((p) => p.id === packageId);
     const pkgRent = matchedPkg ? matchedPkg.rent : hallSelection === "both" ? 65e3 : 3e4;
-    const pkgName = matchedPkg ? matchedPkg.name : hallSelection === "both" ? "Full Hall" : "Single Hall";
+    const pkgName = req.body.packageName?.trim() || (matchedPkg ? matchedPkg.name : hallSelection === "both" ? "Full Hall" : "Single Hall");
     const randomNum = Math.floor(1e5 + Math.random() * 9e5);
     const bookingId = isAdmin && req.body.id && typeof req.body.id === "string" ? req.body.id.trim() : `HH-2026-${randomNum}`;
     const now = (/* @__PURE__ */ new Date()).toISOString();
@@ -1084,6 +1086,7 @@ apiRouter.post("/bookings", async (req, res) => {
       extraChargeReason,
       occupiedResources: requiredResources,
       hallSelection,
+      hall: hallSelection,
       acOption: acOption || "ac",
       date,
       slot,

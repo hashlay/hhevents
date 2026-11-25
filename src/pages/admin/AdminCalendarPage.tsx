@@ -1250,11 +1250,18 @@ Ph:9448151878`;
                     const selId = e.target.value;
                     const pkg = packageOptions.find((p) => p.id === selId);
                     if (pkg) {
+                      const isSingle = pkg.hall !== 'both';
+                      const targetHall = isSingle ? (quickBookForm.hall === 'hall_2' ? 'hall_2' : 'hall_1') : 'both';
+                      const cleanBase = pkg.name.replace(/\s*\(Hall 1\s*\/\s*Hall 2\)/i, '').replace(/\s*-\s*Hall\s*[12]\s*\([^)]*\)/i, '').trim();
+                      const finalPkgName = isSingle
+                        ? `${cleanBase} - ${targetHall === 'hall_2' ? 'Hall 2 (Ladies Wing)' : 'Hall 1 (Gents Wing)'}`
+                        : pkg.name;
+
                       setQuickBookForm({
                         ...quickBookForm,
                         packageId: pkg.id,
-                        packageName: pkg.name,
-                        hall: pkg.hall,
+                        packageName: finalPkgName,
+                        hall: targetHall,
                         estimatedRent: pkg.rent,
                       });
                     }
@@ -1267,8 +1274,76 @@ Ph:9448151878`;
                     </option>
                   ))}
                 </select>
+
+                {/* Dedicated Wing Selection Option Below Package */}
+                {(() => {
+                  const selPkg = packageOptions.find((p) => p.id === quickBookForm.packageId);
+                  const isSingle = selPkg ? selPkg.hall !== 'both' : quickBookForm.hall !== 'both';
+
+                  return isSingle ? (
+                    <div className="p-2 rounded-xl bg-amber-50/70 border border-amber-200/90 space-y-1 mt-1.5">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="font-bold text-slate-800 uppercase tracking-wider">
+                          Choose Hall Wing:
+                        </span>
+                        <span className="font-semibold text-emerald-800">
+                          {quickBookForm.hall === 'hall_2' ? 'Hall 2 (Ladies Wing)' : 'Hall 1 (Gents Wing)'}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const base = selPkg ? selPkg.name : quickBookForm.packageName;
+                            const cleanBase = base.replace(/\s*\(Hall 1\s*\/\s*Hall 2\)/i, '').replace(/\s*-\s*Hall\s*[12]\s*\([^)]*\)/i, '').trim();
+                            setQuickBookForm({
+                              ...quickBookForm,
+                              hall: 'hall_1',
+                              packageName: `${cleanBase} - Hall 1 (Gents Wing)`,
+                            });
+                          }}
+                          className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all border cursor-pointer flex items-center justify-center gap-1 ${
+                            quickBookForm.hall === 'hall_1'
+                              ? 'bg-[#173D35] text-white border-[#173D35] shadow-xs ring-1 ring-[#173D35]'
+                              : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+                          }`}
+                        >
+                          <span>👔 Gents Wing (Hall 1)</span>
+                          {quickBookForm.hall === 'hall_1' && <span className="text-amber-300 text-xs font-black">✓</span>}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const base = selPkg ? selPkg.name : quickBookForm.packageName;
+                            const cleanBase = base.replace(/\s*\(Hall 1\s*\/\s*Hall 2\)/i, '').replace(/\s*-\s*Hall\s*[12]\s*\([^)]*\)/i, '').trim();
+                            setQuickBookForm({
+                              ...quickBookForm,
+                              hall: 'hall_2',
+                              packageName: `${cleanBase} - Hall 2 (Ladies Wing)`,
+                            });
+                          }}
+                          className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all border cursor-pointer flex items-center justify-center gap-1 ${
+                            quickBookForm.hall === 'hall_2'
+                              ? 'bg-[#173D35] text-white border-[#173D35] shadow-xs ring-1 ring-[#173D35]'
+                              : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+                          }`}
+                        >
+                          <span>🧕 Ladies Wing (Hall 2)</span>
+                          {quickBookForm.hall === 'hall_2' && <span className="text-amber-300 text-xs font-black">✓</span>}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-2 rounded-xl bg-amber-50/70 border border-amber-200/90 flex items-center justify-between text-xs font-bold text-amber-900 mt-1.5">
+                      <span>🏛️ Combined Campus (Both Wings)</span>
+                      <span className="text-[10px] font-semibold text-amber-700 uppercase">Gents &amp; Ladies Halls</span>
+                    </div>
+                  );
+                })()}
+
                 <div className="flex items-center justify-between text-[11px] text-slate-500 mt-1 px-0.5">
-                  <span>Wing: <strong className="text-slate-700">{quickBookForm.hall === 'both' ? 'Combined Campus (Full Hall)' : quickBookForm.hall === 'hall_1' ? 'Hall 1 (Gents Wing)' : 'Hall 2 (Ladies Wing)'}</strong></span>
+                  <span>Selected Space: <strong className="text-slate-800">{quickBookForm.hall === 'both' ? 'Combined Campus (Full Hall)' : quickBookForm.hall === 'hall_2' ? 'Hall 2 (Ladies Wing)' : 'Hall 1 (Gents Wing)'}</strong></span>
                   <span>Tariff: <strong className="text-emerald-700 font-mono">₹{Number(quickBookForm.estimatedRent).toLocaleString('en-IN')}</strong></span>
                 </div>
               </div>

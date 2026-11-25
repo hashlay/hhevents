@@ -173,6 +173,37 @@ export const EventOrderReceipt: React.FC<EventOrderReceiptProps> = ({
     ? `AC Charges if needed: ${booking.extraChargeReason.trim()}`
     : 'AC Charges if needed';
 
+  // Wing and Space description
+  const hallCode = ((booking.hall || (booking as any).hallSelection || 'both') as string).toLowerCase();
+  const wingLabel =
+    hallCode === 'hall_2' || hallCode.includes('ladies')
+      ? 'Hall 2 (Ladies Wing)'
+      : hallCode === 'hall_1' || hallCode.includes('gents')
+      ? 'Hall 1 (Gents Wing)'
+      : 'Combined Campus (Gents & Ladies Wings)';
+
+  const formatPackageForReceipt = () => {
+    const raw = (booking.packageName || 'Convention Hall Booking').trim();
+    // Clean up generic placeholder "(Hall 1 / Hall 2)"
+    const cleanBase = raw.replace(/\s*\(Hall 1\s*\/\s*Hall 2\)/i, '').trim();
+
+    if (hallCode === 'hall_2' || hallCode.includes('ladies')) {
+      if (!cleanBase.toLowerCase().includes('ladies') && !cleanBase.toLowerCase().includes('hall 2')) {
+        return `${cleanBase} — Hall 2 (Ladies Wing)`;
+      }
+      return cleanBase;
+    }
+    if (hallCode === 'hall_1' || hallCode.includes('gents')) {
+      if (!cleanBase.toLowerCase().includes('gents') && !cleanBase.toLowerCase().includes('hall 1')) {
+        return `${cleanBase} — Hall 1 (Gents Wing)`;
+      }
+      return cleanBase;
+    }
+    return cleanBase;
+  };
+
+  const receiptItemName = formatPackageForReceipt();
+
   return (
     <div
       ref={containerRef as any}
@@ -287,8 +318,11 @@ export const EventOrderReceipt: React.FC<EventOrderReceiptProps> = ({
             <tbody className="divide-y divide-slate-200 text-slate-800 font-medium">
               <tr className="hover:bg-slate-50/50">
                 <td className="py-2 px-2 border-r border-slate-200 text-center font-mono">1</td>
-                <td className="py-2 px-3 border-r border-slate-200 font-bold text-slate-900">
-                  {booking.packageName || 'Day Session Hall 1 AC'}
+                <td className="py-2 px-3 border-r border-slate-200 text-slate-900">
+                  <div className="font-bold">{receiptItemName}</div>
+                  <div className="text-[11px] font-semibold text-[#0082a6] mt-0.5">
+                    Wing / Space: {wingLabel}
+                  </div>
                 </td>
                 <td className="py-2 px-2 border-r border-slate-200 text-center font-mono">1</td>
                 <td className="py-2 px-3 border-r border-slate-200 text-right font-mono">
@@ -346,8 +380,11 @@ export const EventOrderReceipt: React.FC<EventOrderReceiptProps> = ({
             <tbody className="divide-y divide-slate-200 text-slate-800 font-medium">
               <tr className="hover:bg-slate-50/50">
                 <td className="py-2 px-2 border-r border-slate-200 text-center font-mono">1</td>
-                <td className="py-2 px-3 border-r border-slate-200 font-bold text-slate-900">
-                  {booking.packageName || 'Single Hall + Single Dining Hall'}
+                <td className="py-2 px-3 border-r border-slate-200 text-slate-900">
+                  <div className="font-bold">{receiptItemName}</div>
+                  <div className="text-[11px] font-semibold text-[#0082a6] mt-0.5">
+                    Wing / Space: {wingLabel}
+                  </div>
                 </td>
                 <td className="py-2 px-2 border-r border-slate-200 text-center font-mono">1</td>
                 <td className="py-2 px-3 border-r border-slate-200 text-right font-mono">
@@ -407,13 +444,20 @@ export const EventOrderReceipt: React.FC<EventOrderReceiptProps> = ({
                 <div className="bg-[#0082a6] text-white font-bold py-1 px-3 text-[11px]">
                   Description
                 </div>
-                <div className="p-2.5 text-xs text-slate-800 font-medium">
-                  {evDateShortHeader} {dayOfWeek} {sessionName}
+                <div className="p-2.5 text-xs text-slate-800 font-medium space-y-1">
+                  <div>
+                    <span className="text-slate-500 font-semibold">Event Session:</span>{' '}
+                    <strong>{evDateShortHeader} {dayOfWeek} {sessionName}</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 font-semibold">Reserved Space:</span>{' '}
+                    <strong className="text-[#0082a6] font-bold">{wingLabel}</strong>
+                  </div>
                   {(booking as any).notes &&
                     (booking as any).notes !== `${dayOfWeek} ${sessionName}` && (
-                      <span className="block text-slate-600 mt-0.5">
-                        {(booking as any).notes}
-                      </span>
+                      <div className="text-slate-600 mt-0.5">
+                        <span className="text-slate-500 font-semibold">Function Notes:</span> {(booking as any).notes}
+                      </div>
                     )}
                 </div>
               </>
